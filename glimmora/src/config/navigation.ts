@@ -13,6 +13,8 @@ import {
   ClipboardList,
   FlaskConical,
   Search,
+  BrainCircuit,
+  UserPlus,
   Network,
   FileText,
   TrendingUp,
@@ -59,6 +61,7 @@ export const PORTAL_NAVIGATION: Record<PortalRole, NavSection[]> = {
       label: "Growth",
       items: [
         { label: "Skills & Development", href: "/student/skills", icon: Radar },
+        { label: "AI Tutor", href: "/student/tutor", icon: BrainCircuit },
         { label: "Credentials", href: "/student/credentials", icon: BadgeCheck },
       ],
     },
@@ -134,6 +137,7 @@ export const PORTAL_NAVIGATION: Record<PortalRole, NavSection[]> = {
     {
       label: "Management",
       items: [
+        { label: "Admissions", href: "/admin/admissions", icon: UserPlus },
         { label: "Users & Roles", href: "/admin/users", icon: UserCog },
         { label: "Integrations", href: "/admin/integrations", icon: Link2 },
         { label: "Budget & Resources", href: "/admin/budget", icon: Wallet },

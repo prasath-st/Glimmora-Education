@@ -5,5 +5,7 @@ import { adminHandlers } from "./admin.handlers";
 import { placementHandlers } from "./placement.handlers";
 import { researchHandlers } from "./research.handlers";
 import { ministryHandlers } from "./ministry.handlers";
+import { admissionsHandlers } from "./admissions.handlers";
+import { tutorHandlers } from "./tutor.handlers";
 
-export const handlers = [...authHandlers, ...studentHandlers, ...facultyHandlers, ...adminHandlers, ...placementHandlers, ...researchHandlers, ...ministryHandlers];
+export const handlers = [...authHandlers, ...studentHandlers, ...facultyHandlers, ...adminHandlers, ...placementHandlers, ...researchHandlers, ...ministryHandlers, ...admissionsHandlers, ...tutorHandlers];
