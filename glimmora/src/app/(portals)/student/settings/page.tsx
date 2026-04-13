@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import {
   Settings,
   User,
@@ -9,6 +9,11 @@ import {
   Loader2,
   X,
   Plus,
+  Shield,
+  Download,
+  Briefcase,
+  Trash2,
+  CheckCircle2,
 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import {
@@ -23,8 +28,9 @@ import { FormSection } from "@/components/shared/forms/form-section";
 import { DashboardSkeleton } from "@/components/shared/feedback/loading-skeleton";
 import { ErrorState } from "@/components/shared/feedback/error-state";
 import { cn } from "@/lib/utils/cn";
+import type { WorkExperience } from "@/lib/api/types/student.types";
 
-type TabId = "profile" | "notifications";
+type TabId = "profile" | "notifications" | "security";
 
 export default function StudentSettingsPage() {
   const [activeTab, setActiveTab] = useState<TabId>("profile");
@@ -71,6 +77,13 @@ export default function StudentSettingsPage() {
         >
           Notifications
         </TabButton>
+        <TabButton
+          active={activeTab === "security"}
+          onClick={() => setActiveTab("security")}
+          icon={Shield}
+        >
+          Security
+        </TabButton>
       </div>
 
       {activeTab === "profile" && profileQuery.data && (
@@ -80,6 +93,8 @@ export default function StudentSettingsPage() {
       {activeTab === "notifications" && notifQuery.data && (
         <NotificationsTab preferences={notifQuery.data} />
       )}
+
+      {activeTab === "security" && <SecurityTab />}
     </div>
   );
 }
@@ -115,6 +130,7 @@ function TabButton({
 
 interface ProfileFormData {
   name: string;
+  personalEmail: string;
   phone: string;
   bio: string;
   interests: string;
@@ -129,6 +145,10 @@ function ProfileTab({
   const updateProfile = useUpdateProfile();
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [socialLinks, setSocialLinks] = useState(profile.socialLinks || []);
+  const [workExperience, setWorkExperience] = useState<WorkExperience[]>(
+    profile.workExperience || []
+  );
+  const [showExpForm, setShowExpForm] = useState(false);
 
   const {
     register,
@@ -137,6 +157,7 @@ function ProfileTab({
   } = useForm<ProfileFormData>({
     defaultValues: {
       name: profile.name,
+      personalEmail: profile.personalEmail || "",
       phone: profile.phone || "",
       bio: profile.bio || "",
       interests: profile.interests.join(", "),
@@ -147,6 +168,7 @@ function ProfileTab({
     setSaveSuccess(false);
     await updateProfile.mutateAsync({
       name: data.name,
+      personalEmail: data.personalEmail || undefined,
       phone: data.phone || undefined,
       bio: data.bio || undefined,
       interests: data.interests
@@ -154,6 +176,7 @@ function ProfileTab({
         .map((s) => s.trim())
         .filter(Boolean),
       socialLinks,
+      workExperience,
     });
     setSaveSuccess(true);
     setTimeout(() => setSaveSuccess(false), 3000);
@@ -173,6 +196,10 @@ function ProfileTab({
     );
   };
 
+  const removeWorkExperience = (index: number) => {
+    setWorkExperience((prev) => prev.filter((_, i) => i !== index));
+  };
+
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="max-w-2xl space-y-6">
       <FormSection title="Personal Information" description="Update your personal details">
@@ -183,10 +210,16 @@ function ProfileTab({
           error={errors.name?.message}
         />
         <FormField
-          label="Email"
+          label="Institutional Email"
           value={profile.email}
           disabled
-          hint="Email cannot be changed"
+          hint="Institutional email cannot be changed"
+        />
+        <FormField
+          label="Personal Email (for notifications after graduation)"
+          type="email"
+          {...register("personalEmail")}
+          placeholder="your.personal@email.com"
         />
         <FormField
           label="Phone"
@@ -210,6 +243,9 @@ function ProfileTab({
           <FormField label="Enrollment Year" value={String(profile.enrollmentYear)} disabled />
           <FormField label="Expected Graduation" value={profile.expectedGraduation} disabled />
         </div>
+        <p className="text-xs text-muted-foreground">
+          Academic information is managed by the Registrar&apos;s Office. If any details are incorrect, please contact registrar@university.edu
+        </p>
       </FormSection>
 
       <FormSection title="Interests" description="Add your academic and professional interests">
@@ -257,6 +293,59 @@ function ProfileTab({
             Add social link
           </button>
         </div>
+        <p className="text-xs text-muted-foreground">
+          These links are visible to employers when you apply for positions through Career Services.
+        </p>
+      </FormSection>
+
+      <FormSection title="Work Experience" description="Add your professional experience">
+        <div className="space-y-4">
+          {workExperience.map((exp, i) => (
+            <div
+              key={exp.id}
+              className="rounded-lg border border-border bg-muted/30 p-4"
+            >
+              <div className="flex items-start justify-between">
+                <div>
+                  <h4 className="text-sm font-semibold">{exp.title}</h4>
+                  <p className="text-sm text-muted-foreground">{exp.company}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {exp.startDate} &mdash; {exp.current ? "Present" : exp.endDate || "N/A"}
+                  </p>
+                  {exp.description && (
+                    <p className="mt-2 text-sm text-foreground/80">{exp.description}</p>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => removeWorkExperience(i)}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-danger-light hover:text-danger"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          ))}
+
+          {showExpForm ? (
+            <WorkExperienceForm
+              onSave={(entry) => {
+                setWorkExperience((prev) => [...prev, entry]);
+                setShowExpForm(false);
+              }}
+              onCancel={() => setShowExpForm(false)}
+            />
+          ) : (
+            <button
+              type="button"
+              onClick={() => setShowExpForm(true)}
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-portal-accent hover:underline"
+            >
+              <Plus className="h-4 w-4" />
+              Add Experience
+            </button>
+          )}
+        </div>
       </FormSection>
 
       {/* Save result */}
@@ -288,6 +377,156 @@ function ProfileTab({
   );
 }
 
+// === Work Experience Form ===
+
+function WorkExperienceForm({
+  onSave,
+  onCancel,
+}: {
+  onSave: (entry: WorkExperience) => void;
+  onCancel: () => void;
+}) {
+  const [title, setTitle] = useState("");
+  const [company, setCompany] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [description, setDescription] = useState("");
+  const [current, setCurrent] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const handleSave = () => {
+    const newErrors: Record<string, string> = {};
+    if (!title.trim()) newErrors.title = "Title is required";
+    if (!company.trim()) newErrors.company = "Company is required";
+    if (!startDate) newErrors.startDate = "Start date is required";
+    if (!current && !endDate) newErrors.endDate = "End date is required unless currently working here";
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+
+    onSave({
+      id: crypto.randomUUID(),
+      title: title.trim(),
+      company: company.trim(),
+      startDate,
+      endDate: current ? undefined : endDate,
+      description: description.trim(),
+      current,
+    });
+  };
+
+  return (
+    <div className="space-y-4 rounded-lg border border-border bg-muted/30 p-4">
+      <h4 className="text-sm font-semibold flex items-center gap-2">
+        <Briefcase className="h-4 w-4" />
+        Add Work Experience
+      </h4>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Title <span className="text-danger">*</span></label>
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => { setTitle(e.target.value); setErrors((p) => ({ ...p, title: "" })); }}
+            placeholder="Software Engineer"
+            className={cn(
+              "flex h-10 w-full rounded-lg border bg-background px-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-portal-accent",
+              errors.title ? "border-danger" : "border-input"
+            )}
+          />
+          {errors.title && <p className="text-xs text-danger">{errors.title}</p>}
+        </div>
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Company <span className="text-danger">*</span></label>
+          <input
+            type="text"
+            value={company}
+            onChange={(e) => { setCompany(e.target.value); setErrors((p) => ({ ...p, company: "" })); }}
+            placeholder="Acme Corp"
+            className={cn(
+              "flex h-10 w-full rounded-lg border bg-background px-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-portal-accent",
+              errors.company ? "border-danger" : "border-input"
+            )}
+          />
+          {errors.company && <p className="text-xs text-danger">{errors.company}</p>}
+        </div>
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Start Date <span className="text-danger">*</span></label>
+          <input
+            type="month"
+            value={startDate}
+            onChange={(e) => { setStartDate(e.target.value); setErrors((p) => ({ ...p, startDate: "" })); }}
+            className={cn(
+              "flex h-10 w-full rounded-lg border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-portal-accent",
+              errors.startDate ? "border-danger" : "border-input"
+            )}
+          />
+          {errors.startDate && <p className="text-xs text-danger">{errors.startDate}</p>}
+        </div>
+        <div className="space-y-2">
+          <label className="text-sm font-medium">End Date {!current && <span className="text-danger">*</span>}</label>
+          <input
+            type="month"
+            value={endDate}
+            onChange={(e) => { setEndDate(e.target.value); setErrors((p) => ({ ...p, endDate: "" })); }}
+            disabled={current}
+            className={cn(
+              "flex h-10 w-full rounded-lg border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-portal-accent disabled:cursor-not-allowed disabled:opacity-50",
+              errors.endDate ? "border-danger" : "border-input"
+            )}
+          />
+          {errors.endDate && <p className="text-xs text-danger">{errors.endDate}</p>}
+        </div>
+      </div>
+      <div className="flex items-center gap-2">
+        <input
+          type="checkbox"
+          id="current-work"
+          checked={current}
+          onChange={(e) => {
+            setCurrent(e.target.checked);
+            if (e.target.checked) {
+              setEndDate("");
+              setErrors((p) => ({ ...p, endDate: "" }));
+            }
+          }}
+          className="h-4 w-4 rounded border-border text-portal-accent focus:ring-portal-accent"
+        />
+        <label htmlFor="current-work" className="text-sm">Currently working here</label>
+      </div>
+      <div className="space-y-2">
+        <label className="text-sm font-medium">Description</label>
+        <textarea
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          placeholder="Describe your role and responsibilities..."
+          rows={3}
+          className="flex min-h-[80px] w-full rounded-lg border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-portal-accent"
+        />
+      </div>
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={handleSave}
+          className="inline-flex items-center gap-1.5 rounded-lg bg-portal-accent px-4 py-2 text-sm font-medium text-portal-accent-foreground transition-colors hover:bg-portal-accent-hover"
+        >
+          <Check className="h-4 w-4" />
+          Save Experience
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // === Notifications Tab ===
 
 interface NotifToggleItem {
@@ -304,6 +543,9 @@ const notifToggles: NotifToggleItem[] = [
   { key: "deadlineReminders", label: "Deadline Reminders", description: "Reminders for upcoming deadlines" },
   { key: "jobMatches", label: "Job Matches", description: "Notifications about new job matches" },
   { key: "recommendations", label: "AI Recommendations", description: "New AI-powered recommendations" },
+  { key: "appealUpdates", label: "Appeal Updates", description: "Get notified when your appeals are reviewed or resolved" },
+  { key: "credentialIssued", label: "Credential Issued", description: "Get notified when new credentials are issued to you" },
+  { key: "applicationUpdates", label: "Application Updates", description: "Get notified when your job application status changes" },
 ];
 
 function NotificationsTab({
@@ -376,6 +618,66 @@ function NotificationsTab({
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+// === Security Tab ===
+
+function DataExportButton() {
+  const [requested, setRequested] = useState(false);
+  if (requested) {
+    return (
+      <div className="flex items-center gap-2 rounded-lg border border-success/30 bg-success-light px-4 py-2.5 text-sm text-success">
+        <CheckCircle2 className="h-4 w-4" />
+        Data export requested. You will receive an email when your data is ready.
+      </div>
+    );
+  }
+  return (
+    <button
+      type="button"
+      onClick={() => setRequested(true)}
+      className="inline-flex items-center gap-2 rounded-lg border border-border px-4 py-2.5 text-sm font-medium transition-colors hover:bg-muted"
+    >
+      <Download className="h-4 w-4" />
+      Download My Data
+    </button>
+  );
+}
+
+function SecurityTab() {
+  return (
+    <div className="max-w-2xl space-y-6">
+      <FormSection title="Password" description="Manage your account password">
+        <div className="rounded-lg border border-border bg-muted/30 p-4">
+          <div className="flex items-start gap-3">
+            <Shield className="mt-0.5 h-5 w-5 text-muted-foreground" />
+            <div>
+              <p className="text-sm">
+                Your password is managed by your institution&apos;s Single Sign-On (SSO) provider.
+                Visit your institution&apos;s identity portal to change it.
+              </p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Contact your IT department or visit your institution&apos;s SSO portal to update your credentials.
+              </p>
+            </div>
+          </div>
+        </div>
+      </FormSection>
+
+      <FormSection title="Privacy & Data" description="Manage your data and privacy settings">
+        <div className="space-y-4">
+          <div className="rounded-lg border border-border bg-muted/30 p-4">
+            <p className="text-sm text-foreground/80">
+              Under GDPR and applicable data protection laws, you have the right to access, export,
+              and request deletion of your personal data. Exported data will include your profile,
+              academic records, credentials, and activity history.
+            </p>
+          </div>
+          <DataExportButton />
+        </div>
+      </FormSection>
     </div>
   );
 }

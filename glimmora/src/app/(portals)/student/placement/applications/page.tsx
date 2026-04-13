@@ -7,8 +7,9 @@ import {
   ArrowLeft,
   ChevronDown,
   ChevronRight,
+  Loader2,
 } from "lucide-react";
-import { useApplications } from "@/lib/hooks/use-student";
+import { useApplications, useWithdrawApplication, useAcceptOffer, useDeclineOffer } from "@/lib/hooks/use-student";
 import { PageHeader } from "@/components/shared/misc/page-header";
 import { StatusBadge } from "@/components/shared/feedback/status-badge";
 import { DataTable } from "@/components/shared/data-table/data-table";
@@ -16,6 +17,7 @@ import { Timeline } from "@/components/shared/misc/timeline";
 import { TableSkeleton } from "@/components/shared/feedback/loading-skeleton";
 import { ErrorState } from "@/components/shared/feedback/error-state";
 import { EmptyState } from "@/components/shared/feedback/empty-state";
+import { ConfirmDialog } from "@/components/shared/feedback/confirm-dialog";
 import { cn } from "@/lib/utils/cn";
 import { formatDate, formatRelative } from "@/lib/utils/format";
 import { PIPELINE_STAGE_LABELS } from "@/lib/utils/constants";
@@ -35,12 +37,44 @@ function getStageVariant(stage: PipelineStage): "default" | "success" | "warning
   return map[stage] || "default";
 }
 
+function getStageGuidance(stage: PipelineStage): string {
+  const map: Record<PipelineStage, string> = {
+    matched: "You've been matched. Review this opportunity.",
+    applied: "Your application is with the Career Services team.",
+    interviewed: "Prepare for your interview. Review the job requirements.",
+    offered: "Review and respond to the offer.",
+    placed: "Congratulations! You're placed.",
+    rejected: "This opportunity didn't work out.",
+  };
+  return map[stage] || "";
+}
+
 const PIPELINE_ORDER: PipelineStage[] = ["matched", "applied", "interviewed", "offered", "placed"];
 
 export default function StudentPlacementApplicationsPage() {
   const [page, setPage] = useState(1);
   const { data, isLoading, isError, refetch } = useApplications({ page, pageSize: 20 });
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [withdrawTarget, setWithdrawTarget] = useState<{ id: string; title: string } | null>(null);
+  const [declineTarget, setDeclineTarget] = useState<{ id: string; title: string } | null>(null);
+
+  const withdrawMutation = useWithdrawApplication();
+  const acceptMutation = useAcceptOffer();
+  const declineMutation = useDeclineOffer();
+
+  const handleWithdraw = async () => {
+    if (withdrawTarget) {
+      await withdrawMutation.mutateAsync(withdrawTarget.id);
+      setWithdrawTarget(null);
+    }
+  };
+
+  const handleDecline = async () => {
+    if (declineTarget) {
+      await declineMutation.mutateAsync(declineTarget.id);
+      setDeclineTarget(null);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -143,9 +177,24 @@ export default function StudentPlacementApplicationsPage() {
                     <p className="truncate text-sm font-semibold">{app.jobTitle}</p>
                     <p className="text-xs text-muted-foreground">{app.company}</p>
                   </div>
-                  <StatusBadge variant={getStageVariant(app.status)} dot>
-                    {PIPELINE_STAGE_LABELS[app.status]}
-                  </StatusBadge>
+                  <div className="flex flex-col items-end gap-1">
+                    <StatusBadge variant={getStageVariant(app.status)} dot>
+                      {PIPELINE_STAGE_LABELS[app.status]}
+                    </StatusBadge>
+                    {/* Stage guidance text */}
+                    <p className="text-xs text-muted-foreground max-w-[220px] text-right">
+                      {getStageGuidance(app.status)}
+                    </p>
+                    {app.status === "rejected" && (
+                      <Link
+                        href="/student/placement/jobs"
+                        onClick={(e) => e.stopPropagation()}
+                        className="text-xs text-portal-accent hover:underline"
+                      >
+                        Browse similar jobs
+                      </Link>
+                    )}
+                  </div>
                   <div className="hidden text-right sm:block">
                     <p className="text-xs text-muted-foreground">Applied</p>
                     <p className="text-xs font-medium">{formatDate(app.appliedDate)}</p>
@@ -164,6 +213,47 @@ export default function StudentPlacementApplicationsPage() {
 
                 {isExpanded && (
                   <div className="border-t border-border px-5 py-4">
+                    {/* Action buttons based on status */}
+                    {(app.status === "applied" || app.status === "interviewed") && (
+                      <div className="mb-4 flex gap-2">
+                        <button
+                          onClick={() => setWithdrawTarget({ id: app.id, title: app.jobTitle })}
+                          disabled={withdrawMutation.isPending}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-danger/30 px-3 py-1.5 text-xs font-medium text-danger transition-colors hover:bg-danger-light disabled:opacity-50"
+                        >
+                          {withdrawMutation.isPending && (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          )}
+                          Withdraw Application
+                        </button>
+                      </div>
+                    )}
+
+                    {app.status === "offered" && (
+                      <div className="mb-4 flex gap-2">
+                        <button
+                          onClick={() => acceptMutation.mutate(app.id)}
+                          disabled={acceptMutation.isPending || declineMutation.isPending}
+                          className="inline-flex items-center gap-1.5 rounded-lg bg-success px-4 py-2 text-xs font-medium text-white transition-colors hover:bg-success/90 disabled:opacity-50"
+                        >
+                          {acceptMutation.isPending && (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          )}
+                          Accept Offer
+                        </button>
+                        <button
+                          onClick={() => setDeclineTarget({ id: app.id, title: app.jobTitle })}
+                          disabled={acceptMutation.isPending || declineMutation.isPending}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-danger bg-danger-light px-4 py-2 text-xs font-medium text-danger transition-colors hover:bg-danger/20 disabled:opacity-50"
+                        >
+                          {declineMutation.isPending && (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          )}
+                          Decline Offer
+                        </button>
+                      </div>
+                    )}
+
                     <h4 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                       Application Timeline
                     </h4>
@@ -213,6 +303,28 @@ export default function StudentPlacementApplicationsPage() {
           </div>
         </div>
       )}
+
+      {/* Withdraw Confirmation Dialog */}
+      <ConfirmDialog
+        open={!!withdrawTarget}
+        onOpenChange={(open) => !open && setWithdrawTarget(null)}
+        title="Withdraw Application"
+        description={`Are you sure you want to withdraw your application for "${withdrawTarget?.title}"? This action cannot be undone.`}
+        confirmLabel="Withdraw"
+        variant="danger"
+        onConfirm={handleWithdraw}
+      />
+
+      {/* Decline Offer Confirmation Dialog */}
+      <ConfirmDialog
+        open={!!declineTarget}
+        onOpenChange={(open) => !open && setDeclineTarget(null)}
+        title="Decline Offer"
+        description={`Are you sure you want to decline the offer for "${declineTarget?.title}"? This action cannot be undone.`}
+        confirmLabel="Decline Offer"
+        variant="danger"
+        onConfirm={handleDecline}
+      />
     </div>
   );
 }

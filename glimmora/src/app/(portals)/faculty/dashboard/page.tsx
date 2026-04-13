@@ -14,6 +14,7 @@ import {
   FileText,
   Quote,
   BookOpen,
+  Sparkles,
 } from "lucide-react";
 import { useFacultyDashboard } from "@/lib/hooks/use-faculty";
 import { StatCard } from "@/components/shared/misc/stat-card";
@@ -42,7 +43,7 @@ export default function FacultyDashboardPage() {
       <PageHeader
         icon={LayoutDashboard}
         title="Dashboard"
-        description="Teaching overview and alerts"
+        description="Overview of your students, courses, and research"
       />
 
       {/* KPI Row */}
@@ -85,34 +86,47 @@ export default function FacultyDashboardPage() {
           ) : (
             <div className="space-y-3">
               {data.upcomingClasses.map((cls) => (
-                <Link
+                <div
                   key={cls.courseId}
-                  href={`/faculty/courses/${cls.courseId}`}
-                  className="flex items-center justify-between rounded-lg border border-border px-4 py-3 transition-colors hover:bg-muted/50"
+                  className="rounded-lg border border-border px-4 py-3 transition-colors hover:bg-muted/50"
                 >
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <p className="truncate text-sm font-medium">{cls.courseName}</p>
-                      <StatusBadge variant="muted">{cls.courseCode}</StatusBadge>
+                  <div className="flex items-center justify-between">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <Link
+                          href={`/faculty/courses/${cls.courseId}`}
+                          className="truncate text-sm font-medium hover:underline"
+                        >
+                          {cls.courseName}
+                        </Link>
+                        <StatusBadge variant="muted">{cls.courseCode}</StatusBadge>
+                      </div>
+                      <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          {cls.time} - {cls.endTime}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <MapPin className="h-3 w-3" />
+                          {cls.room}
+                        </span>
+                        <span>{cls.totalStudents} students</span>
+                      </div>
                     </div>
-                    <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        {cls.time} - {cls.endTime}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <MapPin className="h-3 w-3" />
-                        {cls.room}
-                      </span>
-                      <span>{cls.totalStudents} students</span>
-                    </div>
+                    {cls.studentsAtRisk > 0 && (
+                      <StatusBadge variant="danger" dot>
+                        {cls.studentsAtRisk} at risk
+                      </StatusBadge>
+                    )}
                   </div>
-                  {cls.studentsAtRisk > 0 && (
-                    <StatusBadge variant="danger" dot>
-                      {cls.studentsAtRisk} at risk
-                    </StatusBadge>
-                  )}
-                </Link>
+                  <Link
+                    href="/faculty/briefings"
+                    className="mt-2 inline-flex items-center gap-1 text-xs text-portal-accent hover:underline"
+                  >
+                    <Sparkles className="h-3 w-3" />
+                    View Briefing
+                  </Link>
+                </div>
               ))}
             </div>
           )}

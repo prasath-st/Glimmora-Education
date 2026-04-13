@@ -12,7 +12,7 @@ import type {
   AiBriefing,
   FacultyProfile,
 } from "@/lib/api/types/faculty.types";
-import type { PaginationMeta, InterventionStatus } from "@/lib/api/types/common.types";
+import type { PaginationMeta } from "@/lib/api/types/common.types";
 import {
   generateFacultyDashboard,
   generateFacultyStudents,
@@ -38,6 +38,16 @@ let collaborations: FacultyCollaboration[] = generateCollaborations(15);
 let publications: FacultyPublication[] = generatePublications(20);
 let briefings: AiBriefing[] = generateBriefings();
 let profile: FacultyProfile = generateFacultyProfile();
+let facultyNotifPrefs = {
+  email: true,
+  push: true,
+  studentRiskAlerts: true,
+  interventionUpdates: true,
+  grantDeadlines: true,
+  briefingReady: true,
+  collaborationRequests: false,
+  citationAlerts: false,
+};
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -104,10 +114,16 @@ function validationError(details: Record<string, string[]>) {
 // ─── Handlers ─────────────────────────────────────────────────────────────────
 
 export const facultyHandlers = [
-  // ── Dashboard ─────────────────────────────────────────────────────────────
+  // ── Dashboard (live KPIs) ──────────────────────────────────────────────────
   http.get("/api/faculty/me/dashboard", async () => {
     await randomDelay();
-    return HttpResponse.json({ data: dashboard });
+    const liveData = {
+      ...dashboard,
+      atRiskStudentCount: students.filter((s) => s.riskLevel === "high").length,
+      activeInterventions: interventions.filter((i) => i.status === "active").length,
+      totalStudents: students.length,
+    };
+    return HttpResponse.json({ data: liveData });
   }),
 
   // ── Students ──────────────────────────────────────────────────────────────
@@ -244,7 +260,7 @@ export const facultyHandlers = [
     if (idx === -1) return notFound("Intervention");
 
     const body = (await request.json()) as {
-      status?: InterventionStatus;
+      status?: string;
       note?: { content: string };
       outcomes?: string;
     };
@@ -271,7 +287,7 @@ export const facultyHandlers = [
     const updated = { ...current, updatedAt: now };
 
     if (body.status) {
-      updated.status = body.status;
+      updated.status = body.status as Intervention["status"];
       if (body.status === "completed" || body.status === "abandoned") {
         updated.endDate = now;
       }
@@ -459,6 +475,92 @@ export const facultyHandlers = [
     briefings = briefings.map((b) => (b.courseId === courseId ? updatedBriefing : b));
 
     return HttpResponse.json({ data: updatedBriefing });
+  }),
+
+  // ── Grant Status Change ───────────────────────────────────────────────────
+  http.patch("/api/faculty/me/grants/:grantId", async ({ params, request }) => {
+    await randomDelay();
+    const grantId = params.grantId as string;
+    const idx = grants.findIndex((g) => g.id === grantId);
+    if (idx === -1) return notFound("Grant");
+
+    const body = (await request.json()) as { status?: string };
+    if (!body.status || !["discovered", "interested", "drafting", "submitted", "funded", "rejected"].includes(body.status)) {
+      return validationError({ status: ["Status must be one of: discovered, interested, drafting, submitted, funded, rejected"] });
+    }
+
+    const now = new Date().toISOString();
+    grants = grants.map((g) =>
+      g.id === grantId ? { ...g, status: body.status as FacultyGrant["status"] } : g
+    );
+
+    return HttpResponse.json({ data: grants.find((g) => g.id === grantId) });
+  }),
+
+  // ── Notification Preferences ─────────────────────────────────────────────
+  http.get("/api/faculty/me/notification-preferences", async () => {
+    await randomDelay();
+    return HttpResponse.json({ data: facultyNotifPrefs });
+  }),
+
+  http.patch("/api/faculty/me/notification-preferences", async ({ request }) => {
+    await randomDelay();
+    const body = (await request.json()) as Record<string, boolean>;
+
+    for (const key of Object.keys(body)) {
+      if (key in facultyNotifPrefs) {
+        (facultyNotifPrefs as Record<string, boolean>)[key] = body[key];
+      }
+    }
+
+    return HttpResponse.json({ data: facultyNotifPrefs });
+  }),
+
+  // ── Intervention Note Edit/Delete ────────────────────────────────────────
+  http.patch("/api/faculty/me/interventions/:interventionId/notes/:noteIndex", async ({ params, request }) => {
+    await randomDelay();
+    const interventionId = params.interventionId as string;
+    const noteIndex = Number(params.noteIndex);
+    const intervention = interventions.find((i) => i.id === interventionId);
+    if (!intervention) return notFound("Intervention");
+    if (isNaN(noteIndex) || noteIndex < 0 || noteIndex >= intervention.notes.length) {
+      return notFound("Note");
+    }
+
+    const body = (await request.json()) as { content: string };
+    if (!body.content || body.content.trim().length < 5) {
+      return validationError({ content: ["Note must be at least 5 characters"] });
+    }
+
+    const now = new Date().toISOString();
+    const updatedNotes = [...intervention.notes];
+    updatedNotes[noteIndex] = { ...updatedNotes[noteIndex], content: body.content, date: now };
+
+    interventions = interventions.map((i) =>
+      i.id === interventionId ? { ...i, notes: updatedNotes, updatedAt: now } : i
+    );
+
+    return HttpResponse.json({ data: interventions.find((i) => i.id === interventionId) });
+  }),
+
+  http.delete("/api/faculty/me/interventions/:interventionId/notes/:noteIndex", async ({ params }) => {
+    await randomDelay();
+    const interventionId = params.interventionId as string;
+    const noteIndex = Number(params.noteIndex);
+    const intervention = interventions.find((i) => i.id === interventionId);
+    if (!intervention) return notFound("Intervention");
+    if (isNaN(noteIndex) || noteIndex < 0 || noteIndex >= intervention.notes.length) {
+      return notFound("Note");
+    }
+
+    const now = new Date().toISOString();
+    const updatedNotes = intervention.notes.filter((_, i) => i !== noteIndex);
+
+    interventions = interventions.map((i) =>
+      i.id === interventionId ? { ...i, notes: updatedNotes, updatedAt: now } : i
+    );
+
+    return HttpResponse.json({ data: interventions.find((i) => i.id === interventionId) });
   }),
 
   // ── Profile ───────────────────────────────────────────────────────────────

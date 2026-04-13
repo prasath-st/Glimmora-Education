@@ -101,6 +101,7 @@ export interface FacultyCourse extends Identifiable, Timestamps {
   attendanceRate: number;
   schedule: string;
   room: string;
+  lmsUrl?: string;
 }
 
 export interface FacultyCourseDetail extends FacultyCourse {
@@ -177,4 +178,15 @@ export interface FacultyProfile {
   researchInterests: string[];
   expertise: string[];
   socialLinks: { platform: string; url: string }[];
+}
+
+export interface FacultyNotificationPreferences {
+  email: boolean;
+  push: boolean;
+  studentRiskAlerts: boolean;
+  interventionUpdates: boolean;
+  grantDeadlines: boolean;
+  briefingReady: boolean;
+  collaborationRequests: boolean;
+  citationAlerts: boolean;
 }

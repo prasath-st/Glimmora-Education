@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Users, AlertTriangle, AlertCircle } from "lucide-react";
+import { Users, AlertTriangle, AlertCircle, TrendingDown, TrendingUp, Minus } from "lucide-react";
 import { useFacultyStudents } from "@/lib/hooks/use-faculty";
 import { PageHeader } from "@/components/shared/misc/page-header";
 import { SearchInput } from "@/components/shared/forms/search-input";
@@ -60,20 +60,30 @@ const columns: ColumnDef<FacultyStudentListItem, unknown>[] = [
   {
     accessorKey: "attendanceRate",
     header: "Attendance",
-    cell: ({ row }) => (
-      <span
-        className={cn(
-          "font-medium",
-          row.original.attendanceRate < 75
-            ? "text-danger"
-            : row.original.attendanceRate < 85
-            ? "text-warning"
-            : "text-success"
-        )}
-      >
-        {formatPercentage(row.original.attendanceRate, 0)}
-      </span>
-    ),
+    cell: ({ row }) => {
+      const rate = row.original.attendanceRate;
+      return (
+        <span
+          className={cn(
+            "inline-flex items-center gap-1 font-medium",
+            rate < 75
+              ? "text-danger"
+              : rate < 85
+              ? "text-warning"
+              : "text-success"
+          )}
+        >
+          {formatPercentage(rate, 0)}
+          {rate < 75 ? (
+            <TrendingDown className="h-3.5 w-3.5" />
+          ) : rate < 85 ? (
+            <Minus className="h-3.5 w-3.5" />
+          ) : (
+            <TrendingUp className="h-3.5 w-3.5" />
+          )}
+        </span>
+      );
+    },
   },
   {
     accessorKey: "lastActivity",

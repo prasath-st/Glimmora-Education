@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import {
   Bell,
@@ -15,6 +16,13 @@ import { useAuthStore } from "@/lib/stores/auth-store";
 import { useUiStore } from "@/lib/stores/ui-store";
 import { PORTALS, type PortalRole } from "@/config/portals";
 import { cn } from "@/lib/utils/cn";
+import {
+  useNotifications,
+  useMarkNotificationRead,
+  useMarkAllNotificationsRead,
+} from "@/lib/hooks/use-student";
+import { formatRelative } from "@/lib/utils/format";
+import type { Notification } from "@/lib/api/types/student.types";
 
 function getBreadcrumbs(pathname: string): { label: string; href: string }[] {
   const segments = pathname.split("/").filter(Boolean);
@@ -53,6 +61,7 @@ export function Header() {
   const { theme, setTheme } = useTheme();
 
   const breadcrumbs = getBreadcrumbs(pathname);
+  const isStudentPortal = pathname.startsWith("/student");
 
   const handleLogout = async () => {
     await logout();
@@ -72,7 +81,7 @@ export function Header() {
 
         <nav className="hidden items-center gap-1 text-sm sm:flex">
           {breadcrumbs.map((crumb, i) => (
-            <div key={crumb.href} className="flex items-center gap-1">
+            <div key={`${crumb.href}-${i}`} className="flex items-center gap-1">
               {i > 0 && (
                 <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
               )}
@@ -114,10 +123,14 @@ export function Header() {
         </button>
 
         {/* Notifications */}
-        <button className="relative flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
-          <Bell className="h-4 w-4" />
-          <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-danger" />
-        </button>
+        {isStudentPortal ? (
+          <NotificationDropdown />
+        ) : (
+          <button className="relative flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+            <Bell className="h-4 w-4" />
+            <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-danger" />
+          </button>
+        )}
 
         {/* User menu */}
         <div className="flex items-center gap-3 border-l border-border pl-3 ml-1">
@@ -140,5 +153,157 @@ export function Header() {
         </div>
       </div>
     </header>
+  );
+}
+
+// === Notification Dropdown (Student Portal Only) ===
+
+function NotificationDropdown() {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
+
+  const notificationsQuery = useNotifications({ pageSize: 5 });
+  const markRead = useMarkNotificationRead();
+  const markAllRead = useMarkAllNotificationsRead();
+
+  const notifications = notificationsQuery.data || [];
+  const unreadCount = notifications.filter((n) => !n.read).length;
+
+  // Close on click outside
+  useEffect(() => {
+    if (!isOpen) return;
+
+    function handleClickOutside(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isOpen]);
+
+  // Close on Escape
+  useEffect(() => {
+    if (!isOpen) return;
+
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") setIsOpen(false);
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen]);
+
+  const handleNotificationClick = (notification: Notification) => {
+    if (!notification.read) {
+      markRead.mutate(notification.id);
+    }
+    if (notification.linkUrl) {
+      router.push(notification.linkUrl);
+    }
+    setIsOpen(false);
+  };
+
+  const handleMarkAllRead = () => {
+    markAllRead.mutate();
+  };
+
+  return (
+    <div ref={dropdownRef} className="relative">
+      <button
+        onClick={() => setIsOpen((prev) => !prev)}
+        className="relative flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+      >
+        <Bell className="h-4 w-4" />
+        {unreadCount > 0 && (
+          <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-danger px-1 text-[10px] font-bold text-white">
+            {unreadCount > 9 ? "9+" : unreadCount}
+          </span>
+        )}
+      </button>
+
+      {isOpen && (
+        <div className="absolute right-0 top-full mt-2 w-80 rounded-xl border border-border bg-card shadow-lg">
+          {/* Header */}
+          <div className="flex items-center justify-between border-b border-border px-4 py-3">
+            <h3 className="text-sm font-semibold">Notifications</h3>
+            {unreadCount > 0 && (
+              <button
+                onClick={handleMarkAllRead}
+                disabled={markAllRead.isPending}
+                className="text-xs font-medium text-portal-accent hover:underline disabled:opacity-50"
+              >
+                Mark all read
+              </button>
+            )}
+          </div>
+
+          {/* Notification list */}
+          <div className="max-h-80 overflow-y-auto">
+            {notifications.length === 0 ? (
+              <div className="px-4 py-8 text-center">
+                <Bell className="mx-auto h-8 w-8 text-muted-foreground/40" />
+                <p className="mt-2 text-sm text-muted-foreground">
+                  No notifications yet
+                </p>
+              </div>
+            ) : (
+              notifications.map((notification) => (
+                <button
+                  key={notification.id}
+                  onClick={() => handleNotificationClick(notification)}
+                  className={cn(
+                    "flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/50",
+                    "border-b border-border last:border-b-0"
+                  )}
+                >
+                  {/* Unread indicator */}
+                  <div className="mt-1.5 flex-shrink-0">
+                    {!notification.read ? (
+                      <span className="block h-2 w-2 rounded-full bg-portal-accent" />
+                    ) : (
+                      <span className="block h-2 w-2" />
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p
+                      className={cn(
+                        "truncate text-sm",
+                        !notification.read ? "font-semibold" : "font-medium text-muted-foreground"
+                      )}
+                    >
+                      {notification.title}
+                    </p>
+                    <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">
+                      {notification.message}
+                    </p>
+                    <p className="mt-1 text-[11px] text-muted-foreground/70">
+                      {formatRelative(notification.createdAt)}
+                    </p>
+                  </div>
+                </button>
+              ))
+            )}
+          </div>
+
+          {/* Footer */}
+          {notifications.length > 0 && (
+            <div className="border-t border-border px-4 py-2.5">
+              <button
+                onClick={() => {
+                  setIsOpen(false);
+                  router.push("/student/dashboard");
+                }}
+                className="w-full text-center text-xs font-medium text-portal-accent hover:underline"
+              >
+                View all on dashboard
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
   );
 }

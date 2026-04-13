@@ -136,7 +136,7 @@ export function RadarChartDisplay({
 
           {hasBenchmark && (
             <Radar
-              name="Benchmark"
+              name="Program Average"
               dataKey="benchmark"
               stroke={BENCHMARK_COLOR}
               strokeWidth={1.5}

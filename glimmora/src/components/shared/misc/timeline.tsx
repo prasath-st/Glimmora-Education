@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { cn } from "@/lib/utils/cn";
 import type { LucideIcon } from "lucide-react";
 
@@ -10,6 +11,7 @@ interface TimelineItem {
   date: string;
   icon?: LucideIcon;
   variant?: "default" | "success" | "warning" | "danger" | "info";
+  linkUrl?: string;
 }
 
 interface TimelineProps {
@@ -63,7 +65,16 @@ export function Timeline({ items, className }: TimelineProps) {
 
             {/* Content */}
             <div className="flex-1 pt-0">
-              <p className="text-sm font-medium">{item.title}</p>
+              {item.linkUrl ? (
+                <Link
+                  href={item.linkUrl}
+                  className="text-sm font-medium text-primary hover:underline"
+                >
+                  {item.title}
+                </Link>
+              ) : (
+                <p className="text-sm font-medium">{item.title}</p>
+              )}
               {item.description && (
                 <p className="mt-0.5 text-sm text-muted-foreground">
                   {item.description}

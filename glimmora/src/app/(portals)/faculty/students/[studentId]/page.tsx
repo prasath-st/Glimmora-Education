@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -53,6 +54,7 @@ export default function FacultyStudentDetailPage({
   params: Promise<{ studentId: string }>;
 }) {
   const { studentId } = use(params);
+  const router = useRouter();
   const { data: student, isLoading, isError, refetch } = useFacultyStudentDetail(studentId);
   const [activeTab, setActiveTab] = useState<TabId>("overview");
 
@@ -179,6 +181,11 @@ export default function FacultyStudentDetailPage({
               <span>{student.program}</span>
               <span>Semester {student.semester}</span>
             </div>
+            {student.courses && student.courses.length > 0 && (
+              <p className="mt-1 text-xs text-muted-foreground">
+                Student in: {student.courses.join(", ")}
+              </p>
+            )}
           </div>
           <div className="text-right">
             <p className="text-xs text-muted-foreground">GPA</p>
@@ -268,6 +275,12 @@ export default function FacultyStudentDetailPage({
                     </StatusBadge>
                     <p className="mt-2 text-sm">{alert.message}</p>
                     <p className="mt-1 text-xs text-muted-foreground">{formatDate(alert.date)}</p>
+                    <Link
+                      href={`/faculty/interventions/new?studentId=${studentId}`}
+                      className="mt-2 inline-block text-xs text-portal-accent hover:underline"
+                    >
+                      Create Intervention
+                    </Link>
                   </div>
                 ))}
               </div>
@@ -348,7 +361,7 @@ export default function FacultyStudentDetailPage({
               description="No interventions have been created for this student yet."
               action={{
                 label: "Create Intervention",
-                onClick: () => {},
+                onClick: () => router.push(`/faculty/interventions/new?studentId=${studentId}`),
               }}
             />
           ) : (

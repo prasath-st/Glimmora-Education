@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import Link from "next/link";
 import {
   LayoutDashboard,
   GraduationCap,
@@ -9,8 +9,12 @@ import {
   Clock,
   X,
   Activity,
+  BrainCircuit,
+  Briefcase,
+  Scale,
+  Sparkles,
 } from "lucide-react";
-import { useStudentDashboard } from "@/lib/hooks/use-student";
+import { useStudentDashboard, useDismissRiskAlert } from "@/lib/hooks/use-student";
 import { KpiCard } from "@/components/shared/charts/kpi-card";
 import { RadarChartDisplay } from "@/components/shared/charts/radar-chart";
 import { PageHeader } from "@/components/shared/misc/page-header";
@@ -23,9 +27,16 @@ import { cn } from "@/lib/utils/cn";
 import { formatGpa, formatPercentage, formatRelative, formatDate } from "@/lib/utils/format";
 import type { RiskAlert } from "@/lib/api/types/student.types";
 
+const quickActions = [
+  { title: "Continue Learning", href: "/student/tutor", icon: BrainCircuit },
+  { title: "Browse Jobs", href: "/student/placement/jobs", icon: Briefcase },
+  { title: "New Appeal", href: "/student/appeals/new", icon: Scale },
+  { title: "View Recommendations", href: "/student/recommendations", icon: Sparkles },
+] as const;
+
 export default function StudentDashboardPage() {
   const { data, isLoading, isError, refetch } = useStudentDashboard();
-  const [dismissedAlerts, setDismissedAlerts] = useState<Set<string>>(new Set());
+  const dismissAlert = useDismissRiskAlert();
 
   if (isLoading) return <DashboardSkeleton />;
   if (isError || !data) return <ErrorState onRetry={() => refetch()} />;
@@ -45,8 +56,6 @@ export default function StudentDashboardPage() {
     benchmark: s.benchmark,
   }));
 
-  const visibleAlerts = data.riskAlerts.filter((a) => !dismissedAlerts.has(a.id));
-
   const activityVariantMap: Record<string, "default" | "success" | "warning" | "danger" | "info"> = {
     grade: "success",
     credential: "info",
@@ -61,6 +70,7 @@ export default function StudentDashboardPage() {
     description: a.description,
     date: formatRelative(a.timestamp),
     variant: activityVariantMap[a.type] || ("default" as const),
+    linkUrl: a.linkUrl,
   }));
 
   return (
@@ -68,7 +78,7 @@ export default function StudentDashboardPage() {
       <PageHeader
         icon={LayoutDashboard}
         title="Dashboard"
-        description="Your academic overview at a glance"
+        description={`Welcome back, ${data.studentName}`}
       />
 
       {/* KPI Row */}
@@ -98,6 +108,30 @@ export default function StudentDashboardPage() {
             <RiskIndicator level={data.riskLevel} size="md" />
           </div>
         </div>
+      </div>
+
+      {/* Last Synced */}
+      <p className="text-xs text-muted-foreground">
+        Last synced: {formatRelative(data.lastSyncedAt)}
+      </p>
+
+      {/* Quick Actions */}
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+        {quickActions.map((action) => {
+          const Icon = action.icon;
+          return (
+            <Link
+              key={action.href}
+              href={action.href}
+              className="group flex flex-col items-center gap-3 rounded-xl border border-border bg-card p-5 text-center transition-all hover:border-primary/30 hover:shadow-md"
+            >
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary transition-colors group-hover:bg-primary/20">
+                <Icon className="h-5 w-5" />
+              </div>
+              <span className="text-sm font-medium">{action.title}</span>
+            </Link>
+          );
+        })}
       </div>
 
       {/* Two-column: Deadlines + Radar */}
@@ -142,24 +176,34 @@ export default function StudentDashboardPage() {
         </div>
 
         {/* Skill Radar */}
-        <RadarChartDisplay title="Skill Snapshot" data={radarData} />
+        <div>
+          <Link href="/student/skills" className="block transition-shadow hover:shadow-md rounded-xl">
+            <RadarChartDisplay title="Skill Snapshot" data={radarData} />
+          </Link>
+          <div className="mt-2 text-right">
+            <Link
+              href="/student/skills"
+              className="text-xs font-medium text-primary hover:underline"
+            >
+              View all skills &rarr;
+            </Link>
+          </div>
+        </div>
       </div>
 
       {/* Risk Alerts */}
-      {visibleAlerts.length > 0 && (
+      {data.riskAlerts.length > 0 && (
         <div className="space-y-3">
           <div className="flex items-center gap-2">
             <AlertTriangle className="h-4 w-4 text-warning" />
             <h2 className="text-sm font-semibold">Risk Alerts</h2>
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {visibleAlerts.map((alert) => (
+            {data.riskAlerts.map((alert) => (
               <RiskAlertCard
                 key={alert.id}
                 alert={alert}
-                onDismiss={() =>
-                  setDismissedAlerts((prev) => new Set(prev).add(alert.id))
-                }
+                onDismiss={() => dismissAlert.mutate(alert.id)}
               />
             ))}
           </div>
@@ -215,12 +259,28 @@ function RiskAlertCard({
         </StatusBadge>
       </div>
       <p className="mt-2 text-sm">{alert.message}</p>
+      {alert.description && (
+        <p className="mt-1 text-sm text-muted-foreground">{alert.description}</p>
+      )}
       {alert.courseName && (
         <p className="mt-1 text-xs text-muted-foreground">{alert.courseName}</p>
       )}
       <p className="mt-2 text-xs text-muted-foreground">
         {formatRelative(alert.triggeredAt)}
       </p>
+      {(alert.severity === "high" || alert.severity === "medium") && (
+        <p className="mt-1 text-xs text-muted-foreground italic">
+          Your academic advisor has been notified.
+        </p>
+      )}
+      {alert.actionLabel && alert.actionUrl && (
+        <Link
+          href={alert.actionUrl}
+          className="mt-3 inline-flex items-center rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+        >
+          {alert.actionLabel}
+        </Link>
+      )}
     </div>
   );
 }

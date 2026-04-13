@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { BadgeCheck, Award, FileText, Shield } from "lucide-react";
+import { BadgeCheck, Award, FileText, Shield, HelpCircle } from "lucide-react";
 import { useCredentials } from "@/lib/hooks/use-student";
 import { PageHeader } from "@/components/shared/misc/page-header";
 import { StatusBadge } from "@/components/shared/feedback/status-badge";
@@ -161,6 +161,20 @@ export default function StudentCredentialsPage() {
           })}
         </div>
       )}
+
+      {/* Help Link */}
+      <div className="flex items-start gap-2 rounded-xl border border-border bg-muted/30 px-4 py-3">
+        <HelpCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-muted-foreground" />
+        <p className="text-sm text-muted-foreground">
+          Missing a credential? If you completed a course or certification and don&apos;t see it here, contact the Registrar&apos;s Office at{" "}
+          <a
+            href="mailto:registrar@university.edu"
+            className="font-medium text-portal-accent hover:underline"
+          >
+            registrar@university.edu
+          </a>
+        </p>
+      </div>
     </div>
   );
 }

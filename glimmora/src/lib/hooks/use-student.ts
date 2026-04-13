@@ -18,6 +18,8 @@ import type {
   Appeal,
   StudentProfile,
   NotificationPreferences,
+  Notification,
+  DismissReason,
 } from "@/lib/api/types/student.types";
 import type { PaginationMeta } from "@/lib/api/types/common.types";
 
@@ -27,6 +29,17 @@ export function useStudentDashboard() {
     queryKey: ["student", "dashboard"],
     queryFn: () => api.get<StudentDashboard>("/api/students/me/dashboard"),
     select: (res) => res.data,
+  });
+}
+
+export function useDismissRiskAlert() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (alertId: string) =>
+      api.post(`/api/students/me/risk-alerts/${alertId}/dismiss`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["student", "dashboard"] });
+    },
   });
 }
 
@@ -87,6 +100,17 @@ export function useSkillGaps() {
   });
 }
 
+export function useAddSkill() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { skillName: string; category: string; score: number }) =>
+      api.post<SkillScore>("/api/students/me/skills", data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["student", "skills"] });
+    },
+  });
+}
+
 // === Credentials ===
 export function useCredentials() {
   return useQuery({
@@ -141,12 +165,34 @@ export function useJobDetail(jobId: string) {
 export function useApplyToJob() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (jobId: string) =>
-      api.post<Application>("/api/students/me/applications", { jobId }),
+    mutationFn: ({ jobId, note }: { jobId: string; note?: string }) =>
+      api.post<Application>("/api/students/me/applications", { jobId, note }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["student", "jobs"] });
       queryClient.invalidateQueries({ queryKey: ["student", "applications"] });
       queryClient.invalidateQueries({ queryKey: ["student", "dashboard"] });
+    },
+  });
+}
+
+export function useSaveJob() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (jobId: string) =>
+      api.post(`/api/students/me/jobs/${jobId}/save`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["student", "jobs"] });
+    },
+  });
+}
+
+export function useUnsaveJob() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (jobId: string) =>
+      api.delete(`/api/students/me/jobs/${jobId}/save`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["student", "jobs"] });
     },
   });
 }
@@ -164,6 +210,42 @@ export function useApplications(params?: { page?: number; pageSize?: number }) {
   });
 }
 
+export function useWithdrawApplication() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (appId: string) =>
+      api.post(`/api/students/me/applications/${appId}/withdraw`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["student", "applications"] });
+      queryClient.invalidateQueries({ queryKey: ["student", "dashboard"] });
+    },
+  });
+}
+
+export function useAcceptOffer() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (appId: string) =>
+      api.post(`/api/students/me/applications/${appId}/accept`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["student", "applications"] });
+      queryClient.invalidateQueries({ queryKey: ["student", "dashboard"] });
+    },
+  });
+}
+
+export function useDeclineOffer() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (appId: string) =>
+      api.post(`/api/students/me/applications/${appId}/decline`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["student", "applications"] });
+      queryClient.invalidateQueries({ queryKey: ["student", "dashboard"] });
+    },
+  });
+}
+
 // === Portfolio ===
 export function usePortfolio() {
   return useQuery({
@@ -178,6 +260,17 @@ export function useAddPortfolioItem() {
   return useMutation({
     mutationFn: (item: Omit<PortfolioItem, "id" | "createdAt" | "updatedAt">) =>
       api.post<PortfolioItem>("/api/students/me/portfolio", item),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["student", "portfolio"] });
+    },
+  });
+}
+
+export function useEditPortfolioItem() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ itemId, data }: { itemId: string; data: Partial<PortfolioItem> }) =>
+      api.patch<PortfolioItem>(`/api/students/me/portfolio/${itemId}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["student", "portfolio"] });
     },
@@ -218,7 +311,7 @@ export function useApproveRecommendation() {
 export function useDismissRecommendation() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, reason }: { id: string; reason: string }) =>
+    mutationFn: ({ id, reason }: { id: string; reason: DismissReason }) =>
       api.post(`/api/students/me/recommendations/${id}/dismiss`, { reason }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["student", "recommendations"] });
@@ -250,6 +343,30 @@ export function useCreateAppeal() {
     mutationFn: (data: { courseId: string; assessmentId: string; reason: string }) =>
       api.post<Appeal>("/api/students/me/appeals", data),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["student", "appeals"] });
+    },
+  });
+}
+
+export function useRespondToAppeal() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ appealId, response }: { appealId: string; response: string }) =>
+      api.post(`/api/students/me/appeals/${appealId}/respond`, { response }),
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: ["student", "appeal", vars.appealId] });
+      queryClient.invalidateQueries({ queryKey: ["student", "appeals"] });
+    },
+  });
+}
+
+export function useEscalateAppeal() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ appealId, reason }: { appealId: string; reason: string }) =>
+      api.post(`/api/students/me/appeals/${appealId}/escalate`, { reason }),
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: ["student", "appeal", vars.appealId] });
       queryClient.invalidateQueries({ queryKey: ["student", "appeals"] });
     },
   });
@@ -290,6 +407,43 @@ export function useUpdateNotificationPreferences() {
       api.patch<NotificationPreferences>("/api/students/me/notification-preferences", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["student", "notification-preferences"] });
+    },
+  });
+}
+
+// === Notifications ===
+export function useNotifications(params?: { status?: string; page?: number; pageSize?: number }) {
+  const searchParams = new URLSearchParams();
+  if (params?.status) searchParams.set("status", params.status);
+  if (params?.page) searchParams.set("page", String(params.page));
+  if (params?.pageSize) searchParams.set("pageSize", String(params.pageSize));
+  const qs = searchParams.toString();
+
+  return useQuery({
+    queryKey: ["student", "notifications", params],
+    queryFn: () => api.get<Notification[]>(`/api/students/me/notifications${qs ? `?${qs}` : ""}`),
+    select: (res) => res.data,
+  });
+}
+
+export function useMarkNotificationRead() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      api.patch(`/api/students/me/notifications/${id}/read`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["student", "notifications"] });
+    },
+  });
+}
+
+export function useMarkAllNotificationsRead() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      api.post("/api/students/me/notifications/mark-all-read"),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["student", "notifications"] });
     },
   });
 }

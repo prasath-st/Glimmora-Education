@@ -14,6 +14,8 @@ import { useForm } from "react-hook-form";
 import {
   useFacultyProfile,
   useUpdateFacultyProfile,
+  useFacultyNotificationPreferences,
+  useUpdateFacultyNotificationPreferences,
 } from "@/lib/hooks/use-faculty";
 import { PageHeader } from "@/components/shared/misc/page-header";
 import { FormField, FormTextarea } from "@/components/shared/forms/form-field";
@@ -21,7 +23,7 @@ import { FormSection } from "@/components/shared/forms/form-section";
 import { DashboardSkeleton } from "@/components/shared/feedback/loading-skeleton";
 import { ErrorState } from "@/components/shared/feedback/error-state";
 import { cn } from "@/lib/utils/cn";
-import type { FacultyProfile } from "@/lib/api/types/faculty.types";
+import type { FacultyProfile, FacultyNotificationPreferences } from "@/lib/api/types/faculty.types";
 
 type TabId = "profile" | "preferences";
 
@@ -273,6 +275,9 @@ function ProfileTab({ profile }: { profile: FacultyProfile }) {
             <Plus className="h-4 w-4" />
             Add social link
           </button>
+          <p className="text-xs text-muted-foreground mt-2">
+            Social links help collaborators find your research profiles.
+          </p>
         </div>
       </FormSection>
 
@@ -308,7 +313,7 @@ function ProfileTab({ profile }: { profile: FacultyProfile }) {
 // === Preferences Tab ===
 
 interface NotifToggleItem {
-  key: string;
+  key: keyof FacultyNotificationPreferences;
   label: string;
   description: string;
 }
@@ -316,75 +321,85 @@ interface NotifToggleItem {
 const notifToggles: NotifToggleItem[] = [
   { key: "email", label: "Email Notifications", description: "Receive notifications via email" },
   { key: "push", label: "Push Notifications", description: "Receive push notifications in browser" },
-  { key: "riskAlerts", label: "Student Risk Alerts", description: "Get notified when student risk levels change" },
+  { key: "studentRiskAlerts", label: "Student Risk Alerts", description: "Get notified when student risk levels change" },
   { key: "interventionUpdates", label: "Intervention Updates", description: "Updates on intervention progress" },
   { key: "grantDeadlines", label: "Grant Deadlines", description: "Reminders for upcoming grant deadlines" },
   { key: "briefingReady", label: "Briefing Ready", description: "Notification when AI briefings are ready" },
   { key: "collaborationRequests", label: "Collaboration Requests", description: "New collaboration opportunities" },
-  { key: "publicationCitations", label: "Citation Alerts", description: "Notifications when your publications are cited" },
+  { key: "citationAlerts", label: "Citation Alerts", description: "Notifications when your publications are cited" },
 ];
 
 function PreferencesTab() {
-  const [localPrefs, setLocalPrefs] = useState<Record<string, boolean>>(() =>
-    Object.fromEntries(notifToggles.map((t) => [t.key, true]))
-  );
-  const [savingKey, setSavingKey] = useState<string | null>(null);
+  const prefsQuery = useFacultyNotificationPreferences();
+  const updatePrefs = useUpdateFacultyNotificationPreferences();
   const [lastSaved, setLastSaved] = useState<string | null>(null);
 
-  const handleToggle = async (key: string) => {
-    const newValue = !localPrefs[key];
-    setLocalPrefs((prev) => ({ ...prev, [key]: newValue }));
-    setSavingKey(key);
-    // Simulate save
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    setSavingKey(null);
-    setLastSaved(key);
-    setTimeout(() => setLastSaved(null), 2000);
+  if (prefsQuery.isLoading) return <DashboardSkeleton />;
+  if (prefsQuery.isError) return <ErrorState onRetry={() => prefsQuery.refetch()} />;
+
+  const prefs = prefsQuery.data as FacultyNotificationPreferences;
+
+  const handleToggle = async (key: keyof FacultyNotificationPreferences) => {
+    const newValue = !prefs[key];
+    updatePrefs.mutate(
+      { [key]: newValue },
+      {
+        onSuccess: () => {
+          setLastSaved(key);
+          setTimeout(() => setLastSaved(null), 2000);
+        },
+      }
+    );
   };
 
   return (
     <div className="max-w-2xl space-y-1">
       <div className="rounded-xl border border-border bg-card overflow-hidden">
-        {notifToggles.map((toggle, index) => (
-          <div
-            key={toggle.key}
-            className={cn(
-              "flex items-center justify-between px-6 py-4",
-              index < notifToggles.length - 1 && "border-b border-border"
-            )}
-          >
-            <div>
-              <p className="text-sm font-medium">{toggle.label}</p>
-              <p className="text-xs text-muted-foreground">{toggle.description}</p>
-            </div>
-            <div className="flex items-center gap-2">
-              {savingKey === toggle.key && (
-                <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+        {notifToggles.map((toggle, index) => {
+          const isSaving = updatePrefs.isPending && updatePrefs.variables?.[toggle.key] !== undefined;
+          const isChecked = prefs[toggle.key];
+
+          return (
+            <div
+              key={toggle.key}
+              className={cn(
+                "flex items-center justify-between px-6 py-4",
+                index < notifToggles.length - 1 && "border-b border-border"
               )}
-              {lastSaved === toggle.key && (
-                <Check className="h-3.5 w-3.5 text-success" />
-              )}
-              <button
-                onClick={() => handleToggle(toggle.key)}
-                disabled={savingKey === toggle.key}
-                role="switch"
-                aria-checked={localPrefs[toggle.key]}
-                className={cn(
-                  "relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-portal-accent focus:ring-offset-2",
-                  localPrefs[toggle.key] ? "bg-portal-accent" : "bg-muted",
-                  savingKey === toggle.key && "opacity-50"
+            >
+              <div>
+                <p className="text-sm font-medium">{toggle.label}</p>
+                <p className="text-xs text-muted-foreground">{toggle.description}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                {isSaving && (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
                 )}
-              >
-                <span
+                {lastSaved === toggle.key && !isSaving && (
+                  <Check className="h-3.5 w-3.5 text-success" />
+                )}
+                <button
+                  onClick={() => handleToggle(toggle.key)}
+                  disabled={isSaving}
+                  role="switch"
+                  aria-checked={isChecked}
                   className={cn(
-                    "inline-block h-4 w-4 rounded-full bg-white transition-transform shadow-sm",
-                    localPrefs[toggle.key] ? "translate-x-6" : "translate-x-1"
+                    "relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-portal-accent focus:ring-offset-2",
+                    isChecked ? "bg-portal-accent" : "bg-muted",
+                    isSaving && "opacity-50"
                   )}
-                />
-              </button>
+                >
+                  <span
+                    className={cn(
+                      "inline-block h-4 w-4 rounded-full bg-white transition-transform shadow-sm",
+                      isChecked ? "translate-x-6" : "translate-x-1"
+                    )}
+                  />
+                </button>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

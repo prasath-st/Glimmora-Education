@@ -21,27 +21,47 @@ import type { RoleDefinition, Permission } from "@/lib/api/types/admin.types";
 function PermissionMatrix({
   role,
   permissions,
+  userCount,
+  roleLabel,
 }: {
   role: string;
   permissions: Permission[];
+  userCount: number;
+  roleLabel: string;
 }) {
   const togglePermission = useTogglePermission();
   const [togglingKey, setTogglingKey] = useState<string | null>(null);
+  const [pendingToggle, setPendingToggle] = useState<{
+    module: string;
+    action: string;
+    key: string;
+  } | null>(null);
 
   const handleToggle = useCallback(
-    async (module: string, action: string) => {
+    (module: string, action: string) => {
       const key = `${module}:${action}`;
-      setTogglingKey(key);
-      try {
-        await togglePermission.mutateAsync({ role, module, action });
-      } catch {
-        // error is handled by mutation state
-      } finally {
-        setTogglingKey(null);
-      }
+      setPendingToggle({ module, action, key });
     },
-    [role, togglePermission]
+    []
   );
+
+  const confirmToggle = useCallback(async () => {
+    if (!pendingToggle) return;
+    const { module, action, key } = pendingToggle;
+    setPendingToggle(null);
+    setTogglingKey(key);
+    try {
+      await togglePermission.mutateAsync({ role, module, action });
+    } catch {
+      // error is handled by mutation state
+    } finally {
+      setTogglingKey(null);
+    }
+  }, [pendingToggle, role, togglePermission]);
+
+  const cancelToggle = useCallback(() => {
+    setPendingToggle(null);
+  }, []);
 
   if (permissions.length === 0) {
     return (
@@ -58,6 +78,27 @@ function PermissionMatrix({
 
   return (
     <div className="overflow-x-auto">
+      {pendingToggle && (
+        <div className="flex items-center justify-between gap-3 border-b border-border bg-warning-light px-4 py-3">
+          <p className="text-sm text-foreground">
+            This change affects all <span className="font-semibold">{userCount}</span> users with the <span className="font-semibold">{roleLabel}</span> role. Proceed?
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={cancelToggle}
+              className="rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={confirmToggle}
+              className="rounded-lg bg-portal-accent px-3 py-1.5 text-xs font-medium text-portal-accent-foreground transition-colors hover:bg-portal-accent-hover"
+            >
+              Confirm
+            </button>
+          </div>
+        </div>
+      )}
       <table className="w-full">
         <thead>
           <tr className="border-b border-border bg-muted/50">
@@ -88,14 +129,18 @@ function PermissionMatrix({
                 const isAllowed = actionDef?.allowed ?? false;
                 const toggleKey = `${perm.module}:${actionName}`;
                 const isToggling = togglingKey === toggleKey;
+                const isPending = pendingToggle?.key === toggleKey;
 
                 return (
                   <td key={actionName} className="px-4 py-3 text-center">
                     {actionDef ? (
                       <button
                         onClick={() => handleToggle(perm.module, actionName)}
-                        disabled={isToggling}
-                        className="inline-flex items-center justify-center"
+                        disabled={isToggling || !!pendingToggle}
+                        className={cn(
+                          "inline-flex items-center justify-center",
+                          isPending && "ring-2 ring-portal-accent ring-offset-1 rounded"
+                        )}
                       >
                         {isToggling ? (
                           <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
@@ -173,6 +218,8 @@ function RoleCard({ role }: { role: RoleDefinition }) {
           <PermissionMatrix
             role={role.role}
             permissions={role.permissions}
+            userCount={role.userCount}
+            roleLabel={role.label}
           />
         </div>
       )}

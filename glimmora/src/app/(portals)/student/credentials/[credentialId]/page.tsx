@@ -11,6 +11,9 @@ import {
   Calendar,
   Building2,
   Shield,
+  Link2,
+  Download,
+  AlertTriangle,
 } from "lucide-react";
 import { useCredentialDetail } from "@/lib/hooks/use-student";
 import { PageHeader } from "@/components/shared/misc/page-header";
@@ -39,6 +42,7 @@ export default function StudentCredentialDetailPage({
   const { credentialId } = use(params);
   const { data: credential, isLoading, isError, refetch } = useCredentialDetail(credentialId);
   const [copied, setCopied] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   if (isLoading) return <DashboardSkeleton />;
   if (isError || !credential) return <ErrorState onRetry={() => refetch()} />;
@@ -51,6 +55,23 @@ export default function StudentCredentialDetailPage({
     }
   };
 
+  const handleCopyLink = async () => {
+    if (credential.verificationUrl) {
+      await navigator.clipboard.writeText(credential.verificationUrl);
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2000);
+    }
+  };
+
+  const handleAddToLinkedIn = () => {
+    const url = `https://www.linkedin.com/profile/add?startTask=CERTIFICATION_NAME&name=${encodeURIComponent(credential.title)}&organizationName=${encodeURIComponent(credential.issuer)}&issueYear=${new Date(credential.issuedDate).getFullYear()}&issueMonth=${new Date(credential.issuedDate).getMonth() + 1}`;
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
+  const handleDownload = () => {
+    window.print();
+  };
+
   return (
     <div className="space-y-6">
       <Link
@@ -60,6 +81,22 @@ export default function StudentCredentialDetailPage({
         <ArrowLeft className="h-4 w-4" />
         Back to Credentials
       </Link>
+
+      {/* Expired Credential Banner */}
+      {credential.status === "expired" && (
+        <div className="flex items-center gap-3 rounded-xl border border-warning/30 bg-warning/10 px-4 py-3">
+          <AlertTriangle className="h-5 w-5 flex-shrink-0 text-warning" />
+          <p className="flex-1 text-sm text-warning">
+            This credential expired on {formatDate(credential.expiryDate!)}.
+          </p>
+          <a
+            href={`mailto:registrar@university.edu?subject=Credential Renewal Request&body=I would like to request renewal of my credential: ${credential.title}`}
+            className="whitespace-nowrap text-sm font-medium text-warning underline hover:text-warning/80"
+          >
+            Request Renewal
+          </a>
+        </div>
+      )}
 
       {/* Credential Header */}
       <div className="rounded-xl border border-border bg-card p-6">
@@ -144,8 +181,49 @@ export default function StudentCredentialDetailPage({
               </a>
             </div>
           )}
+
+          <p className="mt-4 text-xs text-muted-foreground">
+            This credential is secured using blockchain verification. Share the verification link with employers or institutions to prove authenticity.
+          </p>
         </div>
       )}
+
+      {/* Share & Export */}
+      <div className="rounded-xl border border-border bg-card p-6">
+        <h2 className="mb-4 text-sm font-semibold">Share & Export</h2>
+        <div className="flex flex-wrap gap-3">
+          <button
+            onClick={handleCopyLink}
+            className="inline-flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-medium transition-colors hover:bg-muted"
+          >
+            {linkCopied ? (
+              <>
+                <Check className="h-4 w-4 text-success" />
+                Copied!
+              </>
+            ) : (
+              <>
+                <Link2 className="h-4 w-4" />
+                Copy Share Link
+              </>
+            )}
+          </button>
+          <button
+            onClick={handleAddToLinkedIn}
+            className="inline-flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-medium transition-colors hover:bg-muted"
+          >
+            <ExternalLink className="h-4 w-4" />
+            Add to LinkedIn
+          </button>
+          <button
+            onClick={handleDownload}
+            className="inline-flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-medium transition-colors hover:bg-muted"
+          >
+            <Download className="h-4 w-4" />
+            Download Certificate
+          </button>
+        </div>
+      </div>
 
       {/* Skills */}
       {credential.skills.length > 0 && (

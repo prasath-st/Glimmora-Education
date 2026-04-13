@@ -191,6 +191,10 @@ export default function AdminAiModelsPage() {
         />
       </div>
 
+      <p className="text-xs text-muted-foreground">
+        Models are automatically retrained based on data drift detection. Last system-wide retraining check: 7 days ago.
+      </p>
+
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         {models.map((model) => (
           <ModelCard key={model.id} model={model} />

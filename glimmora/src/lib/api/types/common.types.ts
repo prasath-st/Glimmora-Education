@@ -52,7 +52,7 @@ export interface FilterParams {
 }
 
 export type RiskLevel = "high" | "medium" | "low" | "none";
-export type AppealStatus = "pending" | "under_review" | "resolved" | "rejected";
+export type AppealStatus = "pending" | "under_review" | "info_requested" | "resolved" | "rejected" | "escalated";
 export type MatchStatus = "pending" | "approved" | "rejected";
 export type PipelineStage =
   | "matched"

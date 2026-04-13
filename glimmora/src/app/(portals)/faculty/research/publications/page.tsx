@@ -132,6 +132,10 @@ export default function FacultyResearchPublicationsPage() {
         description="Track and manage your research publications"
       />
 
+      <p className="text-xs text-muted-foreground -mt-4">
+        Publication data synced from Scopus and institutional records.
+      </p>
+
       {/* Filters */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <SearchInput

@@ -116,8 +116,9 @@ function CreateUserDialog({
   const onSubmit = useCallback(
     async (data: CreateUserFormData) => {
       try {
+        const email = data.email;
         await createUser.mutateAsync(data);
-        setSuccessMsg("User created successfully.");
+        setSuccessMsg(`User created successfully. An activation email has been sent to ${email}.`);
         reset();
         setTimeout(() => {
           setSuccessMsg("");

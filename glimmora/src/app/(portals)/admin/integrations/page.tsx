@@ -38,6 +38,21 @@ const TYPE_LABELS: Record<Integration["type"], string> = {
   other: "Other",
 };
 
+const SYNC_DIRECTION_LABELS: Record<Integration["type"], string> = {
+  lms: "Inbound: Grades, enrollments, attendance",
+  sis: "Bidirectional: Student records",
+  erp: "Inbound: Financial data",
+  hrms: "Inbound: Staff records, payroll",
+  research: "Inbound: Publications, grants",
+  auth: "Bidirectional: Identity, permissions",
+  other: "Varies by configuration",
+};
+
+const HEALTH_EXPLANATIONS: Record<string, string> = {
+  degraded: "Some sync operations are failing. Check error logs.",
+  down: "Integration is offline. Contact system administrator.",
+};
+
 function IntegrationCard({ integration }: { integration: Integration }) {
   const [expanded, setExpanded] = useState(false);
 
@@ -67,11 +82,19 @@ function IntegrationCard({ integration }: { integration: Integration }) {
             <p className="mt-0.5 text-xs text-muted-foreground">
               {integration.provider}
             </p>
+            <p className="mt-0.5 text-xs text-muted-foreground/70">
+              {SYNC_DIRECTION_LABELS[integration.type]}
+            </p>
             <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
               <span className="flex items-center gap-1">
                 <Clock className="h-3 w-3" />
                 Last sync {formatRelative(integration.lastSyncAt)}
               </span>
+              {integration.nextSyncAt && (
+                <span className="flex items-center gap-1">
+                  Next sync: {formatRelative(integration.nextSyncAt)}
+                </span>
+              )}
               <span>{formatNumber(integration.recordsSynced)} records</span>
               {integration.errorCount > 0 && (
                 <span className="flex items-center gap-1 text-danger">
@@ -80,6 +103,11 @@ function IntegrationCard({ integration }: { integration: Integration }) {
                 </span>
               )}
             </div>
+            {HEALTH_EXPLANATIONS[integration.health] && (
+              <p className="mt-1.5 text-xs font-medium text-warning">
+                {HEALTH_EXPLANATIONS[integration.health]}
+              </p>
+            )}
           </div>
         </div>
         <StatusBadge variant={getHealthVariant(integration.health)} dot>

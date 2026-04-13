@@ -263,6 +263,22 @@ export default function AdminSettingsPage() {
                     className="flex h-10 flex-1 rounded-lg border border-input bg-background px-3 font-mono text-sm"
                   />
                 </div>
+                {primaryColor && (
+                  <div className="flex items-center gap-3 pt-1">
+                    <span
+                      className="inline-flex h-7 items-center rounded px-3 text-xs font-medium text-white"
+                      style={{ backgroundColor: primaryColor }}
+                    >
+                      Sample
+                    </span>
+                    <span
+                      className="text-xs font-medium"
+                      style={{ color: primaryColor }}
+                    >
+                      Sample Text
+                    </span>
+                  </div>
+                )}
                 {errors.primaryColor?.message && (
                   <p className="text-xs text-danger">
                     {errors.primaryColor.message}
@@ -357,6 +373,11 @@ export default function AdminSettingsPage() {
                   valueAsNumber: true,
                 })}
               />
+            </div>
+            <div className="mt-4 rounded-lg border border-warning/30 bg-warning/5 px-4 py-3">
+              <p className="text-xs text-warning">
+                Changing data retention policies will affect historical data. Records older than the specified period will be permanently archived. Please ensure you have exported any needed data before reducing retention periods.
+              </p>
             </div>
           </FormSection>
         </div>

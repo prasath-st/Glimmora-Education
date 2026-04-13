@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useCallback, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { FilePlus, ArrowLeft, Loader2 } from "lucide-react";
+import { FilePlus, ArrowLeft, Loader2, Info, ChevronDown, ChevronUp } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { useCourses, useCreateAppeal } from "@/lib/hooks/use-student";
@@ -24,23 +24,47 @@ const appealSchema = z.object({
 type AppealFormData = z.infer<typeof appealSchema>;
 
 export default function StudentNewAppealPage() {
+  return (
+    <Suspense fallback={<DashboardSkeleton />}>
+      <StudentNewAppealForm />
+    </Suspense>
+  );
+}
+
+function StudentNewAppealForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const prefillCourseId = searchParams.get("courseId") ?? "";
+  const prefillAssessmentId = searchParams.get("assessmentId") ?? "";
+
   const { data: coursesData, isLoading: coursesLoading, isError: coursesError, refetch: refetchCourses } = useCourses();
   const createAppeal = useCreateAppeal();
   const [files, setFiles] = useState<File[]>([]);
+  const [guidelinesOpen, setGuidelinesOpen] = useState(false);
 
   const {
     register,
     handleSubmit,
     watch,
+    setValue,
     formState: { errors },
   } = useForm<AppealFormData>({
     defaultValues: {
-      courseId: "",
-      assessmentId: "",
+      courseId: prefillCourseId,
+      assessmentId: prefillAssessmentId,
       reason: "",
     },
   });
+
+  // When courses load and we have prefill params, ensure values are set
+  useEffect(() => {
+    if (prefillCourseId && coursesData) {
+      setValue("courseId", prefillCourseId);
+      if (prefillAssessmentId) {
+        setValue("assessmentId", prefillAssessmentId);
+      }
+    }
+  }, [prefillCourseId, prefillAssessmentId, coursesData, setValue]);
 
   const selectedCourseId = watch("courseId");
   const reason = watch("reason");
@@ -92,6 +116,38 @@ export default function StudentNewAppealPage() {
       />
 
       <form onSubmit={handleSubmit(onSubmit)} className="max-w-2xl space-y-6">
+        {/* Appeal Guidelines */}
+        <div className="rounded-xl border border-border bg-card">
+          <button
+            type="button"
+            onClick={() => setGuidelinesOpen((prev) => !prev)}
+            className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm font-medium transition-colors hover:bg-muted/50"
+          >
+            <Info className="h-4 w-4 text-info" />
+            Appeal Guidelines
+            {guidelinesOpen ? (
+              <ChevronUp className="ml-auto h-4 w-4 text-muted-foreground" />
+            ) : (
+              <ChevronDown className="ml-auto h-4 w-4 text-muted-foreground" />
+            )}
+          </button>
+          {guidelinesOpen && (
+            <div className="border-t border-border px-4 py-3 text-sm leading-relaxed text-muted-foreground">
+              <p>You may appeal a grade if:</p>
+              <ol className="mt-2 list-decimal space-y-1 pl-5">
+                <li>There was a calculation error</li>
+                <li>The grading criteria was not applied consistently</li>
+                <li>There were extenuating circumstances affecting your performance</li>
+                <li>You have new evidence not previously considered</li>
+              </ol>
+              <p className="mt-3">
+                Appeals must be submitted within 14 days of the grade being posted.
+                The review process typically takes 5-10 business days.
+              </p>
+            </div>
+          )}
+        </div>
+
         {/* Section 1: Course and Assessment */}
         <FormSection
           title="Course & Assessment"

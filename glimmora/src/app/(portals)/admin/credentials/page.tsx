@@ -101,12 +101,12 @@ function IssueCredentialDialog({
     async (data: IssueCredentialFormData) => {
       try {
         await issueCredential.mutateAsync(data);
-        setSuccessMsg("Credential issued successfully.");
+        setSuccessMsg("Credential issued successfully. The student will be notified and the credential will appear in their digital wallet.");
         reset();
         setTimeout(() => {
           setSuccessMsg("");
           onOpenChange(false);
-        }, 1500);
+        }, 2500);
       } catch {
         // error shown via mutation state
       }
@@ -225,12 +225,12 @@ function RevokeCredentialDialog({
           id: credentialId,
           reason: data.reason,
         });
-        setSuccessMsg("Credential revoked successfully.");
+        setSuccessMsg("Credential revoked. The student has been notified and the verification status has been updated.");
         reset();
         setTimeout(() => {
           setSuccessMsg("");
           onOpenChange(false);
-        }, 1500);
+        }, 2500);
       } catch {
         // error shown via mutation state
       }

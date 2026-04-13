@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   BookOpen,
   ArrowLeft,
@@ -17,6 +17,7 @@ import {
   Clock,
   Target,
   Loader2,
+  AlertCircle,
 } from "lucide-react";
 import {
   useLearningPaths,
@@ -63,6 +64,8 @@ const moduleTypeVariant: Record<string, "default" | "info" | "warning" | "succes
 
 export default function LearningPathsPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const skillFilter = searchParams.get("skill");
   const { data: paths, isLoading, isError, refetch } = useLearningPaths();
   const startPath = useStartLearningPath();
   const pausePath = usePauseLearningPath();
@@ -71,10 +74,30 @@ export default function LearningPathsPage() {
   const [activeTab, setActiveTab] = useState<FilterTab>("all");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [startingModuleId, setStartingModuleId] = useState<string | null>(null);
+  const [activeLimitAlert, setActiveLimitAlert] = useState(false);
+
+  // Auto-expand the path matching the skill filter from query params
+  useEffect(() => {
+    if (skillFilter && paths) {
+      const matchingPath = paths.find(
+        (p) => p.skill.toLowerCase() === decodeURIComponent(skillFilter).toLowerCase()
+      );
+      if (matchingPath) {
+        setExpandedId(matchingPath.id);
+      }
+    }
+  }, [skillFilter, paths]);
 
   const handleStartPath = useCallback(async (pathId: string) => {
+    const allPaths = paths ?? [];
+    const activeCount = allPaths.filter((p) => p.status === "in_progress").length;
+    if (activeCount >= 3) {
+      setActiveLimitAlert(true);
+      return;
+    }
+    setActiveLimitAlert(false);
     await startPath.mutateAsync(pathId);
-  }, [startPath]);
+  }, [startPath, paths]);
 
   const handlePausePath = useCallback(async (pathId: string) => {
     await pausePath.mutateAsync(pathId);
@@ -99,7 +122,7 @@ export default function LearningPathsPage() {
           className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" />
-          Back to AI Tutor
+          Back to Guided Learning
         </Link>
         <PageHeader icon={BookOpen} title="Learning Paths" description="AI-curated paths to strengthen your skills" />
         <TableSkeleton rows={4} />
@@ -115,7 +138,7 @@ export default function LearningPathsPage() {
           className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" />
-          Back to AI Tutor
+          Back to Guided Learning
         </Link>
         <PageHeader icon={BookOpen} title="Learning Paths" description="AI-curated paths to strengthen your skills" />
         <ErrorState onRetry={() => refetch()} />
@@ -124,9 +147,19 @@ export default function LearningPathsPage() {
   }
 
   const allPaths = paths ?? [];
+
+  // If skill filter is active, show matching path first with a highlight
+  const sortedPaths = skillFilter
+    ? [...allPaths].sort((a, b) => {
+        const aMatch = a.skill.toLowerCase() === decodeURIComponent(skillFilter).toLowerCase() ? -1 : 0;
+        const bMatch = b.skill.toLowerCase() === decodeURIComponent(skillFilter).toLowerCase() ? -1 : 0;
+        return aMatch - bMatch;
+      })
+    : allPaths;
+
   const filteredPaths = activeTab === "all"
-    ? allPaths
-    : allPaths.filter((p) => p.status === activeTab);
+    ? sortedPaths
+    : sortedPaths.filter((p) => p.status === activeTab);
 
   const tabs: { key: FilterTab; label: string; count: number }[] = [
     { key: "all", label: "All", count: allPaths.length },
@@ -142,10 +175,25 @@ export default function LearningPathsPage() {
         className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft className="h-4 w-4" />
-        Back to AI Tutor
+        Back to Guided Learning
       </Link>
 
       <PageHeader icon={BookOpen} title="Learning Paths" description="AI-curated paths to strengthen your skills" />
+
+      {/* Skill filter banner */}
+      {skillFilter && (
+        <div className="flex items-center justify-between rounded-lg border border-portal-accent/30 bg-portal-accent/5 px-4 py-3">
+          <p className="text-sm">
+            Showing paths for: <span className="font-semibold">{decodeURIComponent(skillFilter)}</span>
+          </p>
+          <Link
+            href="/student/tutor/learning-path"
+            className="text-xs font-medium text-portal-accent hover:underline"
+          >
+            Clear filter
+          </Link>
+        </div>
+      )}
 
       {/* Filter Tabs */}
       <div className="flex flex-wrap gap-2">
@@ -165,6 +213,22 @@ export default function LearningPathsPage() {
           </button>
         ))}
       </div>
+
+      {/* Active limit alert */}
+      {activeLimitAlert && (
+        <div className="flex items-center gap-2 rounded-lg border border-warning/30 bg-warning-light/20 px-4 py-3">
+          <AlertCircle className="h-4 w-4 text-warning flex-shrink-0" />
+          <p className="text-sm text-warning font-medium">
+            You have 3 active learning paths. Pause or complete one before starting a new path.
+          </p>
+          <button
+            onClick={() => setActiveLimitAlert(false)}
+            className="ml-auto text-xs text-muted-foreground hover:text-foreground"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
 
       {/* Paths List */}
       {filteredPaths.length === 0 ? (
@@ -229,6 +293,11 @@ export default function LearningPathsPage() {
                   <div className="border-t border-border px-5 py-4 space-y-4">
                     {/* Description */}
                     <p className="text-sm text-muted-foreground">{path.description}</p>
+                    {path.author && (
+                      <p className="text-xs text-muted-foreground">
+                        Created by: <span className="font-medium text-foreground">{path.author}</span>
+                      </p>
+                    )}
 
                     {/* Prerequisites & Outcomes */}
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -306,13 +375,14 @@ export default function LearningPathsPage() {
                       <div className="space-y-2">
                         {path.modules
                           .sort((a, b) => a.order - b.order)
-                          .map((mod) => (
+                          .map((mod, modIdx, sortedMods) => (
                             <ModuleItem
                               key={mod.id}
                               module={mod}
                               pathId={path.id}
                               onStart={handleStartModule}
                               isStarting={startingModuleId === mod.id}
+                              previousModuleName={modIdx > 0 ? sortedMods[modIdx - 1].title : undefined}
                             />
                           ))}
                       </div>
@@ -333,11 +403,13 @@ function ModuleItem({
   pathId,
   onStart,
   isStarting,
+  previousModuleName,
 }: {
   module: LearningModule;
   pathId: string;
   onStart: (moduleId: string, pathId: string) => void;
   isStarting: boolean;
+  previousModuleName?: string;
 }) {
   const isLocked = mod.status === "locked";
   const isCompleted = mod.status === "completed";
@@ -372,6 +444,11 @@ function ModuleItem({
           {mod.title}
         </p>
         <p className="text-xs text-muted-foreground">{mod.description}</p>
+        {isLocked && previousModuleName && (
+          <p className="mt-0.5 text-xs text-muted-foreground/70 italic">
+            Complete {previousModuleName} to unlock
+          </p>
+        )}
       </div>
 
       {/* Meta */}

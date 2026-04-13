@@ -11,6 +11,7 @@ import {
   CreditCard,
   Users,
   AlertTriangle,
+  ExternalLink,
 } from "lucide-react";
 import { useFacultyCourseDetail } from "@/lib/hooks/use-faculty";
 import { PageHeader } from "@/components/shared/misc/page-header";
@@ -144,6 +145,15 @@ export default function FacultyCourseDetailPage({
               {course.studentsAtRisk} students at risk
             </span>
           )}
+          <a
+            href={`https://canvas.university.edu/courses/${courseId}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 text-portal-accent hover:underline"
+          >
+            <ExternalLink className="h-4 w-4" />
+            Open in LMS
+          </a>
         </div>
       </div>
 
@@ -187,12 +197,17 @@ export default function FacultyCourseDetailPage({
             />
           </div>
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            <DonutBreakdown
-              title="Grade Distribution"
-              data={gradeDonutData}
-              centerValue={course.totalStudents}
-              centerLabel="Students"
-            />
+            <div className="space-y-2">
+              <DonutBreakdown
+                title="Grade Distribution"
+                data={gradeDonutData}
+                centerValue={course.totalStudents}
+                centerLabel="Students"
+              />
+              <p className="text-xs text-muted-foreground px-1">
+                Based on {course.totalStudents} students, current semester grades.
+              </p>
+            </div>
             <AreaTrend
               title="Attendance Trend"
               data={attendanceTrendData}
@@ -283,15 +298,20 @@ export default function FacultyCourseDetailPage({
       )}
 
       {activeTab === "engagement" && (
-        <BarComparison
-          title="Engagement Metrics vs Benchmarks"
-          data={engagementData}
-          bars={[
-            { dataKey: "actual", label: "Actual", color: "#2563eb" },
-            { dataKey: "benchmark", label: "Benchmark", color: "#9ca3af" },
-          ]}
-          height={350}
-        />
+        <div className="space-y-2">
+          <BarComparison
+            title="Engagement Metrics vs Benchmarks"
+            data={engagementData}
+            bars={[
+              { dataKey: "actual", label: "Actual", color: "#2563eb" },
+              { dataKey: "benchmark", label: "Benchmark", color: "#9ca3af" },
+            ]}
+            height={350}
+          />
+          <p className="text-xs text-muted-foreground px-1">
+            Benchmark: Department average across all sections of this course.
+          </p>
+        </div>
       )}
     </div>
   );

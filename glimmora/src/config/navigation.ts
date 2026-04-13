@@ -61,7 +61,7 @@ export const PORTAL_NAVIGATION: Record<PortalRole, NavSection[]> = {
       label: "Growth",
       items: [
         { label: "Skills & Development", href: "/student/skills", icon: Radar },
-        { label: "AI Tutor", href: "/student/tutor", icon: BrainCircuit },
+        { label: "Guided Learning", href: "/student/tutor", icon: BrainCircuit },
         { label: "Credentials", href: "/student/credentials", icon: BadgeCheck },
       ],
     },

@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   FileText,
   ArrowLeft,
   Plus,
   Trash2,
+  Pencil,
   Globe,
   Lock,
   ExternalLink,
@@ -16,7 +17,7 @@ import {
 import * as Dialog from "@radix-ui/react-dialog";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { usePortfolio, useAddPortfolioItem, useDeletePortfolioItem } from "@/lib/hooks/use-student";
+import { usePortfolio, useAddPortfolioItem, useEditPortfolioItem, useDeletePortfolioItem } from "@/lib/hooks/use-student";
 import { PageHeader } from "@/components/shared/misc/page-header";
 import { StatusBadge } from "@/components/shared/feedback/status-badge";
 import { FormField, FormTextarea, FormSelect } from "@/components/shared/forms/form-field";
@@ -26,6 +27,7 @@ import { ErrorState } from "@/components/shared/feedback/error-state";
 import { EmptyState } from "@/components/shared/feedback/empty-state";
 import { cn } from "@/lib/utils/cn";
 import { formatDate } from "@/lib/utils/format";
+import type { PortfolioItem } from "@/lib/api/types/student.types";
 
 const portfolioSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -49,8 +51,10 @@ const typeOptions = [
 export default function StudentPlacementPortfolioPage() {
   const { data: items, isLoading, isError, refetch } = usePortfolio();
   const addMutation = useAddPortfolioItem();
+  const editMutation = useEditPortfolioItem();
   const deleteMutation = useDeletePortfolioItem();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<PortfolioItem | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string } | null>(null);
 
   const {
@@ -69,8 +73,51 @@ export default function StudentPlacementPortfolioPage() {
     },
   });
 
+  // When editingItem changes, reset form with item values and open dialog
+  useEffect(() => {
+    if (editingItem) {
+      reset({
+        title: editingItem.title,
+        description: editingItem.description,
+        type: editingItem.type,
+        url: editingItem.url || "",
+        skills: editingItem.skills.join(", "),
+        isPublic: editingItem.isPublic,
+      });
+      setDialogOpen(true);
+    }
+  }, [editingItem, reset]);
+
+  const handleOpenAdd = () => {
+    setEditingItem(null);
+    reset({
+      title: "",
+      description: "",
+      type: "project",
+      url: "",
+      skills: "",
+      isPublic: true,
+    });
+    setDialogOpen(true);
+  };
+
+  const handleDialogClose = (open: boolean) => {
+    if (!open) {
+      setEditingItem(null);
+      reset({
+        title: "",
+        description: "",
+        type: "project",
+        url: "",
+        skills: "",
+        isPublic: true,
+      });
+    }
+    setDialogOpen(open);
+  };
+
   const onSubmit = async (formData: PortfolioFormData) => {
-    await addMutation.mutateAsync({
+    const payload = {
       title: formData.title,
       description: formData.description,
       type: formData.type,
@@ -80,8 +127,19 @@ export default function StudentPlacementPortfolioPage() {
         .map((s) => s.trim())
         .filter(Boolean),
       isPublic: formData.isPublic,
-    });
+    };
+
+    if (editingItem) {
+      await editMutation.mutateAsync({
+        itemId: editingItem.id,
+        data: payload,
+      });
+    } else {
+      await addMutation.mutateAsync(payload);
+    }
+
     reset();
+    setEditingItem(null);
     setDialogOpen(false);
   };
 
@@ -91,6 +149,8 @@ export default function StudentPlacementPortfolioPage() {
       setDeleteTarget(null);
     }
   };
+
+  const isMutating = addMutation.isPending || editMutation.isPending;
 
   if (isLoading) {
     return (
@@ -127,9 +187,12 @@ export default function StudentPlacementPortfolioPage() {
         title="Evidence Portfolio"
         description="Showcase your work and achievements"
         actions={
-          <Dialog.Root open={dialogOpen} onOpenChange={setDialogOpen}>
+          <Dialog.Root open={dialogOpen} onOpenChange={handleDialogClose}>
             <Dialog.Trigger asChild>
-              <button className="inline-flex items-center gap-1.5 rounded-lg bg-portal-accent px-4 py-2 text-sm font-medium text-portal-accent-foreground transition-colors hover:bg-portal-accent-hover">
+              <button
+                onClick={handleOpenAdd}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-portal-accent px-4 py-2 text-sm font-medium text-portal-accent-foreground transition-colors hover:bg-portal-accent-hover"
+              >
                 <Plus className="h-4 w-4" />
                 Add Item
               </button>
@@ -138,7 +201,9 @@ export default function StudentPlacementPortfolioPage() {
               <Dialog.Overlay className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm" />
               <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-xl border border-border bg-card p-6 shadow-lg">
                 <div className="flex items-center justify-between">
-                  <Dialog.Title className="text-lg font-semibold">Add Portfolio Item</Dialog.Title>
+                  <Dialog.Title className="text-lg font-semibold">
+                    {editingItem ? "Edit Portfolio Item" : "Add Portfolio Item"}
+                  </Dialog.Title>
                   <Dialog.Close className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted">
                     <X className="h-4 w-4" />
                   </Dialog.Close>
@@ -199,11 +264,11 @@ export default function StudentPlacementPortfolioPage() {
                     </Dialog.Close>
                     <button
                       type="submit"
-                      disabled={addMutation.isPending}
+                      disabled={isMutating}
                       className="inline-flex items-center gap-1.5 rounded-lg bg-portal-accent px-4 py-2 text-sm font-medium text-portal-accent-foreground transition-colors hover:bg-portal-accent-hover disabled:opacity-50"
                     >
-                      {addMutation.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                      Add Item
+                      {isMutating && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                      {editingItem ? "Save Changes" : "Add Item"}
                     </button>
                   </div>
                 </form>
@@ -221,7 +286,7 @@ export default function StudentPlacementPortfolioPage() {
           description="Add your projects, papers, and achievements to build your portfolio."
           action={{
             label: "Add Item",
-            onClick: () => setDialogOpen(true),
+            onClick: () => handleOpenAdd(),
           }}
         />
       ) : (
@@ -240,13 +305,22 @@ export default function StudentPlacementPortfolioPage() {
                     <Lock className="h-3.5 w-3.5 text-muted-foreground" />
                   )}
                 </div>
-                <button
-                  onClick={() => setDeleteTarget({ id: item.id, title: item.title })}
-                  className="rounded-md p-1 text-muted-foreground opacity-0 transition-all hover:bg-danger-light hover:text-danger group-hover:opacity-100"
-                  aria-label="Delete item"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => setEditingItem(item)}
+                    className="rounded-md p-1 text-muted-foreground opacity-0 transition-all hover:bg-muted hover:text-foreground group-hover:opacity-100"
+                    aria-label="Edit item"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => setDeleteTarget({ id: item.id, title: item.title })}
+                    className="rounded-md p-1 text-muted-foreground opacity-0 transition-all hover:bg-danger-light hover:text-danger group-hover:opacity-100"
+                    aria-label="Delete item"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
               <h3 className="mt-3 text-sm font-semibold">{item.title}</h3>
               <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">

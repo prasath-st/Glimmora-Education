@@ -15,6 +15,8 @@ import type {
   Appeal,
   StudentProfile,
   NotificationPreferences,
+  Notification,
+  DismissReason,
 } from "@/lib/api/types/student.types";
 import type { PaginationMeta } from "@/lib/api/types/common.types";
 import {
@@ -33,6 +35,7 @@ import {
   generateAppeals,
   generateStudentProfile,
   generateNotificationPreferences,
+  generateNotifications,
 } from "@/mocks/data/generators/student.generator";
 
 // ─── Generate data once at module level ───────────────────────────────────────
@@ -53,6 +56,8 @@ let appeals: Appeal[] = generateAppeals(3);
 let profile: StudentProfile = generateStudentProfile();
 let notificationPrefs: NotificationPreferences =
   generateNotificationPreferences();
+let notifications: Notification[] = generateNotifications(8);
+const dismissedAlertIds: Set<string> = new Set();
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -122,7 +127,19 @@ export const studentHandlers = [
   // ── Dashboard ─────────────────────────────────────────────────────────────
   http.get("/api/students/me/dashboard", async () => {
     await randomDelay();
-    return HttpResponse.json({ data: dashboard });
+    const filtered = {
+      ...dashboard,
+      riskAlerts: dashboard.riskAlerts.filter((a) => !dismissedAlertIds.has(a.id)),
+    };
+    return HttpResponse.json({ data: filtered });
+  }),
+
+  // ── Dismiss Risk Alert ───────────────────────────────────────────────────
+  http.post("/api/students/me/risk-alerts/:alertId/dismiss", async ({ params }) => {
+    await randomDelay();
+    const alertId = params.alertId as string;
+    dismissedAlertIds.add(alertId);
+    return HttpResponse.json({ data: { success: true } });
   }),
 
   // ── Transcript ────────────────────────────────────────────────────────────
@@ -387,6 +404,22 @@ export const studentHandlers = [
     return HttpResponse.json({ data: newItem }, { status: 201 });
   }),
 
+  http.patch("/api/students/me/portfolio/:itemId", async ({ params, request }) => {
+    await randomDelay();
+    const itemId = params.itemId as string;
+    const idx = portfolioItems.findIndex((p) => p.id === itemId);
+    if (idx === -1) return notFound("Portfolio item");
+
+    const body = (await request.json()) as Partial<PortfolioItem>;
+    const now = new Date().toISOString();
+
+    portfolioItems = portfolioItems.map((p) =>
+      p.id === itemId ? { ...p, ...body, updatedAt: now } : p
+    );
+
+    return HttpResponse.json({ data: portfolioItems.find((p) => p.id === itemId) });
+  }),
+
   http.delete(
     "/api/students/me/portfolio/:itemId",
     async ({ params }) => {
@@ -446,9 +479,9 @@ export const studentHandlers = [
       const idx = recommendations.findIndex((r) => r.id === params.id);
       if (idx === -1) return notFound("Recommendation");
 
-      let dismissReason: string | undefined;
+      let dismissReason: DismissReason | undefined;
       try {
-        const body = (await request.json()) as { reason?: string };
+        const body = (await request.json()) as { reason?: DismissReason };
         dismissReason = body.reason;
       } catch {
         // No body is acceptable
@@ -614,6 +647,9 @@ export const studentHandlers = [
       "deadlineReminders",
       "jobMatches",
       "recommendations",
+      "appealUpdates",
+      "credentialIssued",
+      "applicationUpdates",
     ];
 
     const errors: Record<string, string[]> = {};
@@ -631,5 +667,189 @@ export const studentHandlers = [
 
     notificationPrefs = { ...notificationPrefs, ...body };
     return HttpResponse.json({ data: notificationPrefs });
+  }),
+
+  // ── Notifications ────────────────────────────────────────────────────────
+  http.get("/api/students/me/notifications", async ({ request }) => {
+    await randomDelay();
+    const url = new URL(request.url);
+    const status = url.searchParams.get("status");
+    let filtered = [...notifications];
+    if (status === "unread") {
+      filtered = filtered.filter((n) => !n.read);
+    }
+    const result = paginate(filtered, url);
+    return HttpResponse.json({ data: result.data, meta: result.meta });
+  }),
+
+  http.patch("/api/students/me/notifications/:id/read", async ({ params }) => {
+    await randomDelay();
+    notifications = notifications.map((n) =>
+      n.id === params.id ? { ...n, read: true } : n
+    );
+    return HttpResponse.json({ data: { success: true } });
+  }),
+
+  http.post("/api/students/me/notifications/mark-all-read", async () => {
+    await randomDelay();
+    notifications = notifications.map((n) => ({ ...n, read: true }));
+    return HttpResponse.json({ data: { success: true } });
+  }),
+
+  // ── Job Save/Unsave ──────────────────────────────────────────────────────
+  http.post("/api/students/me/jobs/:jobId/save", async ({ params }) => {
+    await randomDelay();
+    jobMatches = jobMatches.map((j) =>
+      j.id === params.jobId ? { ...j, saved: true } : j
+    );
+    return HttpResponse.json({ data: { success: true } });
+  }),
+
+  http.delete("/api/students/me/jobs/:jobId/save", async ({ params }) => {
+    await randomDelay();
+    jobMatches = jobMatches.map((j) =>
+      j.id === params.jobId ? { ...j, saved: false } : j
+    );
+    return HttpResponse.json({ data: { success: true } });
+  }),
+
+  http.get("/api/students/me/jobs/saved", async ({ request }) => {
+    await randomDelay();
+    const url = new URL(request.url);
+    const saved = jobMatches.filter((j) => j.saved);
+    const result = paginate(saved, url);
+    return HttpResponse.json({ data: result.data, meta: result.meta });
+  }),
+
+  // ── Application Actions ──────────────────────────────────────────────────
+  http.post("/api/students/me/applications/:appId/withdraw", async ({ params }) => {
+    await randomDelay();
+    const app = applications.find((a) => a.id === params.appId);
+    if (!app) return notFound("Application");
+    if (!["applied", "interviewed"].includes(app.status)) {
+      return validationError({ status: ["Can only withdraw applications in applied or interviewed stage"] });
+    }
+    const now = new Date().toISOString();
+    applications = applications.filter((a) => a.id !== params.appId);
+    return HttpResponse.json({ data: { success: true } });
+  }),
+
+  http.post("/api/students/me/applications/:appId/accept", async ({ params }) => {
+    await randomDelay();
+    const app = applications.find((a) => a.id === params.appId);
+    if (!app) return notFound("Application");
+    if (app.status !== "offered") {
+      return validationError({ status: ["Can only accept offers"] });
+    }
+    const now = new Date().toISOString();
+    applications = applications.map((a) =>
+      a.id === params.appId
+        ? {
+            ...a,
+            status: "placed" as const,
+            lastActivityDate: now,
+            nextStep: "Start date confirmed",
+            timeline: [...a.timeline, { date: now, event: "Offer accepted - placement confirmed", status: "placed" as const }],
+            updatedAt: now,
+          }
+        : a
+    );
+    return HttpResponse.json({ data: applications.find((a) => a.id === params.appId) });
+  }),
+
+  http.post("/api/students/me/applications/:appId/decline", async ({ params }) => {
+    await randomDelay();
+    const app = applications.find((a) => a.id === params.appId);
+    if (!app) return notFound("Application");
+    if (app.status !== "offered") {
+      return validationError({ status: ["Can only decline offers"] });
+    }
+    const now = new Date().toISOString();
+    applications = applications.map((a) =>
+      a.id === params.appId
+        ? {
+            ...a,
+            status: "rejected" as const,
+            lastActivityDate: now,
+            nextStep: undefined,
+            timeline: [...a.timeline, { date: now, event: "Offer declined by student", status: "rejected" as const }],
+            updatedAt: now,
+          }
+        : a
+    );
+    return HttpResponse.json({ data: applications.find((a) => a.id === params.appId) });
+  }),
+
+  // ── Appeal Respond & Escalate ────────────────────────────────────────────
+  http.post("/api/students/me/appeals/:appealId/respond", async ({ params, request }) => {
+    await randomDelay();
+    const appeal = appeals.find((a) => a.id === params.appealId);
+    if (!appeal) return notFound("Appeal");
+    if (appeal.status !== "info_requested") {
+      return validationError({ status: ["Can only respond to appeals with status info_requested"] });
+    }
+    const body = (await request.json()) as { response: string };
+    if (!body.response || body.response.trim().length < 10) {
+      return validationError({ response: ["Response must be at least 10 characters"] });
+    }
+    const now = new Date().toISOString();
+    appeals = appeals.map((a) =>
+      a.id === params.appealId
+        ? {
+            ...a,
+            status: "under_review" as const,
+            studentResponse: body.response,
+            timeline: [...a.timeline, { date: now, event: "Student provided additional information", actor: "Alex Rivera" }],
+            updatedAt: now,
+          }
+        : a
+    );
+    return HttpResponse.json({ data: appeals.find((a) => a.id === params.appealId) });
+  }),
+
+  http.post("/api/students/me/appeals/:appealId/escalate", async ({ params, request }) => {
+    await randomDelay();
+    const appeal = appeals.find((a) => a.id === params.appealId);
+    if (!appeal) return notFound("Appeal");
+    if (appeal.status !== "rejected") {
+      return validationError({ status: ["Can only escalate rejected appeals"] });
+    }
+    const body = (await request.json()) as { reason: string };
+    if (!body.reason || body.reason.trim().length < 20) {
+      return validationError({ reason: ["Escalation reason must be at least 20 characters"] });
+    }
+    const now = new Date().toISOString();
+    appeals = appeals.map((a) =>
+      a.id === params.appealId
+        ? {
+            ...a,
+            status: "escalated" as const,
+            timeline: [...a.timeline, { date: now, event: "Appeal escalated to Department Head", actor: "Alex Rivera" }],
+            updatedAt: now,
+          }
+        : a
+    );
+    return HttpResponse.json({ data: appeals.find((a) => a.id === params.appealId) });
+  }),
+
+  // ── Add Self-Assessed Skill ──────────────────────────────────────────────
+  http.post("/api/students/me/skills", async ({ request }) => {
+    await randomDelay();
+    const body = (await request.json()) as { skillName: string; category: string; score: number };
+    if (!body.skillName) return validationError({ skillName: ["Skill name is required"] });
+    if (!body.score || body.score < 1 || body.score > 100) {
+      return validationError({ score: ["Score must be between 1 and 100"] });
+    }
+    const newSkill: SkillScore = {
+      skillId: `skill_${Date.now()}`,
+      skillName: body.skillName,
+      category: body.category || "Self-Assessed",
+      score: body.score,
+      benchmark: 0,
+      trend: "stable",
+      selfAssessed: true,
+    };
+    (skills as SkillScore[]).push(newSkill);
+    return HttpResponse.json({ data: newSkill }, { status: 201 });
   }),
 ];

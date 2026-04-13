@@ -274,6 +274,7 @@ export function generateLearningPaths(): LearningPath[] {
     const completedModules = modules.filter((m) => m.status === "completed").length;
     const now = new Date().toISOString();
 
+    const authors = ["Dr. Sarah Chen", "Prof. Michael Torres", "Dr. Emily Johnson", "Prof. David Kim", "Dr. Anita Gupta"];
     return {
       id: id("path"),
       title: def.title,
@@ -288,6 +289,7 @@ export function generateLearningPaths(): LearningPath[] {
       prerequisites: def.prerequisites,
       outcomes: def.outcomes,
       progress: def.progress,
+      author: pick(authors),
       createdAt: pastDate(Math.max(1, 90)),
       updatedAt: def.status === "not_started" ? pastDate(Math.max(1, 90)) : pastDate(Math.max(1, 3)),
     };
@@ -476,6 +478,9 @@ export function generateTutorDashboard(): TutorDashboard {
     completedLessons: 47,
     totalLessons: 120,
     currentStreak: 5,
+    totalXp: 4750,
+    level: 12,
+    levelTitle: "Advanced Learner",
     weeklyGoal: { target: 5, completed: 3 },
     weaknesses: generateWeaknesses(),
     recentActivity: generateRecentActivity(),

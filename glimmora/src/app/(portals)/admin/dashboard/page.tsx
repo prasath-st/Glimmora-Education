@@ -125,11 +125,24 @@ export default function AdminDashboardPage() {
                   : "Non-Compliant"}
             </StatusBadge>
           </div>
-          <p className="mt-2 text-xs text-muted-foreground">
+          <p className="mt-1 text-xs font-medium">
+            {data.compliance.score >= 90 ? (
+              <span className="text-success">(Meets standards)</span>
+            ) : data.compliance.score >= 75 ? (
+              <span className="text-yellow-500">(Needs attention)</span>
+            ) : (
+              <span className="text-danger">(Critical)</span>
+            )}
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
             {data.compliance.deviations} active deviation{data.compliance.deviations !== 1 ? "s" : ""}
           </p>
         </div>
       </div>
+
+      <p className="text-xs text-muted-foreground">
+        Data synced from institutional systems. Last updated: {formatRelative(new Date().toISOString())}
+      </p>
 
       {/* Charts Row */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -194,9 +207,10 @@ export default function AdminDashboardPage() {
         ) : (
           <div className="divide-y divide-border">
             {recentDeviations.map((dev) => (
-              <div
+              <Link
                 key={dev.id}
-                className="flex items-center justify-between px-6 py-4"
+                href="/admin/compliance"
+                className="flex items-center justify-between px-6 py-4 transition-colors hover:bg-muted/50"
               >
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium">{dev.description}</p>
@@ -207,7 +221,7 @@ export default function AdminDashboardPage() {
                 <StatusBadge variant={getRiskVariant(dev.severity)}>
                   {dev.severity}
                 </StatusBadge>
-              </div>
+              </Link>
             ))}
           </div>
         )}

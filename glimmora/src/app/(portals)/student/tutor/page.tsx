@@ -15,10 +15,13 @@ import {
   BarChart3,
   CheckCircle2,
   Zap,
+  Pencil,
+  Star,
 } from "lucide-react";
 import {
   useTutorDashboard,
   useRecommendedLessons,
+  useUpdateWeeklyGoal,
 } from "@/lib/hooks/use-tutor";
 import { PageHeader } from "@/components/shared/misc/page-header";
 import { StatCard } from "@/components/shared/misc/stat-card";
@@ -56,14 +59,17 @@ const activityVariantMap: Record<string, "default" | "success" | "warning" | "da
 export default function TutorDashboardPage() {
   const { data, isLoading, isError, refetch } = useTutorDashboard();
   const { data: recommended } = useRecommendedLessons();
+  const updateWeeklyGoal = useUpdateWeeklyGoal();
+  const [isEditingGoal, setIsEditingGoal] = useState(false);
+  const [goalInput, setGoalInput] = useState("");
 
   if (isLoading) {
     return (
       <div className="space-y-6">
         <PageHeader
           icon={BrainCircuit}
-          title="AI Tutor"
-          description="Personalized learning powered by AI"
+          title="Guided Learning"
+          description="Your personalized learning dashboard"
         />
         <DashboardSkeleton />
       </div>
@@ -75,8 +81,8 @@ export default function TutorDashboardPage() {
       <div className="space-y-6">
         <PageHeader
           icon={BrainCircuit}
-          title="AI Tutor"
-          description="Personalized learning powered by AI"
+          title="Guided Learning"
+          description="Your personalized learning dashboard"
         />
         <ErrorState
           title="Failed to load tutor dashboard"
@@ -105,8 +111,8 @@ export default function TutorDashboardPage() {
     <div className="space-y-6">
       <PageHeader
         icon={BrainCircuit}
-        title="AI Tutor"
-        description="Personalized learning powered by AI"
+        title="Guided Learning"
+        description="Your personalized learning dashboard"
         actions={
           <Link
             href="/student/tutor/learning-path"
@@ -119,7 +125,7 @@ export default function TutorDashboardPage() {
       />
 
       {/* Stat Cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         <StatCard
           label="Active Learning Paths"
           value={data.activeLearningPaths}
@@ -136,6 +142,36 @@ export default function TutorDashboardPage() {
         />
         <div className="rounded-xl border border-border bg-card p-6 transition-shadow hover:shadow-md">
           <div className="flex items-center justify-between">
+            <p className="text-sm font-medium text-muted-foreground">Level</p>
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-100">
+              <Star className="h-4 w-4 text-purple-500" />
+            </div>
+          </div>
+          <p className="mt-2 text-3xl font-semibold tracking-tight">
+            {data.level}
+          </p>
+          <p className="mt-2 text-xs text-muted-foreground">{data.levelTitle}</p>
+        </div>
+        <div
+          className="rounded-xl border border-border bg-card p-6 transition-shadow hover:shadow-md"
+          title="Lesson: 50 XP, Quiz passed: 100 XP, Perfect score: 150 XP"
+        >
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-medium text-muted-foreground">Total XP</p>
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-100">
+              <Zap className="h-4 w-4 text-amber-500" />
+            </div>
+          </div>
+          <p className="mt-2 text-3xl font-semibold tracking-tight">
+            {data.totalXp.toLocaleString()}
+          </p>
+          <p className="mt-2 text-xs text-muted-foreground">Experience points</p>
+        </div>
+        <div
+          className="rounded-xl border border-border bg-card p-6 transition-shadow hover:shadow-md"
+          title="Consecutive days with at least one completed learning activity"
+        >
+          <div className="flex items-center justify-between">
             <p className="text-sm font-medium text-muted-foreground">Current Streak</p>
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-orange-100">
               <Flame className="h-4 w-4 text-orange-500" />
@@ -149,27 +185,94 @@ export default function TutorDashboardPage() {
         <div className="rounded-xl border border-border bg-card p-6 transition-shadow hover:shadow-md">
           <div className="flex items-center justify-between">
             <p className="text-sm font-medium text-muted-foreground">Weekly Goal</p>
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-portal-accent-light">
-              <Target className="h-4 w-4 text-portal-accent" />
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => {
+                  setIsEditingGoal(!isEditingGoal);
+                  setGoalInput(String(data.weeklyGoal.target));
+                }}
+                className="flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                title="Edit weekly goal"
+              >
+                <Pencil className="h-3 w-3" />
+              </button>
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-portal-accent-light">
+                <Target className="h-4 w-4 text-portal-accent" />
+              </div>
             </div>
           </div>
-          <p className="mt-2 text-3xl font-semibold tracking-tight">
-            {data.weeklyGoal.completed} / {data.weeklyGoal.target}
-          </p>
-          <div className="mt-2">
-            <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
-              <span>{weeklyPct}% complete</span>
+          {isEditingGoal ? (
+            <div className="mt-2 space-y-2">
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min={1}
+                  max={20}
+                  value={goalInput}
+                  onChange={(e) => setGoalInput(e.target.value)}
+                  className="h-9 w-20 rounded-lg border border-border bg-background px-2 text-center text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-portal-accent"
+                />
+                <span className="text-xs text-muted-foreground">lessons/week</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                {[3, 5, 7].map((preset) => (
+                  <button
+                    key={preset}
+                    onClick={() => setGoalInput(String(preset))}
+                    className={cn(
+                      "rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
+                      goalInput === String(preset)
+                        ? "bg-portal-accent text-portal-accent-foreground"
+                        : "bg-muted text-muted-foreground hover:bg-muted/80"
+                    )}
+                  >
+                    {preset}
+                  </button>
+                ))}
+              </div>
+              <div className="flex items-center gap-1.5 pt-1">
+                <button
+                  onClick={async () => {
+                    const target = parseInt(goalInput, 10);
+                    if (target > 0) {
+                      await updateWeeklyGoal.mutateAsync(target);
+                      setIsEditingGoal(false);
+                    }
+                  }}
+                  disabled={updateWeeklyGoal.isPending || !goalInput || parseInt(goalInput, 10) < 1}
+                  className="rounded-lg bg-portal-accent px-3 py-1 text-xs font-medium text-portal-accent-foreground transition-colors hover:bg-portal-accent-hover disabled:opacity-50"
+                >
+                  {updateWeeklyGoal.isPending ? "Saving..." : "Save"}
+                </button>
+                <button
+                  onClick={() => setIsEditingGoal(false)}
+                  className="rounded-lg px-3 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted"
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
-            <div className="h-2 overflow-hidden rounded-full bg-muted">
-              <div
-                className={cn(
-                  "h-full rounded-full transition-all",
-                  weeklyPct >= 100 ? "bg-success" : weeklyPct >= 50 ? "bg-portal-accent" : "bg-warning"
-                )}
-                style={{ width: `${Math.min(weeklyPct, 100)}%` }}
-              />
-            </div>
-          </div>
+          ) : (
+            <>
+              <p className="mt-2 text-3xl font-semibold tracking-tight">
+                {data.weeklyGoal.completed} / {data.weeklyGoal.target}
+              </p>
+              <div className="mt-2">
+                <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
+                  <span>{weeklyPct}% complete</span>
+                </div>
+                <div className="h-2 overflow-hidden rounded-full bg-muted">
+                  <div
+                    className={cn(
+                      "h-full rounded-full transition-all",
+                      weeklyPct >= 100 ? "bg-success" : weeklyPct >= 50 ? "bg-portal-accent" : "bg-warning"
+                    )}
+                    style={{ width: `${Math.min(weeklyPct, 100)}%` }}
+                  />
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
@@ -333,7 +436,7 @@ function WeaknessCard({ weakness }: { weakness: WeaknessArea }) {
       </div>
 
       <Link
-        href="/student/tutor/learning-path"
+        href={`/student/tutor/learning-path?skill=${encodeURIComponent(weakness.skill)}`}
         className="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-portal-accent px-3 py-2 text-xs font-medium text-portal-accent-foreground transition-colors hover:bg-portal-accent-hover"
       >
         Start Learning

@@ -162,6 +162,9 @@ export default function AdminAnalyticsPage() {
           searchPlaceholder="Search departments..."
           showPagination={false}
         />
+        <p className="mt-3 text-xs text-muted-foreground">
+          Showing current academic year performance across all departments.
+        </p>
       </div>
     </div>
   );

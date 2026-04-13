@@ -57,11 +57,17 @@ const auditColumns: ColumnDef<AuditLogEntry, unknown>[] = [
   {
     accessorKey: "details",
     header: "Details",
-    cell: ({ getValue }) => (
-      <span className="max-w-[200px] truncate text-xs text-muted-foreground">
-        {getValue() as string}
-      </span>
-    ),
+    cell: ({ getValue }) => {
+      const details = getValue() as string;
+      return (
+        <span
+          className="block max-w-[200px] truncate text-xs text-muted-foreground"
+          title={details}
+        >
+          {details}
+        </span>
+      );
+    },
   },
   {
     accessorKey: "ipAddress",
@@ -118,6 +124,10 @@ export default function AdminAuditTrailPage() {
           title="Audit Trail"
           description="System-wide audit log of all administrative actions"
         />
+        <p className="mt-2 text-sm text-muted-foreground">
+          Showing all system activities. Use filters to narrow results by action
+          type, user role, or search term.
+        </p>
       </div>
 
       {/* Filters */}

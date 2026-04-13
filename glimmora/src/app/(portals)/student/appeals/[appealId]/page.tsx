@@ -1,6 +1,6 @@
 "use client";
 
-import { use } from "react";
+import { use, useState } from "react";
 import Link from "next/link";
 import {
   Scale,
@@ -8,8 +8,12 @@ import {
   FileText,
   Download,
   CheckCircle2,
+  MessageSquare,
+  AlertTriangle,
+  Send,
+  Loader2,
 } from "lucide-react";
-import { useAppealDetail } from "@/lib/hooks/use-student";
+import { useAppealDetail, useRespondToAppeal, useEscalateAppeal } from "@/lib/hooks/use-student";
 import { PageHeader } from "@/components/shared/misc/page-header";
 import { StatusBadge } from "@/components/shared/feedback/status-badge";
 import { Timeline } from "@/components/shared/misc/timeline";
@@ -24,8 +28,10 @@ function getAppealStatusVariant(status: AppealStatus) {
   const map: Record<AppealStatus, "default" | "success" | "warning" | "danger" | "info" | "muted"> = {
     pending: "warning",
     under_review: "info",
+    info_requested: "warning",
     resolved: "success",
     rejected: "danger",
+    escalated: "info",
   };
   return map[status] || "muted";
 }
@@ -45,6 +51,12 @@ export default function StudentAppealDetailPage({
 }) {
   const { appealId } = use(params);
   const { data: appeal, isLoading, isError, refetch } = useAppealDetail(appealId);
+  const respondToAppeal = useRespondToAppeal();
+  const escalateAppeal = useEscalateAppeal();
+
+  const [infoResponse, setInfoResponse] = useState("");
+  const [showEscalation, setShowEscalation] = useState(false);
+  const [escalationReason, setEscalationReason] = useState("");
 
   if (isLoading) return <DashboardSkeleton />;
   if (isError || !appeal) return <ErrorState onRetry={() => refetch()} />;
@@ -138,6 +150,144 @@ export default function StudentAppealDetailPage({
               </div>
               <p className="mt-3 text-sm leading-relaxed text-muted-foreground whitespace-pre-wrap">
                 {appeal.reviewerNote}
+              </p>
+            </div>
+          )}
+
+          {/* Info Requested - Respond Flow */}
+          {appeal.status === "info_requested" && (
+            <div className="rounded-xl border border-warning/30 bg-warning-light/20 p-6">
+              <div className="flex items-center gap-2">
+                <MessageSquare className="h-4 w-4 text-warning" />
+                <h2 className="text-sm font-semibold">Information Requested</h2>
+              </div>
+              {appeal.reviewerQuestion && (
+                <div className="mt-3 rounded-lg border border-warning/20 bg-card px-4 py-3">
+                  <p className="text-xs font-medium text-muted-foreground">Reviewer&apos;s Question</p>
+                  <p className="mt-1 text-sm leading-relaxed">{appeal.reviewerQuestion}</p>
+                </div>
+              )}
+              <div className="mt-4 space-y-3">
+                <label className="block text-sm font-medium">Your Response</label>
+                <textarea
+                  value={infoResponse}
+                  onChange={(e) => setInfoResponse(e.target.value)}
+                  placeholder="Provide the requested information..."
+                  rows={4}
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:border-portal-accent focus:outline-none focus:ring-1 focus:ring-portal-accent"
+                />
+                <button
+                  type="button"
+                  disabled={!infoResponse.trim() || respondToAppeal.isPending}
+                  onClick={() =>
+                    respondToAppeal.mutate(
+                      { appealId, response: infoResponse },
+                      { onSuccess: () => { setInfoResponse(""); refetch(); } }
+                    )
+                  }
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-portal-accent px-4 py-2 text-sm font-medium text-portal-accent-foreground transition-colors hover:bg-portal-accent-hover disabled:opacity-50"
+                >
+                  {respondToAppeal.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4" />
+                  )}
+                  Submit Response
+                </button>
+                {respondToAppeal.isError && (
+                  <p className="text-sm text-danger">Failed to submit response. Please try again.</p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Rejected - Escalation Options */}
+          {appeal.status === "rejected" && (
+            <div className="rounded-xl border border-danger/30 bg-danger-light/20 p-6">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 text-danger" />
+                <h2 className="text-sm font-semibold">Appeal Options</h2>
+              </div>
+              <div className="mt-4 space-y-4">
+                {!showEscalation ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowEscalation(true)}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-danger/30 px-4 py-2 text-sm font-medium text-danger transition-colors hover:bg-danger-light/30"
+                  >
+                    Escalate to Department Head
+                  </button>
+                ) : (
+                  <div className="space-y-3">
+                    <label className="block text-sm font-medium">
+                      Reason for escalation <span className="text-muted-foreground">(min 20 characters)</span>
+                    </label>
+                    <textarea
+                      value={escalationReason}
+                      onChange={(e) => setEscalationReason(e.target.value)}
+                      placeholder="Explain why you believe this appeal should be reviewed by the department head..."
+                      rows={3}
+                      className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:border-portal-accent focus:outline-none focus:ring-1 focus:ring-portal-accent"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      {escalationReason.length}/20 characters minimum
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        disabled={escalationReason.length < 20 || escalateAppeal.isPending}
+                        onClick={() =>
+                          escalateAppeal.mutate(
+                            { appealId, reason: escalationReason },
+                            { onSuccess: () => { setShowEscalation(false); setEscalationReason(""); refetch(); } }
+                          )
+                        }
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-danger px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-danger/90 disabled:opacity-50"
+                      >
+                        {escalateAppeal.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+                        Submit Escalation
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setShowEscalation(false); setEscalationReason(""); }}
+                        className="rounded-lg border border-border px-4 py-2 text-sm font-medium transition-colors hover:bg-muted"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                    {escalateAppeal.isError && (
+                      <p className="text-sm text-danger">Failed to escalate appeal. Please try again.</p>
+                    )}
+                  </div>
+                )}
+                <div className="border-t border-border pt-4">
+                  <a
+                    href="mailto:ombudsman@university.edu"
+                    className="inline-flex items-center gap-1.5 text-sm font-medium text-portal-accent transition-colors hover:text-portal-accent-hover"
+                  >
+                    Contact the Ombudsman
+                  </a>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    ombudsman@university.edu
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Resolved - Success Banner */}
+          {appeal.status === "resolved" && appeal.resolvedScore !== undefined && (
+            <div className="rounded-xl border border-success/30 bg-success-light/20 p-6">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-5 w-5 text-success" />
+                <h2 className="text-sm font-semibold text-success">Appeal Resolved</h2>
+              </div>
+              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                Your grade for <span className="font-medium text-foreground">{appeal.assessmentName}</span> in{" "}
+                <span className="font-medium text-foreground">{appeal.courseName}</span> has been updated from{" "}
+                <span className="font-medium text-foreground">{appeal.currentScore}</span> to{" "}
+                <span className="font-medium text-success">{appeal.resolvedScore}</span>.
+                This change is reflected in your transcript.
               </p>
             </div>
           )}

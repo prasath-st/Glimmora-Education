@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { GraduationCap, BookOpen, ChevronDown, ChevronRight } from "lucide-react";
+import { GraduationCap, BookOpen, ChevronDown, ChevronRight, Download } from "lucide-react";
 import { useCourses, useTranscript } from "@/lib/hooks/use-student";
 import { PageHeader } from "@/components/shared/misc/page-header";
 import { StatusBadge } from "@/components/shared/feedback/status-badge";
@@ -47,14 +47,28 @@ export default function StudentAcademicsPage() {
         icon={GraduationCap}
         title="Academics"
         description="Your courses, grades, and transcript"
+        actions={
+          <button
+            onClick={() => window.print()}
+            className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
+            <Download className="h-4 w-4" />
+            Download Unofficial Transcript
+          </button>
+        }
       />
 
       {summary && (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <SummaryCell label="Cumulative GPA" value={formatGpa(summary.cumulativeGpa)} />
-          <SummaryCell label="Credits Earned" value={`${summary.creditsEarned}`} />
-          <SummaryCell label="Credits Attempted" value={`${summary.creditsAttempted}`} />
-          <SummaryCell label="Current Semester GPA" value={formatGpa(summary.currentSemesterGpa)} />
+        <div className="space-y-2">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <SummaryCell label="Cumulative GPA" value={formatGpa(summary.cumulativeGpa)} />
+            <SummaryCell label="Credits Earned" value={`${summary.creditsEarned}`} />
+            <SummaryCell label="Credits Attempted" value={`${summary.creditsAttempted}`} />
+            <SummaryCell label="Current Semester GPA" value={formatGpa(summary.currentSemesterGpa)} />
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Source: Canvas LMS — Synced from your institution&apos;s records
+          </p>
         </div>
       )}
 
@@ -189,7 +203,10 @@ function CurrentSemesterTab({
               <p className="mt-1 text-xs text-muted-foreground">{course.instructor}</p>
               <div className="mt-3 flex items-center justify-between">
                 <span className="text-xs text-muted-foreground">{course.credits} credits</span>
-                <div className="flex items-center gap-1.5">
+                <div
+                  className="flex items-center gap-1.5"
+                  title="Attendance data synced from your institution's records"
+                >
                   <div className="h-1.5 w-16 overflow-hidden rounded-full bg-muted">
                     <div
                       className={cn(
@@ -272,7 +289,7 @@ function TranscriptTab({
             const isOpen = expanded.has(sem.semester);
             return (
               <div
-                key={sem.semester}
+                key={`${sem.semester}-${sem.year}`}
                 className="overflow-hidden rounded-xl border border-border bg-card"
               >
                 <button

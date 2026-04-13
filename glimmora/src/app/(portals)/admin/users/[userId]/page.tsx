@@ -71,26 +71,36 @@ export default function AdminUserDetailPage({
   const showFeedback = useCallback(
     (type: "success" | "error", message: string) => {
       setFeedback({ type, message });
-      setTimeout(() => setFeedback(null), 3000);
+      setTimeout(() => setFeedback(null), 5000);
     },
     []
   );
 
   const handleRoleChange = useCallback(
-    async (newRole: string) => {
-      if (!user) return;
-      setRoleChanging(true);
-      try {
-        await updateUser.mutateAsync({
-          id: user.id,
-          role: newRole as typeof user.role,
-        });
-        showFeedback("success", `Role updated to ${newRole}`);
-      } catch {
-        showFeedback("error", "Failed to update role");
-      } finally {
-        setRoleChanging(false);
-      }
+    (newRole: string) => {
+      if (!user || newRole === user.role) return;
+      const newRoleLabel = ROLES.find((r) => r.value === newRole)?.label ?? newRole;
+      const currentRoleLabel = ROLES.find((r) => r.value === user.role)?.label ?? user.role;
+      setConfirmDialog({
+        open: true,
+        title: "Confirm Role Change",
+        description: `You are about to change ${user.name}'s role from ${currentRoleLabel} to ${newRoleLabel}. This will change their system access. Continue?`,
+        variant: "default",
+        action: async () => {
+          setRoleChanging(true);
+          try {
+            await updateUser.mutateAsync({
+              id: user.id,
+              role: newRole as typeof user.role,
+            });
+            showFeedback("success", `Role updated to ${newRoleLabel}. Changes saved. This action has been logged in the Audit Trail.`);
+          } catch {
+            showFeedback("error", "Failed to update role");
+          } finally {
+            setRoleChanging(false);
+          }
+        },
+      });
     },
     [user, updateUser, showFeedback]
   );
@@ -106,7 +116,7 @@ export default function AdminUserDetailPage({
         action: async () => {
           try {
             await updateUser.mutateAsync({ id: user.id, status: newStatus });
-            showFeedback("success", `Status changed to ${newStatus}`);
+            showFeedback("success", `Status changed to ${newStatus}. Changes saved. This action has been logged in the Audit Trail.`);
           } catch {
             showFeedback("error", "Failed to update status");
           }
@@ -120,7 +130,7 @@ export default function AdminUserDetailPage({
     if (!user || !deptValue.trim()) return;
     try {
       await updateUser.mutateAsync({ id: user.id, department: deptValue.trim() });
-      showFeedback("success", "Department updated");
+      showFeedback("success", "Department updated. Changes saved. This action has been logged in the Audit Trail.");
       setDeptEditing(false);
     } catch {
       showFeedback("error", "Failed to update department");
@@ -298,6 +308,9 @@ export default function AdminUserDetailPage({
                 </button>
               ))}
             </div>
+            <p className="mt-2 text-xs text-muted-foreground">
+              <span className="font-medium text-danger">Note:</span> Suspending this user will immediately revoke their access.
+            </p>
           </div>
 
           {/* Change Department */}

@@ -72,7 +72,7 @@ function GenerateReportDialog({
           templateId: template.id,
           parameters: formData,
         });
-        setSuccessMsg("Report generation started. Check back shortly.");
+        setSuccessMsg("Report generation started. This typically takes 1-2 minutes. The report will appear in the Generated Reports section below when ready.");
         reset();
         setTimeout(() => {
           setSuccessMsg("");
@@ -325,6 +325,9 @@ export default function AdminReportsPage() {
       {/* Generated Reports Section */}
       <div>
         <h2 className="mb-4 text-sm font-semibold">Generated Reports</h2>
+        <p className="mb-3 text-xs text-muted-foreground">
+          Reports are generated asynchronously. Refresh the page to check for completed reports.
+        </p>
         {reportsLoading ? (
           <TableSkeleton rows={5} />
         ) : reportsError ? (

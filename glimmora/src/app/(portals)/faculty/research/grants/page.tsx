@@ -10,8 +10,10 @@ import {
   TrendingUp,
   ChevronDown,
   ChevronUp,
+  Loader2,
+  CheckCircle2,
 } from "lucide-react";
-import { useFacultyGrants } from "@/lib/hooks/use-faculty";
+import { useFacultyGrants, useUpdateGrantStatus } from "@/lib/hooks/use-faculty";
 import { PageHeader } from "@/components/shared/misc/page-header";
 import { StatusBadge } from "@/components/shared/feedback/status-badge";
 import { GaugeChart } from "@/components/shared/charts/gauge-chart";
@@ -130,9 +132,21 @@ function GrantCard({
 }) {
   const deadlineDate = new Date(grant.deadline);
   const isUrgent = deadlineDate.getTime() - Date.now() < 14 * 24 * 60 * 60 * 1000;
+  const updateStatus = useUpdateGrantStatus();
+
+  const handleStatusChange = (newStatus: string) => {
+    updateStatus.mutate({ grantId: grant.id, status: newStatus });
+  };
+
+  const isFinalState = grant.status === "funded" || grant.status === "rejected";
 
   return (
-    <div className="rounded-xl border border-border bg-card transition-shadow hover:shadow-sm">
+    <div
+      className={cn(
+        "rounded-xl border border-border bg-card transition-shadow hover:shadow-sm",
+        grant.status === "rejected" && "opacity-60"
+      )}
+    >
       <div className="p-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0 flex-1">
@@ -141,6 +155,12 @@ function GrantCard({
               <StatusBadge variant={statusVariant[grant.status] || "muted"} dot>
                 {grant.status}
               </StatusBadge>
+              {grant.status === "funded" && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
+                  <CheckCircle2 className="h-3 w-3" />
+                  Funded
+                </span>
+              )}
             </div>
             <p className="mt-1 text-sm text-muted-foreground">{grant.fundingBody}</p>
 
@@ -160,8 +180,14 @@ function GrantCard({
               <span className="flex items-center gap-1 text-portal-accent font-medium">
                 <Target className="h-3.5 w-3.5" />
                 {grant.alignmentScore}% match
+                <span className="ml-0.5 text-[11px] font-normal text-muted-foreground">
+                  Based on your research interests and publication history
+                </span>
               </span>
-              <span className="flex items-center gap-1 text-muted-foreground">
+              <span
+                className="flex items-center gap-1 text-muted-foreground"
+                title="Computed from historical acceptance rates and proposal alignment"
+              >
                 <TrendingUp className="h-3.5 w-3.5" />
                 {formatPercentage(grant.successProbability, 0)} success probability
               </span>
@@ -180,6 +206,62 @@ function GrantCard({
             </div>
           </div>
         </div>
+
+        {/* Status Workflow Actions */}
+        {!isFinalState && (
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            {grant.status === "discovered" && (
+              <button
+                onClick={() => handleStatusChange("interested")}
+                disabled={updateStatus.isPending}
+                className="inline-flex items-center gap-1.5 rounded-md border border-blue-300 bg-transparent px-3 py-1.5 text-sm font-medium text-blue-600 transition-colors hover:bg-blue-50 disabled:opacity-50 dark:border-blue-700 dark:text-blue-400 dark:hover:bg-blue-950"
+              >
+                {updateStatus.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                Mark Interested
+              </button>
+            )}
+            {grant.status === "interested" && (
+              <button
+                onClick={() => handleStatusChange("drafting")}
+                disabled={updateStatus.isPending}
+                className="inline-flex items-center gap-1.5 rounded-md border border-blue-300 bg-transparent px-3 py-1.5 text-sm font-medium text-blue-600 transition-colors hover:bg-blue-50 disabled:opacity-50 dark:border-blue-700 dark:text-blue-400 dark:hover:bg-blue-950"
+              >
+                {updateStatus.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                Start Drafting
+              </button>
+            )}
+            {grant.status === "drafting" && (
+              <button
+                onClick={() => handleStatusChange("submitted")}
+                disabled={updateStatus.isPending}
+                className="inline-flex items-center gap-1.5 rounded-md border border-green-300 bg-transparent px-3 py-1.5 text-sm font-medium text-green-600 transition-colors hover:bg-green-50 disabled:opacity-50 dark:border-green-700 dark:text-green-400 dark:hover:bg-green-950"
+              >
+                {updateStatus.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                Mark Submitted
+              </button>
+            )}
+            {grant.status === "submitted" && (
+              <>
+                <button
+                  onClick={() => handleStatusChange("funded")}
+                  disabled={updateStatus.isPending}
+                  className="inline-flex items-center gap-1.5 rounded-md border border-green-300 bg-green-50 px-3 py-1.5 text-sm font-medium text-green-700 transition-colors hover:bg-green-100 disabled:opacity-50 dark:border-green-700 dark:bg-green-950 dark:text-green-400 dark:hover:bg-green-900"
+                >
+                  {updateStatus.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                  Mark Funded
+                </button>
+                <button
+                  onClick={() => handleStatusChange("rejected")}
+                  disabled={updateStatus.isPending}
+                  className="inline-flex items-center gap-1.5 rounded-md border border-red-300 bg-transparent px-3 py-1.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950"
+                >
+                  {updateStatus.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                  Mark Rejected
+                </button>
+              </>
+            )}
+          </div>
+        )}
 
         {/* Expand/Collapse */}
         <button

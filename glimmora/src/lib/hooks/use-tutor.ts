@@ -7,6 +7,7 @@ import type {
   LearningPath,
   TutorSession,
   RecommendedLesson,
+  TutorBookmark,
 } from "@/lib/api/types/tutor.types";
 
 export function useTutorDashboard() {
@@ -98,6 +99,7 @@ export function useSubmitQuiz() {
       qc.invalidateQueries({ queryKey: ["tutor", "session", vars.sessionId] });
       qc.invalidateQueries({ queryKey: ["tutor", "learning-paths"] });
       qc.invalidateQueries({ queryKey: ["tutor", "dashboard"] });
+      qc.invalidateQueries({ queryKey: ["student", "skills"] });
     },
   });
 }
@@ -107,5 +109,35 @@ export function useRecommendedLessons() {
     queryKey: ["tutor", "recommended"],
     queryFn: () => api.get<RecommendedLesson[]>("/api/students/me/tutor/recommended"),
     select: (res) => res.data,
+  });
+}
+
+export function useUpdateWeeklyGoal() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (target: number) =>
+      api.patch("/api/students/me/tutor/preferences", { weeklyGoalTarget: target }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["tutor", "dashboard"] });
+    },
+  });
+}
+
+export function useTutorBookmarks() {
+  return useQuery({
+    queryKey: ["tutor", "bookmarks"],
+    queryFn: () => api.get<TutorBookmark[]>("/api/students/me/tutor/bookmarks"),
+    select: (res) => res.data,
+  });
+}
+
+export function useAddBookmark() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { sectionId: string; sectionTitle: string; pathTitle: string; skill: string }) =>
+      api.post<TutorBookmark>("/api/students/me/tutor/bookmarks", data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["tutor", "bookmarks"] });
+    },
   });
 }

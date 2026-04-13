@@ -15,6 +15,7 @@ import type {
   FacultyPublication,
   AiBriefing,
   FacultyProfile,
+  FacultyNotificationPreferences,
 } from "@/lib/api/types/faculty.types";
 import type { PaginationMeta } from "@/lib/api/types/common.types";
 
@@ -265,6 +266,64 @@ export function useUpdateFacultyProfile() {
       api.patch<FacultyProfile>("/api/faculty/me/profile", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["faculty", "profile"] });
+    },
+  });
+}
+
+// === Grant Status Change ===
+export function useUpdateGrantStatus() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ grantId, status }: { grantId: string; status: string }) =>
+      api.patch<FacultyGrant>(`/api/faculty/me/grants/${grantId}`, { status }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["faculty", "grants"] });
+      queryClient.invalidateQueries({ queryKey: ["faculty", "dashboard"] });
+    },
+  });
+}
+
+// === Notification Preferences ===
+export function useFacultyNotificationPreferences() {
+  return useQuery({
+    queryKey: ["faculty", "notification-preferences"],
+    queryFn: () => api.get<FacultyNotificationPreferences>("/api/faculty/me/notification-preferences"),
+    select: (res) => res.data,
+  });
+}
+
+export function useUpdateFacultyNotificationPreferences() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Partial<FacultyNotificationPreferences>) =>
+      api.patch<FacultyNotificationPreferences>("/api/faculty/me/notification-preferences", data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["faculty", "notification-preferences"] });
+    },
+  });
+}
+
+// === Intervention Note Edit/Delete ===
+export function useEditInterventionNote() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ interventionId, noteIndex, content }: { interventionId: string; noteIndex: number; content: string }) =>
+      api.patch(`/api/faculty/me/interventions/${interventionId}/notes/${noteIndex}`, { content }),
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: ["faculty", "intervention", vars.interventionId] });
+      queryClient.invalidateQueries({ queryKey: ["faculty", "interventions"] });
+    },
+  });
+}
+
+export function useDeleteInterventionNote() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ interventionId, noteIndex }: { interventionId: string; noteIndex: number }) =>
+      api.delete(`/api/faculty/me/interventions/${interventionId}/notes/${noteIndex}`),
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: ["faculty", "intervention", vars.interventionId] });
+      queryClient.invalidateQueries({ queryKey: ["faculty", "interventions"] });
     },
   });
 }

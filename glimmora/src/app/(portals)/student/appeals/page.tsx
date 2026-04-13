@@ -20,8 +20,10 @@ function getAppealStatusVariant(status: AppealStatus) {
   const map: Record<AppealStatus, "default" | "success" | "warning" | "danger" | "info" | "muted"> = {
     pending: "warning",
     under_review: "info",
+    info_requested: "warning",
     resolved: "success",
     rejected: "danger",
+    escalated: "info",
   };
   return map[status] || "muted";
 }

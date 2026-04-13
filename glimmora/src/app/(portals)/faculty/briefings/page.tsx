@@ -16,6 +16,7 @@ import {
   Loader2,
   Eye,
 } from "lucide-react";
+import Link from "next/link";
 import { useBriefings, useToggleBriefingAction } from "@/lib/hooks/use-faculty";
 import { PageHeader } from "@/components/shared/misc/page-header";
 import { StatusBadge, getRiskVariant } from "@/components/shared/feedback/status-badge";
@@ -123,6 +124,13 @@ function BriefingCard({
             <div className="flex flex-wrap items-center gap-2">
               <StatusBadge variant="default">{briefing.courseCode}</StatusBadge>
               <h3 className="text-sm font-semibold">{briefing.courseName}</h3>
+              <Link
+                href={`/faculty/courses/${briefing.courseId}`}
+                onClick={(e) => e.stopPropagation()}
+                className="ml-auto text-xs text-portal-accent hover:underline"
+              >
+                View Course &rarr;
+              </Link>
             </div>
             <div className="mt-2 flex items-center gap-3 text-xs text-muted-foreground">
               <span className="flex items-center gap-1">
@@ -202,7 +210,12 @@ function BriefingCard({
                     <div className="flex items-center gap-3">
                       <RiskIndicator level={student.riskLevel} showLabel={false} />
                       <div>
-                        <p className="text-sm font-medium">{student.name}</p>
+                        <Link
+                          href={`/faculty/students/${student.studentId}`}
+                          className="text-sm font-medium text-portal-accent hover:underline"
+                        >
+                          {student.name}
+                        </Link>
                         <p className="text-xs text-muted-foreground">{student.reason}</p>
                       </div>
                     </div>
@@ -218,10 +231,13 @@ function BriefingCard({
           {/* Topic Suggestions */}
           {briefing.topicSuggestions.length > 0 && (
             <div>
-              <div className="flex items-center gap-2 mb-3">
+              <div className="flex items-center gap-2 mb-1">
                 <Sparkles className="h-4 w-4 text-portal-accent" />
                 <h4 className="text-sm font-semibold">Topic Suggestions</h4>
               </div>
+              <p className="mb-3 text-xs text-muted-foreground">
+                Suggested based on recent quiz results and assignment gaps across your students.
+              </p>
               <div className="flex flex-wrap gap-2">
                 {briefing.topicSuggestions.map((topic, i) => (
                   <span
@@ -289,6 +305,16 @@ function BriefingCard({
                   </div>
                 ))}
               </div>
+              <p className="mt-3 text-xs text-muted-foreground">
+                To follow up on action items, create an intervention from the{" "}
+                <Link
+                  href="/faculty/students"
+                  className="text-portal-accent hover:underline"
+                >
+                  student&apos;s profile
+                </Link>
+                .
+              </p>
             </div>
           )}
 

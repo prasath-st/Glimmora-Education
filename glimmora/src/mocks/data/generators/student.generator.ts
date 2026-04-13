@@ -19,6 +19,8 @@ import type {
   Appeal,
   StudentProfile,
   NotificationPreferences,
+  Notification,
+  WorkExperience,
 } from "@/lib/api/types/student.types";
 import type {
   AppealStatus,
@@ -325,6 +327,7 @@ function generateSingleCourse(
     code: courseInfo.code,
     name: courseInfo.name,
     instructor,
+    instructorEmail: `${instructor.split(" ").pop()?.toLowerCase()}@university.edu`,
     instructorId: id("fac"),
     credits: courseInfo.credits,
     semester,
@@ -335,6 +338,8 @@ function generateSingleCourse(
     schedule: status === "active" ? `${pick(days)} ${pick(times)}` : undefined,
     room: status === "active" ? pick(rooms) : undefined,
     assignments,
+    lmsUrl: `https://canvas.university.edu/courses/${faker.string.alphanumeric(6)}`,
+    dataSource: "Canvas LMS",
     createdAt: pastDate(200),
     updatedAt: nowStr,
   };
@@ -475,13 +480,19 @@ export function generateSkillEvolution(
     startValues[name] = faker.number.int({ min: 30, max: 55 });
   });
 
+  const eventMarkers = [
+    { month: 3, skill: "Python", label: "Completed CS 201", type: "course" as const },
+    { month: 5, skill: "Machine Learning", label: "Earned ML Badge", type: "credential" as const },
+    { month: 8, skill: "Data Structures", label: "Completed DS Learning Path", type: "tutor" as const },
+    { month: 10, skill: "JavaScript", label: "Completed CS 305", type: "course" as const },
+  ];
+
   for (let i = 0; i < count; i++) {
     const date = new Date(now);
     date.setMonth(date.getMonth() - (count - 1 - i));
 
     const skills: Record<string, number> = {};
     skillNames.forEach((name) => {
-      // Gradual growth with some noise
       const growth = faker.number.int({ min: -2, max: 5 });
       startValues[name] = Math.min(
         98,
@@ -490,9 +501,14 @@ export function generateSkillEvolution(
       skills[name] = startValues[name];
     });
 
+    const events = eventMarkers
+      .filter((e) => e.month === i)
+      .map((e) => ({ skill: e.skill, label: e.label, type: e.type }));
+
     points.push({
       date: isoDate(date),
       skills,
+      events: events.length > 0 ? events : undefined,
     });
   }
 
@@ -578,14 +594,27 @@ export function generateSkillGaps(count: number = 4): SkillGap[] {
     },
   ];
 
+  const pathTitles: Record<string, { pathId: string; pathTitle: string }> = {
+    "System Design": { pathId: "lp_sysdesign", pathTitle: "System Design Fundamentals" },
+    "Docker & Containers": { pathId: "lp_docker", pathTitle: "Docker & Containerization Mastery" },
+    "Cloud Services (AWS)": { pathId: "lp_cloud", pathTitle: "Cloud Computing with AWS" },
+    "Machine Learning": { pathId: "lp_ml", pathTitle: "Machine Learning Fundamentals" },
+    "Technical Communication": { pathId: "lp_techcomm", pathTitle: "Technical Communication Skills" },
+  };
+
   return gapSkills.slice(0, count).map((gs) => {
     const current = faker.number.int({ min: 30, max: 55 });
     const required = faker.number.int({ min: 70, max: 90 });
+    const pathInfo = pathTitles[gs.name];
     return {
       skillName: gs.name,
+      skillId: id("skill"),
       currentScore: current,
       requiredScore: required,
       gap: required - current,
+      requiredBy: `Software Engineer roles (based on ${faker.number.int({ min: 20, max: 60 })} matching job postings)`,
+      learningPathId: pathInfo?.pathId,
+      learningPathTitle: pathInfo?.pathTitle,
       recommendedResources: gs.resources,
     };
   });
@@ -884,16 +913,20 @@ export function generateJobMatches(count: number = 10): JobMatch[] {
 
     const currency = "USD";
 
+    const company = pick(TECH_COMPANIES);
     return {
       id: id("job"),
       title: jd.title,
-      company: pick(TECH_COMPANIES),
+      company,
       companyLogo: undefined,
+      companyDescription: `${company} is a leading technology company specializing in enterprise software solutions and cloud infrastructure.`,
+      companySize: pick(["50-200", "200-500", "500-1000", "1000-5000", "5000+"]),
+      companyIndustry: pick(["Software", "Cloud Computing", "AI/ML", "FinTech", "Enterprise Software"]),
       location: pick(locations),
       type: jd.type,
       salary: { min: jd.salaryMin, max: jd.salaryMax, currency },
       matchScore,
-      matchExplanation: `${matched.length} of ${jd.required.length} required skills matched. ${gap.length > 0 ? `Consider building: ${gap.join(", ")}.` : "Strong match across all requirements."}`,
+      matchExplanation: `You match ${matched.length} of ${jd.required.length} required skills. ${gap.length > 0 ? `Gap: ${gap.join(", ")}.` : "Strong match across all requirements."}`,
       requiredSkills: jd.required,
       matchedSkills: matched,
       gapSkills: gap,
@@ -901,6 +934,8 @@ export function generateJobMatches(count: number = 10): JobMatch[] {
       deadline: futureDate(faker.number.int({ min: 14, max: 60 })),
       description: faker.lorem.paragraphs(2),
       applied: faker.datatype.boolean(0.2),
+      saved: false,
+      source: "Career Services",
     };
   });
 }
@@ -1275,6 +1310,14 @@ export function generateRecommendations(
     },
   ];
 
+  const followUpMap: Record<string, { url: string; label: string }> = {
+    course: { url: "/student/academics", label: "View Course Details" },
+    skill: { url: "/student/tutor/learning-path", label: "Start Learning Path" },
+    job: { url: "/student/placement/jobs", label: "View Job Listing" },
+    resource: { url: "/student/tutor", label: "Open in Guided Learning" },
+    intervention: { url: "/student/dashboard", label: "View Action Plan" },
+  };
+
   return recDefs.slice(0, count).map((rd, i) => ({
     id: id("rec"),
     type: rd.type,
@@ -1283,9 +1326,11 @@ export function generateRecommendations(
     confidence: faker.number.float({ min: 0.7, max: 0.96, multipleOf: 0.01 }),
     priority: rd.priority,
     actionLabel: rd.actionLabel,
-    actionUrl: `/student/${rd.type === "job" ? "placement/jobs" : rd.type === "course" ? "academics/courses" : "skills"}`,
+    actionUrl: `/student/${rd.type === "job" ? "placement/jobs" : rd.type === "course" ? "academics" : "skills"}`,
+    followUpUrl: followUpMap[rd.type]?.url,
+    followUpLabel: followUpMap[rd.type]?.label,
     status: i === 0 ? "approved" : i === count - 1 ? "dismissed" : "pending",
-    dismissReason: i === count - 1 ? "Already planning this" : undefined,
+    dismissReason: i === count - 1 ? "not_interested" as const : undefined,
     explanation: {
       summary: rd.desc,
       factors: rd.factors,
@@ -1435,6 +1480,7 @@ export function generateStudentProfile(): StudentProfile {
   return {
     name: "Alex Rivera",
     email: "student@glimmora.dev",
+    personalEmail: "alex.rivera@gmail.com",
     studentId: "STU-2023-04172",
     department: "Computer Science",
     program: "Bachelor of Science in Computer Science",
@@ -1453,11 +1499,21 @@ export function generateStudentProfile(): StudentProfile {
     socialLinks: [
       { platform: "GitHub", url: "https://github.com/alexrivera" },
       { platform: "LinkedIn", url: "https://linkedin.com/in/alexrivera" },
+      { platform: "Portfolio", url: "https://alexrivera.dev" },
+    ],
+    workExperience: [
       {
-        platform: "Portfolio",
-        url: "https://alexrivera.dev",
+        id: id("exp"),
+        title: "Software Engineering Intern",
+        company: "CloudPeak Systems",
+        startDate: `${currentYear - 1}-06-01`,
+        endDate: `${currentYear - 1}-08-31`,
+        description: "Developed REST APIs using Node.js and PostgreSQL. Built internal dashboards with React.",
+        current: false,
       },
     ],
+    onboardingCompleted: true,
+    lastLoginAt: pastDate(0),
   };
 }
 
@@ -1470,6 +1526,9 @@ export function generateNotificationPreferences(): NotificationPreferences {
     deadlineReminders: true,
     jobMatches: true,
     recommendations: false,
+    appealUpdates: true,
+    credentialIssued: true,
+    applicationUpdates: true,
   };
 }
 
@@ -1504,21 +1563,25 @@ export function generateStudentDashboard(): StudentDashboard {
       id: id("risk"),
       type: "attendance",
       severity: "medium",
-      message:
-        "Attendance in CS 301: Operating Systems has dropped below 80%. This may affect your grade.",
+      message: "Attendance in CS 301: Operating Systems has dropped below 80%.",
+      description: "Your attendance in CS 301 dropped to 68% this month. Falling below 75% may result in grade penalties. Your academic advisor has been notified.",
       courseId: id("crs"),
       courseName: "Operating Systems",
       triggeredAt: pastDate(3),
+      actionLabel: "View Attendance Details",
+      actionUrl: "/student/academics",
     },
     {
       id: id("risk"),
       type: "academic",
       severity: "low",
-      message:
-        "Your quiz average in CS 302: Database Systems is trending downward. Consider reviewing recent material.",
+      message: "Quiz average in CS 302: Database Systems is trending downward.",
+      description: "Your quiz average dropped from 82% to 71% over the last 3 quizzes. Consider reviewing recent material or visiting office hours.",
       courseId: id("crs"),
       courseName: "Database Systems",
       triggeredAt: pastDate(7),
+      actionLabel: "View Course Performance",
+      actionUrl: "/student/academics",
     },
   ];
 
@@ -1561,18 +1624,19 @@ export function generateStudentDashboard(): StudentDashboard {
     {
       id: id("act"),
       title: "Grade posted",
-      description:
-        "Assignment 4 in Data Structures & Algorithms graded: 47/50",
+      description: "Assignment 4 in Data Structures & Algorithms graded: 47/50",
       timestamp: pastDate(1),
       type: "grade",
+      linkUrl: "/student/academics",
+      resourceId: id("crs"),
     },
     {
       id: id("act"),
       title: "New recommendation",
-      description:
-        "AI recommends enrolling in CS 430: Cloud Computing next semester",
+      description: "AI recommends enrolling in CS 430: Cloud Computing next semester",
       timestamp: pastDate(2),
       type: "recommendation",
+      linkUrl: "/student/recommendations",
     },
     {
       id: id("act"),
@@ -1580,22 +1644,25 @@ export function generateStudentDashboard(): StudentDashboard {
       description: "Python Proficiency - Advanced badge earned",
       timestamp: pastDate(5),
       type: "credential",
+      linkUrl: "/student/credentials",
+      resourceId: id("cred"),
     },
     {
       id: id("act"),
       title: "Appeal update",
-      description:
-        "Your appeal for CS 301 Midterm Exam is now under review",
+      description: "Your appeal for CS 301 Midterm Exam is now under review",
       timestamp: pastDate(4),
       type: "appeal",
+      linkUrl: "/student/appeals",
+      resourceId: id("apl"),
     },
     {
       id: id("act"),
       title: "Application status changed",
-      description:
-        "Your application to Nextera Technologies moved to Interview stage",
+      description: "Your application to Nextera Technologies moved to Interview stage",
       timestamp: pastDate(6),
       type: "application",
+      linkUrl: "/student/placement/applications",
     },
   ];
 
@@ -1613,5 +1680,26 @@ export function generateStudentDashboard(): StudentDashboard {
     upcomingDeadlines,
     skillRadarPreview: skills,
     recentActivity,
+    lastSyncedAt: pastDate(0),
+    studentName: "Alex",
   };
+}
+
+export function generateNotifications(count: number = 8): Notification[] {
+  const notifDefs: Omit<Notification, "id" | "createdAt">[] = [
+    { type: "grade_update", title: "Grade posted", message: "Assignment 4 in Data Structures graded: 47/50", linkUrl: "/student/academics", read: false },
+    { type: "risk_alert", title: "Attendance alert", message: "Your attendance in CS 301 dropped below 80%", linkUrl: "/student/dashboard", read: false },
+    { type: "credential_issued", title: "Credential earned", message: "Python Proficiency - Advanced badge has been issued", linkUrl: "/student/credentials", read: false },
+    { type: "job_match", title: "New job match", message: "Software Engineer Intern at Nextera Technologies (85% match)", linkUrl: "/student/placement/jobs", read: true },
+    { type: "application_update", title: "Application update", message: "Your application to Axiom Software moved to Interview stage", linkUrl: "/student/placement/applications", read: true },
+    { type: "recommendation", title: "New recommendation", message: "AI recommends building Docker & Container skills", linkUrl: "/student/recommendations", read: true },
+    { type: "deadline_reminder", title: "Deadline tomorrow", message: "Assignment 5: Process Scheduling due tomorrow", linkUrl: "/student/academics", read: false },
+    { type: "appeal_update", title: "Appeal update", message: "Your appeal for CS 301 Midterm is now under review", linkUrl: "/student/appeals", read: true },
+  ];
+
+  return notifDefs.slice(0, count).map((nd, i) => ({
+    ...nd,
+    id: id("notif"),
+    createdAt: pastDate(i + 1),
+  }));
 }

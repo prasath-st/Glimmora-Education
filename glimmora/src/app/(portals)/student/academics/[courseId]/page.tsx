@@ -10,6 +10,8 @@ import {
   User,
   Calendar,
   CreditCard,
+  ExternalLink,
+  Scale,
 } from "lucide-react";
 import { useCourseDetail } from "@/lib/hooks/use-student";
 import { PageHeader } from "@/components/shared/misc/page-header";
@@ -39,55 +41,73 @@ function getAssignmentStatusVariant(status: Assignment["status"]) {
   return map[status] || "muted";
 }
 
-const assignmentColumns: ColumnDef<Assignment, unknown>[] = [
-  {
-    accessorKey: "title",
-    header: "Title",
-    cell: ({ row }) => <span className="font-medium">{row.original.title}</span>,
-  },
-  {
-    accessorKey: "type",
-    header: "Type",
-    cell: ({ row }) => (
-      <StatusBadge variant="muted">{row.original.type}</StatusBadge>
-    ),
-  },
-  {
-    accessorKey: "dueDate",
-    header: "Due Date",
-    cell: ({ row }) => (
-      <span className="text-muted-foreground">{formatDate(row.original.dueDate)}</span>
-    ),
-  },
-  {
-    accessorKey: "score",
-    header: "Score",
-    cell: ({ row }) => {
-      const a = row.original;
-      if (a.score === undefined) return <span className="text-muted-foreground">-</span>;
-      const pct = (a.score / a.maxScore) * 100;
-      return (
-        <span className={cn("font-semibold", pct >= 80 ? "text-success" : pct >= 60 ? "text-warning" : "text-danger")}>
-          {a.score}/{a.maxScore}
-        </span>
-      );
+function getAssignmentColumns(courseId: string): ColumnDef<Assignment, unknown>[] {
+  return [
+    {
+      accessorKey: "title",
+      header: "Title",
+      cell: ({ row }) => <span className="font-medium">{row.original.title}</span>,
     },
-  },
-  {
-    accessorKey: "weight",
-    header: "Weight",
-    cell: ({ row }) => <span>{formatPercentage(row.original.weight, 0)}</span>,
-  },
-  {
-    accessorKey: "status",
-    header: "Status",
-    cell: ({ row }) => (
-      <StatusBadge variant={getAssignmentStatusVariant(row.original.status)} dot>
-        {row.original.status}
-      </StatusBadge>
-    ),
-  },
-];
+    {
+      accessorKey: "type",
+      header: "Type",
+      cell: ({ row }) => (
+        <StatusBadge variant="muted">{row.original.type}</StatusBadge>
+      ),
+    },
+    {
+      accessorKey: "dueDate",
+      header: "Due Date",
+      cell: ({ row }) => (
+        <span className="text-muted-foreground">{formatDate(row.original.dueDate)}</span>
+      ),
+    },
+    {
+      accessorKey: "score",
+      header: "Score",
+      cell: ({ row }) => {
+        const a = row.original;
+        if (a.score === undefined) return <span className="text-muted-foreground">-</span>;
+        const pct = (a.score / a.maxScore) * 100;
+        return (
+          <span className={cn("font-semibold", pct >= 80 ? "text-success" : pct >= 60 ? "text-warning" : "text-danger")}>
+            {a.score}/{a.maxScore}
+          </span>
+        );
+      },
+    },
+    {
+      accessorKey: "weight",
+      header: "Weight",
+      cell: ({ row }) => <span>{formatPercentage(row.original.weight, 0)}</span>,
+    },
+    {
+      accessorKey: "status",
+      header: "Status",
+      cell: ({ row }) => (
+        <StatusBadge variant={getAssignmentStatusVariant(row.original.status)} dot>
+          {row.original.status}
+        </StatusBadge>
+      ),
+    },
+    {
+      id: "actions",
+      header: "Actions",
+      cell: ({ row }) => {
+        if (row.original.status !== "graded") return null;
+        return (
+          <Link
+            href={`/student/appeals/new?courseId=${courseId}&assessmentId=${row.original.id}`}
+            className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-portal-accent hover:bg-portal-accent-light transition-colors"
+          >
+            <Scale className="h-3 w-3" />
+            Appeal
+          </Link>
+        );
+      },
+    },
+  ];
+}
 
 export default function StudentCourseDetailPage({
   params,
@@ -97,6 +117,7 @@ export default function StudentCourseDetailPage({
   const { courseId } = use(params);
   const { data: course, isLoading, isError, refetch } = useCourseDetail(courseId);
   const [activeTab, setActiveTab] = useState<TabId>("overview");
+  const assignmentColumns = useMemo(() => getAssignmentColumns(courseId), [courseId]);
 
   if (isLoading) return <DashboardSkeleton />;
   if (isError || !course) return <ErrorState onRetry={() => refetch()} />;
@@ -174,6 +195,16 @@ export default function StudentCourseDetailPage({
           <span className="flex items-center gap-1.5">
             <CreditCard className="h-4 w-4" /> {course.credits} credits
           </span>
+          {course.lmsUrl && (
+            <a
+              href={course.lmsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-portal-accent hover:underline"
+            >
+              <ExternalLink className="h-4 w-4" /> Open in LMS
+            </a>
+          )}
         </div>
       </div>
 
@@ -197,17 +228,22 @@ export default function StudentCourseDetailPage({
 
       {/* Tab content */}
       {activeTab === "overview" && (
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <DonutBreakdown
-            title="Assignment Weight Breakdown"
-            data={donutData}
-            centerValue={`${currentGradePercent}%`}
-            centerLabel="Current"
-          />
-          <GaugeChart
-            label="Attendance Rate"
-            value={course.attendance}
-          />
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <DonutBreakdown
+              title="Assignment Weight Breakdown"
+              data={donutData}
+              centerValue={`${currentGradePercent}%`}
+              centerLabel="Current"
+            />
+            <GaugeChart
+              label="Attendance Rate"
+              value={course.attendance}
+            />
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Final grade is determined by your instructor and may include adjustments not reflected here.
+          </p>
         </div>
       )}
 
@@ -246,6 +282,10 @@ export default function StudentCourseDetailPage({
               </div>
             </div>
           </div>
+          <p className="text-sm text-muted-foreground">
+            If you believe your attendance record is incorrect, contact your instructor or the
+            Registrar&apos;s Office.
+          </p>
         </div>
       )}
     </div>

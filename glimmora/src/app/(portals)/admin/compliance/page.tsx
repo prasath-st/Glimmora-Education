@@ -157,7 +157,7 @@ function DeviationResolveForm({
     <form onSubmit={handleSubmit(onSubmit)} className="mt-3 space-y-3">
       <FormTextarea
         label="Resolution"
-        placeholder="Describe how this deviation was resolved..."
+        placeholder="Describe the corrective action taken to resolve this deviation..."
         error={errors.resolution?.message}
         required
         {...register("resolution")}
@@ -167,7 +167,17 @@ function DeviationResolveForm({
           Failed to resolve deviation. Please try again.
         </p>
       )}
-      {successMsg && <p className="text-xs text-success">{successMsg}</p>}
+      {successMsg && (
+        <div className="flex items-center gap-2">
+          <p className="text-xs text-success">{successMsg}</p>
+          <Link
+            href="/admin/compliance/audit-trail"
+            className="text-xs font-medium text-portal-accent underline-offset-2 hover:underline"
+          >
+            View in Audit Trail &rarr;
+          </Link>
+        </div>
+      )}
       <button
         type="submit"
         disabled={resolveMutation.isPending}
@@ -236,11 +246,17 @@ export default function AdminCompliancePage() {
 
       {/* Overall Score + Frameworks */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <GaugeChart
-          label="Overall Compliance Score"
-          value={pulse.overallScore}
-          size="lg"
-        />
+        <div>
+          <GaugeChart
+            label="Overall Compliance Score"
+            value={pulse.overallScore}
+            size="lg"
+          />
+          <p className="mt-2 text-center text-xs text-muted-foreground">
+            Score reflects compliance across GDPR, FERPA, and institutional
+            policies. Updated automatically.
+          </p>
+        </div>
         <div className="lg:col-span-2">
           <h3 className="mb-3 text-sm font-semibold">Framework Scores</h3>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

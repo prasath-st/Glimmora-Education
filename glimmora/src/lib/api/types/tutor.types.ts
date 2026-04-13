@@ -6,6 +6,9 @@ export interface TutorDashboard {
   completedLessons: number;
   totalLessons: number;
   currentStreak: number;
+  totalXp: number;
+  level: number;
+  levelTitle: string;
   weeklyGoal: { target: number; completed: number };
   weaknesses: WeaknessArea[];
   recentActivity: TutorActivityItem[];
@@ -56,6 +59,7 @@ export interface LearningPath extends Identifiable, Timestamps {
   prerequisites: string[];
   outcomes: string[];
   progress: number; // 0-100
+  author?: string;
 }
 
 export interface LearningModule extends Identifiable {
@@ -145,4 +149,18 @@ export interface StartSessionRequest {
 export interface SubmitQuizRequest {
   sessionId: string;
   answers: { questionId: string; answer: string }[];
+}
+
+// === Tutor Preferences ===
+export interface TutorPreferences {
+  weeklyGoalTarget: number;
+}
+
+// === Bookmarks ===
+export interface TutorBookmark extends Identifiable {
+  sectionId: string;
+  sectionTitle: string;
+  pathTitle: string;
+  skill: string;
+  createdAt: string;
 }

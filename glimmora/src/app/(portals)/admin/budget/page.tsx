@@ -87,11 +87,16 @@ export default function AdminBudgetPage() {
           value={formatCurrency(data.remaining)}
           icon={PiggyBank}
         />
-        <GaugeChart
-          label="Utilization Rate"
-          value={Math.round(data.utilizationRate)}
-          size="sm"
-        />
+        <div>
+          <GaugeChart
+            label="Utilization Rate"
+            value={Math.round(data.utilizationRate)}
+            size="sm"
+          />
+          <p className="mt-1 px-2 text-center text-xs text-muted-foreground">
+            Current fiscal year utilization. Target: 85-95% by year end.
+          </p>
+        </div>
       </div>
 
       {/* Monthly Spend Trend */}
@@ -149,6 +154,11 @@ export default function AdminBudgetPage() {
             ))}
           </div>
         )}
+        <div className="border-t border-border px-6 py-3">
+          <p className="text-xs text-muted-foreground">
+            Budget alerts are generated automatically when departments approach or exceed their allocated budget.
+          </p>
+        </div>
       </div>
     </div>
   );

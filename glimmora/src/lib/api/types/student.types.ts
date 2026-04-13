@@ -11,15 +11,20 @@ export interface StudentDashboard {
   upcomingDeadlines: Deadline[];
   skillRadarPreview: SkillScore[];
   recentActivity: ActivityItem[];
+  lastSyncedAt: string;
+  studentName: string;
 }
 
 export interface RiskAlert extends Identifiable {
   type: "academic" | "attendance" | "engagement";
   severity: RiskLevel;
   message: string;
+  description: string;
   courseId?: string;
   courseName?: string;
   triggeredAt: string;
+  actionLabel: string;
+  actionUrl: string;
 }
 
 export interface Deadline {
@@ -29,6 +34,7 @@ export interface Deadline {
   courseName: string;
   dueDate: string;
   type: "assignment" | "exam" | "project";
+  lmsUrl?: string;
 }
 
 export interface ActivityItem {
@@ -37,6 +43,8 @@ export interface ActivityItem {
   description: string;
   timestamp: string;
   type: "grade" | "credential" | "recommendation" | "appeal" | "application";
+  linkUrl?: string;
+  resourceId?: string;
 }
 
 // === Academics ===
@@ -44,6 +52,7 @@ export interface Course extends Identifiable, Timestamps {
   code: string;
   name: string;
   instructor: string;
+  instructorEmail?: string;
   instructorId: string;
   credits: number;
   semester: string;
@@ -54,6 +63,8 @@ export interface Course extends Identifiable, Timestamps {
   schedule?: string;
   room?: string;
   assignments: Assignment[];
+  lmsUrl?: string;
+  dataSource?: string;
 }
 
 export interface Assignment extends Identifiable {
@@ -66,6 +77,7 @@ export interface Assignment extends Identifiable {
   status: "upcoming" | "submitted" | "graded" | "late" | "missed";
   submittedAt?: string;
   feedback?: string;
+  lmsUrl?: string;
 }
 
 export interface TranscriptSemester {
@@ -86,18 +98,25 @@ export interface SkillScore {
   score: number;
   benchmark: number;
   trend: "up" | "down" | "stable";
+  selfAssessed?: boolean;
+  factors?: { source: string; weight: number; contribution: string }[];
 }
 
 export interface SkillEvolutionPoint {
   date: string;
   skills: Record<string, number>;
+  events?: { skill: string; label: string; type: "course" | "credential" | "tutor" }[];
 }
 
 export interface SkillGap {
   skillName: string;
+  skillId?: string;
   currentScore: number;
   requiredScore: number;
   gap: number;
+  requiredBy: string;
+  learningPathId?: string;
+  learningPathTitle?: string;
   recommendedResources: { title: string; type: string; url: string }[];
 }
 
@@ -114,6 +133,7 @@ export interface Credential extends Identifiable, Timestamps {
   description: string;
   skills: string[];
   metadata: Record<string, string>;
+  courseId?: string;
 }
 
 // === Placement ===
@@ -130,6 +150,9 @@ export interface JobMatch extends Identifiable {
   title: string;
   company: string;
   companyLogo?: string;
+  companyDescription?: string;
+  companySize?: string;
+  companyIndustry?: string;
   location: string;
   type: "full_time" | "internship" | "part_time" | "contract";
   salary?: { min: number; max: number; currency: string };
@@ -142,6 +165,8 @@ export interface JobMatch extends Identifiable {
   deadline: string;
   description: string;
   applied: boolean;
+  saved?: boolean;
+  source?: string;
 }
 
 export interface Application extends Identifiable, Timestamps {
@@ -153,6 +178,7 @@ export interface Application extends Identifiable, Timestamps {
   lastActivityDate: string;
   nextStep?: string;
   notes?: string;
+  applicationNote?: string;
   timeline: { date: string; event: string; status: PipelineStage }[];
 }
 
@@ -167,6 +193,13 @@ export interface PortfolioItem extends Identifiable, Timestamps {
 }
 
 // === Recommendations ===
+export type DismissReason =
+  | "not_relevant"
+  | "already_completed"
+  | "too_advanced"
+  | "too_basic"
+  | "not_interested";
+
 export interface StudentRecommendation extends Identifiable, Timestamps {
   type: "course" | "skill" | "job" | "resource" | "intervention";
   title: string;
@@ -175,8 +208,10 @@ export interface StudentRecommendation extends Identifiable, Timestamps {
   priority: "high" | "medium" | "low";
   actionLabel: string;
   actionUrl?: string;
+  followUpUrl?: string;
+  followUpLabel?: string;
   status: "pending" | "approved" | "dismissed";
-  dismissReason?: string;
+  dismissReason?: DismissReason;
   explanation: {
     summary: string;
     factors: { name: string; value: string | number; weight: number; direction: "positive" | "negative" | "neutral" }[];
@@ -200,6 +235,8 @@ export interface Appeal extends Identifiable, Timestamps {
   status: AppealStatus;
   reviewerName?: string;
   reviewerNote?: string;
+  reviewerQuestion?: string;
+  studentResponse?: string;
   resolvedScore?: number;
   resolvedAt?: string;
   timeline: { date: string; event: string; actor: string }[];
@@ -212,10 +249,31 @@ export interface CreateAppealRequest {
   supportingDocuments?: File[];
 }
 
+// === Notifications ===
+export interface Notification extends Identifiable {
+  type: "grade_update" | "risk_alert" | "appeal_update" | "credential_issued" | "job_match" | "recommendation" | "deadline_reminder" | "application_update";
+  title: string;
+  message: string;
+  linkUrl?: string;
+  read: boolean;
+  createdAt: string;
+}
+
 // === Settings ===
+export interface WorkExperience {
+  id: string;
+  title: string;
+  company: string;
+  startDate: string;
+  endDate?: string;
+  description: string;
+  current: boolean;
+}
+
 export interface StudentProfile {
   name: string;
   email: string;
+  personalEmail?: string;
   studentId: string;
   department: string;
   program: string;
@@ -226,6 +284,9 @@ export interface StudentProfile {
   avatarUrl?: string;
   interests: string[];
   socialLinks: { platform: string; url: string }[];
+  workExperience: WorkExperience[];
+  onboardingCompleted?: boolean;
+  lastLoginAt?: string;
 }
 
 export interface NotificationPreferences {
@@ -236,4 +297,7 @@ export interface NotificationPreferences {
   deadlineReminders: boolean;
   jobMatches: boolean;
   recommendations: boolean;
+  appealUpdates: boolean;
+  credentialIssued: boolean;
+  applicationUpdates: boolean;
 }

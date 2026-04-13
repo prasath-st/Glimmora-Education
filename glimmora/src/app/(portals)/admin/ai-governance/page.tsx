@@ -84,6 +84,11 @@ export default function AdminAiGovernancePage() {
         />
       </div>
 
+      {/* Bias Score Context */}
+      <p className="text-xs text-muted-foreground">
+        Bias score measures demographic parity. Lower values indicate better fairness. Target: &lt; 0.10.
+      </p>
+
       {/* Quick Links */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Link
@@ -132,6 +137,9 @@ export default function AdminAiGovernancePage() {
             </p>
           </div>
         </div>
+        <p className="px-6 pb-2 text-xs text-muted-foreground">
+          All AI overrides are permanently logged for compliance and audit purposes.
+        </p>
         {recentOverrides.length === 0 ? (
           <div className="px-6 py-8 text-center text-sm text-muted-foreground">
             No recent overrides found.

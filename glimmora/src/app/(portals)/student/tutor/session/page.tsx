@@ -15,18 +15,20 @@ import {
   AlertCircle,
   Sparkles,
   ChevronRight,
+  Bookmark,
 } from "lucide-react";
 import {
   useTutorSession,
   useCompleteSection,
   useSubmitQuiz,
+  useAddBookmark,
 } from "@/lib/hooks/use-tutor";
 import { PageHeader } from "@/components/shared/misc/page-header";
 import { StatusBadge } from "@/components/shared/feedback/status-badge";
 import { DashboardSkeleton } from "@/components/shared/feedback/loading-skeleton";
 import { ErrorState } from "@/components/shared/feedback/error-state";
 import { cn } from "@/lib/utils/cn";
-import type { QuizQuestion, ContentSection, AiTutorFeedback } from "@/lib/api/types/tutor.types";
+import type { QuizQuestion, ContentSection, AiTutorFeedback, SessionQuiz } from "@/lib/api/types/tutor.types";
 
 export default function SessionPageWrapper() {
   return (
@@ -58,9 +60,11 @@ function SessionPage() {
   const { data: session, isLoading, isError, refetch } = useTutorSession(sessionId);
   const completeSection = useCompleteSection();
   const submitQuiz = useSubmitQuiz();
+  const addBookmark = useAddBookmark();
 
   const [quizAnswers, setQuizAnswers] = useState<Record<string, string>>({});
   const [quizSubmitted, setQuizSubmitted] = useState(false);
+  const [bookmarkedSections, setBookmarkedSections] = useState<Set<string>>(new Set());
 
   const handleCompleteSection = useCallback(async (sectionId: string) => {
     if (!sessionId) return;
@@ -77,6 +81,17 @@ function SessionPage() {
     setQuizSubmitted(true);
   }, [session, sessionId, quizAnswers, submitQuiz]);
 
+  const handleBookmarkSection = useCallback(async (sectionId: string, sectionTitle: string) => {
+    if (!session) return;
+    await addBookmark.mutateAsync({
+      sectionId,
+      sectionTitle,
+      pathTitle: session.pathName,
+      skill: session.skill,
+    });
+    setBookmarkedSections((prev) => new Set(prev).add(sectionId));
+  }, [addBookmark, session]);
+
   if (!sessionId) {
     return (
       <div className="space-y-6">
@@ -89,8 +104,15 @@ function SessionPage() {
         </Link>
         <ErrorState
           title="No session specified"
-          message="Please select a module from your learning paths to start a session."
+          message="A valid session ID is required. Please select a module from your learning paths to start a session."
         />
+        <Link
+          href="/student/tutor/learning-path"
+          className="inline-flex items-center gap-2 rounded-lg bg-portal-accent px-4 py-2 text-sm font-medium text-portal-accent-foreground transition-colors hover:bg-portal-accent-hover"
+        >
+          <BookOpen className="h-4 w-4" />
+          Go to Learning Paths
+        </Link>
       </div>
     );
   }
@@ -188,6 +210,9 @@ function SessionPage() {
             onComplete={handleCompleteSection}
             isCompleting={completeSection.isPending}
             completingId={completeSection.variables?.sectionId}
+            onBookmark={handleBookmarkSection}
+            isBookmarked={bookmarkedSections.has(section.id)}
+            isBookmarking={addBookmark.isPending}
           />
         ))}
       </div>
@@ -274,7 +299,11 @@ function SessionPage() {
 
       {/* AI Feedback Section */}
       {showFeedback && feedback && (
-        <FeedbackCard feedback={feedback} score={session.score} />
+        <FeedbackCard
+          feedback={feedback}
+          score={session.score}
+          quiz={quiz}
+        />
       )}
 
       {/* Not all sections complete hint */}
@@ -296,12 +325,18 @@ function SectionCard({
   onComplete,
   isCompleting,
   completingId,
+  onBookmark,
+  isBookmarked,
+  isBookmarking,
 }: {
   section: ContentSection;
   index: number;
   onComplete: (sectionId: string) => void;
   isCompleting: boolean;
   completingId?: string;
+  onBookmark: (sectionId: string, sectionTitle: string) => void;
+  isBookmarked: boolean;
+  isBookmarking: boolean;
 }) {
   const isThisCompleting = isCompleting && completingId === section.id;
 
@@ -326,11 +361,26 @@ function SectionCard({
 
         {/* Content */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-2">
-            <span className="text-xs font-medium text-muted-foreground">
-              Section {index + 1}
-            </span>
-            <StatusBadge variant="muted" size="sm">{section.type}</StatusBadge>
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-medium text-muted-foreground">
+                Section {index + 1}
+              </span>
+              <StatusBadge variant="muted" size="sm">{section.type}</StatusBadge>
+            </div>
+            <button
+              onClick={() => onBookmark(section.id, section.title)}
+              disabled={isBookmarked || isBookmarking}
+              className={cn(
+                "flex h-7 w-7 items-center justify-center rounded-md transition-colors",
+                isBookmarked
+                  ? "text-portal-accent"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              )}
+              title={isBookmarked ? "Bookmarked" : "Bookmark this section"}
+            >
+              <Bookmark className={cn("h-4 w-4", isBookmarked && "fill-current")} />
+            </button>
           </div>
           <h3 className="text-sm font-semibold">{section.title}</h3>
           <div className="mt-3 prose prose-sm max-w-none text-sm text-muted-foreground leading-relaxed">
@@ -457,8 +507,10 @@ function QuestionCard({
   );
 }
 
-function FeedbackCard({ feedback, score }: { feedback: AiTutorFeedback; score?: number }) {
+function FeedbackCard({ feedback, score, quiz }: { feedback: AiTutorFeedback; score?: number; quiz?: SessionQuiz }) {
   const passed = feedback.overallScore >= 70;
+  const quizFailed = quiz && score !== undefined && quiz.passingScore > 0 && score < quiz.passingScore;
+  const canRetake = quizFailed && quiz.attempts < quiz.maxAttempts;
 
   return (
     <div className={cn(
@@ -550,14 +602,44 @@ function FeedbackCard({ feedback, score }: { feedback: AiTutorFeedback; score?: 
         </div>
       )}
 
-      {/* Back Link */}
-      <Link
-        href="/student/tutor/learning-path"
-        className="inline-flex items-center gap-2 rounded-lg bg-portal-accent px-4 py-2 text-sm font-medium text-portal-accent-foreground transition-colors hover:bg-portal-accent-hover"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Back to Learning Paths
-      </Link>
+      {/* Quiz Result CTAs */}
+      {canRetake && (
+        <div className="rounded-lg border border-warning/20 bg-warning-light/20 px-4 py-3 space-y-2">
+          <p className="text-sm font-medium text-warning">
+            You scored {score}%. You need {quiz.passingScore}% to pass. Review the content and try again.
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Attempt {quiz.attempts} of {quiz.maxAttempts}
+          </p>
+        </div>
+      )}
+
+      <div className="flex items-center gap-3 flex-wrap">
+        {canRetake ? (
+          <button
+            onClick={() => window.location.reload()}
+            className="inline-flex items-center gap-2 rounded-lg bg-portal-accent px-4 py-2 text-sm font-medium text-portal-accent-foreground transition-colors hover:bg-portal-accent-hover"
+          >
+            <ArrowRight className="h-4 w-4" />
+            Retake Quiz
+          </button>
+        ) : passed ? (
+          <Link
+            href="/student/tutor/learning-path"
+            className="inline-flex items-center gap-2 rounded-lg bg-portal-accent px-4 py-2 text-sm font-medium text-portal-accent-foreground transition-colors hover:bg-portal-accent-hover"
+          >
+            Continue to Next Module
+            <ArrowRight className="h-4 w-4" />
+          </Link>
+        ) : null}
+        <Link
+          href="/student/tutor/learning-path"
+          className="inline-flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-medium transition-colors hover:bg-muted"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Learning Paths
+        </Link>
+      </div>
     </div>
   );
 }

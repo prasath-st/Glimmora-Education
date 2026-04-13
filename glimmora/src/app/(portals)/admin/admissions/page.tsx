@@ -166,9 +166,10 @@ export default function AdmissionsDashboardPage() {
             if (pct < 1) return null;
             const color = PIPELINE_COLORS[stage.stage] ?? "#9ca3af";
             return (
-              <div
+              <Link
                 key={stage.stage}
-                className="relative group flex items-center justify-center text-xs font-medium text-white transition-all first:rounded-l-lg last:rounded-r-lg"
+                href={`/admin/admissions/applications?status=${stage.stage}`}
+                className="relative group flex items-center justify-center text-xs font-medium text-white transition-all first:rounded-l-lg last:rounded-r-lg hover:opacity-90"
                 style={{
                   width: `${pct}%`,
                   backgroundColor: color,
@@ -189,14 +190,18 @@ export default function AdmissionsDashboardPage() {
                     </p>
                   </div>
                 </div>
-              </div>
+              </Link>
             );
           })}
         </div>
         {/* Legend */}
         <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1">
           {data.pipeline.map((stage) => (
-            <div key={stage.stage} className="flex items-center gap-1.5">
+            <Link
+              key={stage.stage}
+              href={`/admin/admissions/applications?status=${stage.stage}`}
+              className="flex items-center gap-1.5 transition-opacity hover:opacity-70"
+            >
               <span
                 className="inline-block h-2.5 w-2.5 rounded-sm"
                 style={{ backgroundColor: PIPELINE_COLORS[stage.stage] ?? "#9ca3af" }}
@@ -205,7 +210,7 @@ export default function AdmissionsDashboardPage() {
                 {PIPELINE_LABELS[stage.stage] ?? stage.stage}
               </span>
               <span className="text-xs font-medium">{stage.count}</span>
-            </div>
+            </Link>
           ))}
         </div>
       </div>

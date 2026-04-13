@@ -392,4 +392,31 @@ export const tutorHandlers = [
     await randomDelay();
     return HttpResponse.json({ data: recommended });
   }),
+
+  // ── Weekly Goal Preference ───────────────────────────────────────────────
+  http.patch("/api/students/me/tutor/preferences", async ({ request }) => {
+    await randomDelay();
+    const body = (await request.json()) as { weeklyGoalTarget?: number };
+    if (body.weeklyGoalTarget !== undefined) {
+      (dashboard as { weeklyGoal: { target: number; completed: number } }).weeklyGoal.target = body.weeklyGoalTarget;
+    }
+    return HttpResponse.json({ data: { weeklyGoalTarget: dashboard.weeklyGoal.target } });
+  }),
+
+  // ── Bookmarks ────────────────────────────────────────────────────────────
+  http.get("/api/students/me/tutor/bookmarks", async () => {
+    await randomDelay();
+    return HttpResponse.json({ data: [] });
+  }),
+
+  http.post("/api/students/me/tutor/bookmarks", async ({ request }) => {
+    await randomDelay();
+    const body = (await request.json()) as { sectionId: string; sectionTitle: string; pathTitle: string; skill: string };
+    const bookmark = {
+      id: `bm_${Date.now()}`,
+      ...body,
+      createdAt: new Date().toISOString(),
+    };
+    return HttpResponse.json({ data: bookmark }, { status: 201 });
+  }),
 ];

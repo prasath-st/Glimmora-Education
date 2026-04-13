@@ -31,8 +31,10 @@ export const PIPELINE_STAGE_LABELS = {
 export const APPEAL_STATUS_LABELS = {
   pending: "Pending",
   under_review: "Under Review",
+  info_requested: "Info Requested",
   resolved: "Resolved",
   rejected: "Rejected",
+  escalated: "Escalated",
 } as const;
 
 export const INTERVENTION_STATUS_LABELS = {

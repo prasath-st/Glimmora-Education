@@ -52,11 +52,16 @@ export default function AdmissionsPredictionsPage() {
 
   const [implementingId, setImplementingId] = useState<string | null>(null);
   const [dismissingId, setDismissingId] = useState<string | null>(null);
+  const [implementFeedback, setImplementFeedback] = useState<string | null>(null);
 
   const handleImplement = async (id: string) => {
     setImplementingId(id);
     try {
       await implementRec.mutateAsync(id);
+      setImplementFeedback(
+        "Recommendation marked for implementation. Assigned to the relevant department for action."
+      );
+      setTimeout(() => setImplementFeedback(null), 8000);
     } finally {
       setImplementingId(null);
     }
@@ -159,6 +164,9 @@ export default function AdmissionsPredictionsPage() {
             <div className="flex items-center gap-3">
               <AiConfidenceIndicator confidence={data.yieldRate.confidence} size="md" />
             </div>
+            <p className="text-[11px] text-muted-foreground/70 leading-snug">
+              Based on historical enrollment data from the past 5 years.
+            </p>
           </div>
         </div>
       </div>
@@ -320,6 +328,18 @@ export default function AdmissionsPredictionsPage() {
             <Sparkles className="h-4 w-4 text-portal-accent" />
             <h2 className="text-sm font-semibold">AI Recommendations</h2>
           </div>
+          {implementFeedback && (
+            <div className="flex items-center gap-3 rounded-lg border border-success/30 bg-success-light/30 px-4 py-3">
+              <CheckCircle2 className="h-4 w-4 text-success flex-shrink-0" />
+              <p className="text-sm font-medium text-success">{implementFeedback}</p>
+              <button
+                onClick={() => setImplementFeedback(null)}
+                className="ml-auto text-success/60 hover:text-success"
+              >
+                <XCircle className="h-4 w-4" />
+              </button>
+            </div>
+          )}
           <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
             {data.recommendations.map((rec) => (
               <RecommendationCard

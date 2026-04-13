@@ -6,17 +6,15 @@ import {
   ArrowLeft,
   Network,
   Mail,
-  BookOpen,
   Star,
+  FileText,
 } from "lucide-react";
 import { useFacultyCollaborations } from "@/lib/hooks/use-faculty";
 import { PageHeader } from "@/components/shared/misc/page-header";
 import { SearchInput } from "@/components/shared/forms/search-input";
-import { StatusBadge } from "@/components/shared/feedback/status-badge";
 import { DashboardSkeleton } from "@/components/shared/feedback/loading-skeleton";
 import { ErrorState } from "@/components/shared/feedback/error-state";
 import { EmptyState } from "@/components/shared/feedback/empty-state";
-import { cn } from "@/lib/utils/cn";
 import type { FacultyCollaboration } from "@/lib/api/types/faculty.types";
 
 export default function FacultyResearchCollaborationsPage() {
@@ -106,14 +104,20 @@ function CollaboratorCard({ collaborator }: { collaborator: FacultyCollaboration
       </div>
 
       {/* Match Score */}
-      <div className="mt-4 flex items-center gap-2">
-        <Star className="h-3.5 w-3.5 text-portal-accent" />
-        <span className="text-sm font-medium text-portal-accent">
-          {collaborator.matchScore}% match
-        </span>
-        <span className="text-xs text-muted-foreground">
-          {collaborator.sharedPublications} shared publications
-        </span>
+      <div className="mt-4">
+        <div className="flex items-center gap-2">
+          <Star className="h-3.5 w-3.5 text-portal-accent" />
+          <span className="text-sm font-medium text-portal-accent">
+            {collaborator.matchScore}% match
+          </span>
+          <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+            <FileText className="h-3 w-3" />
+            {collaborator.sharedPublications} co-authored paper{collaborator.sharedPublications !== 1 ? "s" : ""}
+          </span>
+        </div>
+        <p className="mt-1 text-[11px] text-muted-foreground/70">
+          Based on research interest overlap and publication history.
+        </p>
       </div>
 
       {/* Expertise Tags */}
