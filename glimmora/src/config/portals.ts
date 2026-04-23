@@ -4,17 +4,17 @@ import {
   Shield,
   FlaskConical,
   Briefcase,
-  Landmark,
+  Crown,
   type LucideIcon,
 } from "lucide-react";
 
 export type PortalRole =
+  | "super_admin"
   | "student"
   | "faculty"
   | "admin"
   | "research"
-  | "placement"
-  | "ministry";
+  | "placement";
 
 export interface PortalConfig {
   name: string;
@@ -25,6 +25,14 @@ export interface PortalConfig {
 }
 
 export const PORTALS: Record<PortalRole, PortalConfig> = {
+  super_admin: {
+    name: "Super Admin",
+    basePath: "/super-admin",
+    icon: Crown,
+    accent: "rose",
+    description:
+      "Platform administration and university onboarding",
+  },
   student: {
     name: "Student Portal",
     basePath: "/student",
@@ -62,14 +70,6 @@ export const PORTALS: Record<PortalRole, PortalConfig> = {
     accent: "amber",
     description:
       "Student-employer matching, pipeline management, and placement analytics",
-  },
-  ministry: {
-    name: "Ministry Portal",
-    basePath: "/ministry",
-    icon: Landmark,
-    accent: "teal",
-    description:
-      "National oversight, policy simulation, and cross-institution intelligence",
   },
 } as const;
 

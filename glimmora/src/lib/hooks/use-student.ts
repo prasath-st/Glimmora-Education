@@ -20,6 +20,8 @@ import type {
   NotificationPreferences,
   Notification,
   DismissReason,
+  StudentCourseModule,
+  AssignmentDetail,
 } from "@/lib/api/types/student.types";
 import type { PaginationMeta } from "@/lib/api/types/common.types";
 
@@ -444,6 +446,36 @@ export function useMarkAllNotificationsRead() {
       api.post("/api/students/me/notifications/mark-all-read"),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["student", "notifications"] });
+    },
+  });
+}
+
+// === Course Content (LMS) ===
+export function useStudentCourseModules(courseId: string) {
+  return useQuery({
+    queryKey: ["student", "course", courseId, "modules"],
+    queryFn: () => api.get<StudentCourseModule[]>(`/api/students/me/courses/${courseId}/modules`),
+    select: (res) => res.data,
+    enabled: !!courseId,
+  });
+}
+
+export function useStudentAssignmentDetail(courseId: string, assignmentId: string) {
+  return useQuery({
+    queryKey: ["student", "course", courseId, "assignment", assignmentId],
+    queryFn: () => api.get<AssignmentDetail>(`/api/students/me/courses/${courseId}/assignments/${assignmentId}`),
+    select: (res) => res.data,
+    enabled: !!courseId && !!assignmentId,
+  });
+}
+
+export function useSubmitAssignment() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ courseId, assignmentId }: { courseId: string; assignmentId: string }) =>
+      api.post(`/api/students/me/courses/${courseId}/assignments/${assignmentId}/submit`, {}),
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: ["student", "course", vars.courseId] });
     },
   });
 }

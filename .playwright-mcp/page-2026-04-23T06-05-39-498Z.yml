@@ -1,0 +1,330 @@
+- generic [ref=e1]:
+  - button "Open Next.js Dev Tools" [ref=e11] [cursor=pointer]:
+    - img [ref=e12]
+  - alert [ref=e15]
+  - generic [ref=e70]:
+    - complementary [ref=e71]:
+      - generic [ref=e72]:
+        - img [ref=e74]
+        - generic [ref=e76]:
+          - generic [ref=e77]: Glimmora
+          - generic [ref=e78]: Command
+      - navigation [ref=e80]:
+        - generic [ref=e81]:
+          - generic [ref=e82]:
+            - paragraph [ref=e83]: Overview
+            - list [ref=e84]:
+              - listitem [ref=e85]:
+                - link "Dashboard" [ref=e86] [cursor=pointer]:
+                  - /url: /super-admin/dashboard
+                  - img [ref=e88]
+                  - generic [ref=e93]: Dashboard
+          - generic [ref=e94]:
+            - paragraph [ref=e95]: Customers
+            - list [ref=e96]:
+              - listitem [ref=e97]:
+                - link "Universities" [active] [ref=e98] [cursor=pointer]:
+                  - /url: /super-admin/universities
+                  - img [ref=e99]
+                  - generic [ref=e103]: Universities
+              - listitem [ref=e104]:
+                - link "Ministries" [ref=e105] [cursor=pointer]:
+                  - /url: /super-admin/ministries
+                  - img [ref=e106]
+                  - generic [ref=e108]: Ministries
+          - generic [ref=e109]:
+            - paragraph [ref=e110]: Platform
+            - list [ref=e111]:
+              - listitem [ref=e112]:
+                - link "Monitoring" [ref=e113] [cursor=pointer]:
+                  - /url: /super-admin/monitoring
+                  - img [ref=e114]
+                  - generic [ref=e116]: Monitoring
+              - listitem [ref=e117]:
+                - link "Audit Log" [ref=e118] [cursor=pointer]:
+                  - /url: /super-admin/audit-log
+                  - img [ref=e119]
+                  - generic [ref=e122]: Audit Log
+          - generic [ref=e123]:
+            - paragraph [ref=e124]: Account
+            - list [ref=e125]:
+              - listitem [ref=e126]:
+                - link "Settings" [ref=e127] [cursor=pointer]:
+                  - /url: /super-admin/settings
+                  - img [ref=e128]
+                  - generic [ref=e131]: Settings
+      - button "Collapse" [ref=e133]:
+        - img [ref=e134]
+        - generic [ref=e137]: Collapse
+    - generic [ref=e138]:
+      - banner [ref=e139]:
+        - navigation [ref=e141]:
+          - link "Super Admin" [ref=e143] [cursor=pointer]:
+            - /url: /super-admin/dashboard
+          - generic [ref=e398]:
+            - img [ref=e399]
+            - generic [ref=e401]: Universities
+        - button "Search… ⌘K" [ref=e149]:
+          - img [ref=e150]
+          - generic [ref=e153]: Search…
+          - generic [ref=e154]: ⌘K
+        - generic [ref=e155]:
+          - button [ref=e156]:
+            - img [ref=e157]
+          - button "P Platform Admin Super Admin" [ref=e162]:
+            - generic [ref=e163]: P
+            - generic [ref=e164]:
+              - generic [ref=e165]: Platform Admin
+              - generic [ref=e166]: Super Admin
+            - img [ref=e167]
+      - main [ref=e169]:
+        - generic [ref=e402]:
+          - generic [ref=e403]:
+            - heading "Universities" [level=1] [ref=e404]
+            - button "Create University" [ref=e405]:
+              - img [ref=e406]
+              - text: Create University
+          - generic [ref=e407]:
+            - img [ref=e408]
+            - textbox "Search universities..." [ref=e411]
+          - generic [ref=e412]:
+            - button "All" [ref=e413]
+            - button "Active" [ref=e414]
+            - button "Suspended" [ref=e415]
+          - table [ref=e419]:
+            - rowgroup [ref=e420]:
+              - row "Name Domain Admin Users Status Created" [ref=e421]:
+                - columnheader "Name" [ref=e422]:
+                  - generic [ref=e423] [cursor=pointer]:
+                    - text: Name
+                    - img [ref=e424]
+                - columnheader "Domain" [ref=e427]:
+                  - generic [ref=e428] [cursor=pointer]:
+                    - text: Domain
+                    - img [ref=e429]
+                - columnheader "Admin" [ref=e432]:
+                  - generic [ref=e433] [cursor=pointer]:
+                    - text: Admin
+                    - img [ref=e434]
+                - columnheader "Users" [ref=e437]:
+                  - generic [ref=e438] [cursor=pointer]:
+                    - text: Users
+                    - img [ref=e439]
+                - columnheader "Status" [ref=e442]:
+                  - generic [ref=e443] [cursor=pointer]:
+                    - text: Status
+                    - img [ref=e444]
+                - columnheader "Created" [ref=e447]:
+                  - generic [ref=e448] [cursor=pointer]:
+                    - text: Created
+                    - img [ref=e449]
+                - columnheader [ref=e452]
+            - rowgroup [ref=e453]:
+              - row "Jadavpur University Kolkata, India jaduniv.edu.in Dexter Reinger admin@jaduniv.edu.in 12,326 active Jan 19, 2026 Actions" [ref=e454] [cursor=pointer]:
+                - cell "Jadavpur University Kolkata, India" [ref=e455]:
+                  - generic [ref=e456]:
+                    - paragraph [ref=e457]: Jadavpur University
+                    - paragraph [ref=e458]: Kolkata, India
+                - cell "jaduniv.edu.in" [ref=e459]
+                - cell "Dexter Reinger admin@jaduniv.edu.in" [ref=e460]:
+                  - generic [ref=e461]:
+                    - paragraph [ref=e462]: Dexter Reinger
+                    - paragraph [ref=e463]: admin@jaduniv.edu.in
+                - cell "12,326" [ref=e464]
+                - cell "active" [ref=e465]:
+                  - generic [ref=e466]: active
+                - cell "Jan 19, 2026" [ref=e468]
+                - cell "Actions" [ref=e469]:
+                  - button "Actions" [ref=e470]:
+                    - img [ref=e471]
+              - row "Manipal Academy Manipal, India manipal.edu Vincenza Barton admin@manipal.edu 9,852 active Jan 3, 2026 Actions" [ref=e475] [cursor=pointer]:
+                - cell "Manipal Academy Manipal, India" [ref=e476]:
+                  - generic [ref=e477]:
+                    - paragraph [ref=e478]: Manipal Academy
+                    - paragraph [ref=e479]: Manipal, India
+                - cell "manipal.edu" [ref=e480]
+                - cell "Vincenza Barton admin@manipal.edu" [ref=e481]:
+                  - generic [ref=e482]:
+                    - paragraph [ref=e483]: Vincenza Barton
+                    - paragraph [ref=e484]: admin@manipal.edu
+                - cell "9,852" [ref=e485]
+                - cell "active" [ref=e486]:
+                  - generic [ref=e487]: active
+                - cell "Jan 3, 2026" [ref=e489]
+                - cell "Actions" [ref=e490]:
+                  - button "Actions" [ref=e491]:
+                    - img [ref=e492]
+              - row "VIT University Vellore, India vit.ac.in Marlee Hessel admin@vit.ac.in 5,162 active Dec 18, 2025 Actions" [ref=e496] [cursor=pointer]:
+                - cell "VIT University Vellore, India" [ref=e497]:
+                  - generic [ref=e498]:
+                    - paragraph [ref=e499]: VIT University
+                    - paragraph [ref=e500]: Vellore, India
+                - cell "vit.ac.in" [ref=e501]
+                - cell "Marlee Hessel admin@vit.ac.in" [ref=e502]:
+                  - generic [ref=e503]:
+                    - paragraph [ref=e504]: Marlee Hessel
+                    - paragraph [ref=e505]: admin@vit.ac.in
+                - cell "5,162" [ref=e506]
+                - cell "active" [ref=e507]:
+                  - generic [ref=e508]: active
+                - cell "Dec 18, 2025" [ref=e510]
+                - cell "Actions" [ref=e511]:
+                  - button "Actions" [ref=e512]:
+                    - img [ref=e513]
+              - row "IIT Madras Chennai, India iitm.ac.in Nathanial Zboncak admin@iitm.ac.in 14,994 active Nov 28, 2025 Actions" [ref=e517] [cursor=pointer]:
+                - cell "IIT Madras Chennai, India" [ref=e518]:
+                  - generic [ref=e519]:
+                    - paragraph [ref=e520]: IIT Madras
+                    - paragraph [ref=e521]: Chennai, India
+                - cell "iitm.ac.in" [ref=e522]
+                - cell "Nathanial Zboncak admin@iitm.ac.in" [ref=e523]:
+                  - generic [ref=e524]:
+                    - paragraph [ref=e525]: Nathanial Zboncak
+                    - paragraph [ref=e526]: admin@iitm.ac.in
+                - cell "14,994" [ref=e527]
+                - cell "active" [ref=e528]:
+                  - generic [ref=e529]: active
+                - cell "Nov 28, 2025" [ref=e531]
+                - cell "Actions" [ref=e532]:
+                  - button "Actions" [ref=e533]:
+                    - img [ref=e534]
+              - row "Anna University Chennai, India annauniv.edu Lauryn Waelchi PhD admin@annauniv.edu 5,368 active Nov 23, 2025 Actions" [ref=e538] [cursor=pointer]:
+                - cell "Anna University Chennai, India" [ref=e539]:
+                  - generic [ref=e540]:
+                    - paragraph [ref=e541]: Anna University
+                    - paragraph [ref=e542]: Chennai, India
+                - cell "annauniv.edu" [ref=e543]
+                - cell "Lauryn Waelchi PhD admin@annauniv.edu" [ref=e544]:
+                  - generic [ref=e545]:
+                    - paragraph [ref=e546]: Lauryn Waelchi PhD
+                    - paragraph [ref=e547]: admin@annauniv.edu
+                - cell "5,368" [ref=e548]
+                - cell "active" [ref=e549]:
+                  - generic [ref=e550]: active
+                - cell "Nov 23, 2025" [ref=e552]
+                - cell "Actions" [ref=e553]:
+                  - button "Actions" [ref=e554]:
+                    - img [ref=e555]
+              - row "NIT Trichy Tiruchirappalli, India nitt.edu Winnifred Hilpert admin@nitt.edu 14,611 suspended Nov 15, 2025 Actions" [ref=e559] [cursor=pointer]:
+                - cell "NIT Trichy Tiruchirappalli, India" [ref=e560]:
+                  - generic [ref=e561]:
+                    - paragraph [ref=e562]: NIT Trichy
+                    - paragraph [ref=e563]: Tiruchirappalli, India
+                - cell "nitt.edu" [ref=e564]
+                - cell "Winnifred Hilpert admin@nitt.edu" [ref=e565]:
+                  - generic [ref=e566]:
+                    - paragraph [ref=e567]: Winnifred Hilpert
+                    - paragraph [ref=e568]: admin@nitt.edu
+                - cell "14,611" [ref=e569]
+                - cell "suspended" [ref=e570]:
+                  - generic [ref=e571]: suspended
+                - cell "Nov 15, 2025" [ref=e573]
+                - cell "Actions" [ref=e574]:
+                  - button "Actions" [ref=e575]:
+                    - img [ref=e576]
+              - row "Osmania University Hyderabad, India osmania.ac.in Evie Herman-Zemlak admin@osmania.ac.in 11,940 active Nov 2, 2025 Actions" [ref=e580] [cursor=pointer]:
+                - cell "Osmania University Hyderabad, India" [ref=e581]:
+                  - generic [ref=e582]:
+                    - paragraph [ref=e583]: Osmania University
+                    - paragraph [ref=e584]: Hyderabad, India
+                - cell "osmania.ac.in" [ref=e585]
+                - cell "Evie Herman-Zemlak admin@osmania.ac.in" [ref=e586]:
+                  - generic [ref=e587]:
+                    - paragraph [ref=e588]: Evie Herman-Zemlak
+                    - paragraph [ref=e589]: admin@osmania.ac.in
+                - cell "11,940" [ref=e590]
+                - cell "active" [ref=e591]:
+                  - generic [ref=e592]: active
+                - cell "Nov 2, 2025" [ref=e594]
+                - cell "Actions" [ref=e595]:
+                  - button "Actions" [ref=e596]:
+                    - img [ref=e597]
+              - row "IIT Bombay Mumbai, India iitb.ac.in Tabitha Goodwin IV admin@iitb.ac.in 8,825 active Oct 21, 2025 Actions" [ref=e601] [cursor=pointer]:
+                - cell "IIT Bombay Mumbai, India" [ref=e602]:
+                  - generic [ref=e603]:
+                    - paragraph [ref=e604]: IIT Bombay
+                    - paragraph [ref=e605]: Mumbai, India
+                - cell "iitb.ac.in" [ref=e606]
+                - cell "Tabitha Goodwin IV admin@iitb.ac.in" [ref=e607]:
+                  - generic [ref=e608]:
+                    - paragraph [ref=e609]: Tabitha Goodwin IV
+                    - paragraph [ref=e610]: admin@iitb.ac.in
+                - cell "8,825" [ref=e611]
+                - cell "active" [ref=e612]:
+                  - generic [ref=e613]: active
+                - cell "Oct 21, 2025" [ref=e615]
+                - cell "Actions" [ref=e616]:
+                  - button "Actions" [ref=e617]:
+                    - img [ref=e618]
+              - row "SRM University Chennai, India srmist.edu.in Gerard Cronin admin@srmist.edu.in 11,062 suspended Aug 11, 2025 Actions" [ref=e622] [cursor=pointer]:
+                - cell "SRM University Chennai, India" [ref=e623]:
+                  - generic [ref=e624]:
+                    - paragraph [ref=e625]: SRM University
+                    - paragraph [ref=e626]: Chennai, India
+                - cell "srmist.edu.in" [ref=e627]
+                - cell "Gerard Cronin admin@srmist.edu.in" [ref=e628]:
+                  - generic [ref=e629]:
+                    - paragraph [ref=e630]: Gerard Cronin
+                    - paragraph [ref=e631]: admin@srmist.edu.in
+                - cell "11,062" [ref=e632]
+                - cell "suspended" [ref=e633]:
+                  - generic [ref=e634]: suspended
+                - cell "Aug 11, 2025" [ref=e636]
+                - cell "Actions" [ref=e637]:
+                  - button "Actions" [ref=e638]:
+                    - img [ref=e639]
+              - row "BITS Pilani Pilani, India bits-pilani.ac.in Mr. Malcolm Rohan admin@bits-pilani.ac.in 11,255 active Aug 2, 2025 Actions" [ref=e643] [cursor=pointer]:
+                - cell "BITS Pilani Pilani, India" [ref=e644]:
+                  - generic [ref=e645]:
+                    - paragraph [ref=e646]: BITS Pilani
+                    - paragraph [ref=e647]: Pilani, India
+                - cell "bits-pilani.ac.in" [ref=e648]
+                - cell "Mr. Malcolm Rohan admin@bits-pilani.ac.in" [ref=e649]:
+                  - generic [ref=e650]:
+                    - paragraph [ref=e651]: Mr. Malcolm Rohan
+                    - paragraph [ref=e652]: admin@bits-pilani.ac.in
+                - cell "11,255" [ref=e653]
+                - cell "active" [ref=e654]:
+                  - generic [ref=e655]: active
+                - cell "Aug 2, 2025" [ref=e657]
+                - cell "Actions" [ref=e658]:
+                  - button "Actions" [ref=e659]:
+                    - img [ref=e660]
+              - row "Amrita University Coimbatore, India amrita.edu Zander Price admin@amrita.edu 11,567 active Jul 24, 2025 Actions" [ref=e664] [cursor=pointer]:
+                - cell "Amrita University Coimbatore, India" [ref=e665]:
+                  - generic [ref=e666]:
+                    - paragraph [ref=e667]: Amrita University
+                    - paragraph [ref=e668]: Coimbatore, India
+                - cell "amrita.edu" [ref=e669]
+                - cell "Zander Price admin@amrita.edu" [ref=e670]:
+                  - generic [ref=e671]:
+                    - paragraph [ref=e672]: Zander Price
+                    - paragraph [ref=e673]: admin@amrita.edu
+                - cell "11,567" [ref=e674]
+                - cell "active" [ref=e675]:
+                  - generic [ref=e676]: active
+                - cell "Jul 24, 2025" [ref=e678]
+                - cell "Actions" [ref=e679]:
+                  - button "Actions" [ref=e680]:
+                    - img [ref=e681]
+              - row "University of Delhi New Delhi, India du.ac.in Bernard Kuphal admin@du.ac.in 11,601 active Jun 5, 2025 Actions" [ref=e685] [cursor=pointer]:
+                - cell "University of Delhi New Delhi, India" [ref=e686]:
+                  - generic [ref=e687]:
+                    - paragraph [ref=e688]: University of Delhi
+                    - paragraph [ref=e689]: New Delhi, India
+                - cell "du.ac.in" [ref=e690]
+                - cell "Bernard Kuphal admin@du.ac.in" [ref=e691]:
+                  - generic [ref=e692]:
+                    - paragraph [ref=e693]: Bernard Kuphal
+                    - paragraph [ref=e694]: admin@du.ac.in
+                - cell "11,601" [ref=e695]
+                - cell "active" [ref=e696]:
+                  - generic [ref=e697]: active
+                - cell "Jun 5, 2025" [ref=e699]
+                - cell "Actions" [ref=e700]:
+                  - button "Actions" [ref=e701]:
+                    - img [ref=e702]
+  - button "Dev Role Switcher" [ref=e58]:
+    - img [ref=e59]
+  - region "Notifications alt+T"
+  - generic [ref=e393]: "0"

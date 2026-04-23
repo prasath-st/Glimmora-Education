@@ -84,3 +84,26 @@ export const resolveDeviationSchema = z.object({
 });
 
 export type ResolveDeviationFormData = z.infer<typeof resolveDeviationSchema>;
+
+export const createCourseSchema = z.object({
+  code: z.string().min(1, "Course code is required"),
+  name: z.string().min(1, "Course name is required"),
+  description: z.string().min(1, "Description is required"),
+  credits: z.coerce.number().min(1, "Credits must be at least 1").max(12),
+  department: z.string().min(1, "Department is required"),
+  semesterId: z.string().min(1, "Semester is required"),
+  facultyId: z.string().min(1, "Faculty is required"),
+  maxCapacity: z.coerce.number().min(1, "Capacity must be at least 1"),
+});
+
+export type CreateCourseFormData = z.output<typeof createCourseSchema>;
+export type CreateCourseFormInput = z.input<typeof createCourseSchema>;
+
+export const createSemesterSchema = z.object({
+  name: z.string().min(1, "Semester name is required"),
+  year: z.string().min(4, "Year is required"),
+  startDate: z.string().min(1, "Start date is required"),
+  endDate: z.string().min(1, "End date is required"),
+});
+
+export type CreateSemesterFormData = z.infer<typeof createSemesterSchema>;

@@ -101,7 +101,6 @@ export interface FacultyCourse extends Identifiable, Timestamps {
   attendanceRate: number;
   schedule: string;
   room: string;
-  lmsUrl?: string;
 }
 
 export interface FacultyCourseDetail extends FacultyCourse {
@@ -189,4 +188,110 @@ export interface FacultyNotificationPreferences {
   briefingReady: boolean;
   collaborationRequests: boolean;
   citationAlerts: boolean;
+}
+
+// === Course Content (LMS) ===
+export interface CourseModule extends Identifiable {
+  courseId: string;
+  title: string;
+  description: string;
+  order: number;
+  materials: CourseMaterial[];
+}
+
+export interface CourseMaterial extends Identifiable {
+  moduleId: string;
+  title: string;
+  type: "pdf" | "video" | "slides" | "link";
+  url: string;
+  fileSize?: number;
+  duration?: number;
+  uploadedAt: string;
+}
+
+export interface CreateModuleRequest {
+  courseId: string;
+  title: string;
+  description: string;
+}
+
+// === Assignments (LMS) ===
+export interface FacultyAssignment extends Identifiable {
+  courseId: string;
+  title: string;
+  description: string;
+  type: "assignment" | "exam" | "project" | "quiz";
+  dueDate: string;
+  maxScore: number;
+  weight: number;
+  status: "draft" | "published" | "closed";
+  submissionCount: number;
+  gradedCount: number;
+  rubric: AssignmentRubric[];
+}
+
+export interface AssignmentRubric {
+  criterion: string;
+  description: string;
+  maxPoints: number;
+}
+
+export interface CreateAssignmentRequest {
+  courseId: string;
+  title: string;
+  description: string;
+  type: "assignment" | "exam" | "project" | "quiz";
+  dueDate: string;
+  maxScore: number;
+  weight: number;
+  rubric: { criterion: string; description: string; maxPoints: number }[];
+}
+
+export interface StudentSubmission extends Identifiable {
+  assignmentId: string;
+  studentId: string;
+  studentName: string;
+  submittedAt: string;
+  fileName: string;
+  fileUrl: string;
+  score?: number;
+  feedback?: string;
+  status: "submitted" | "graded" | "late";
+}
+
+export interface GradeSubmissionRequest {
+  submissionId: string;
+  score: number;
+  feedback: string;
+}
+
+// === Gradebook ===
+export interface GradebookEntry {
+  studentId: string;
+  studentName: string;
+  assignments: { assignmentId: string; title: string; score: number | null; maxScore: number; weight: number; status: string }[];
+  weightedAverage: number;
+}
+
+// === Attendance ===
+export interface AttendanceSession extends Identifiable {
+  courseId: string;
+  date: string;
+  topic: string;
+  records: AttendanceRecord[];
+  presentCount: number;
+  absentCount: number;
+  lateCount: number;
+}
+
+export interface AttendanceRecord {
+  studentId: string;
+  studentName: string;
+  status: "present" | "absent" | "late";
+}
+
+export interface CreateAttendanceSessionRequest {
+  courseId: string;
+  date: string;
+  topic: string;
 }

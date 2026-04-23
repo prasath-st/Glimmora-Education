@@ -13,7 +13,7 @@ const DEV_ACCOUNTS: Record<PortalRole, { email: string; password: string; name: 
   admin: { email: "admin@glimmora.dev", password: "glimmora123", name: "James Mitchell" },
   research: { email: "research@glimmora.dev", password: "glimmora123", name: "Dr. Priya Patel" },
   placement: { email: "placement@glimmora.dev", password: "glimmora123", name: "Maria Santos" },
-  ministry: { email: "ministry@glimmora.dev", password: "glimmora123", name: "Robert Okafor" },
+  super_admin: { email: "superadmin@glimmora.dev", password: "glimmora123", name: "Platform Admin" },
 };
 
 export function DevRoleSwitcher() {

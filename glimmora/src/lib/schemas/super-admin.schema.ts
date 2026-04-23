@@ -21,14 +21,3 @@ export const createUniversitySchema = z.object({
 
 export type CreateUniversityFormData = z.infer<typeof createUniversitySchema>;
 
-export const createMinistrySchema = z.object({
-  name: z.string().min(1, "Ministry name is required"),
-  country: z.string().min(1, "Country is required"),
-  contactEmail: z
-    .string()
-    .min(1, "Contact email is required")
-    .email("Invalid email"),
-  contactName: z.string().min(1, "Contact name is required"),
-});
-
-export type CreateMinistryFormData = z.infer<typeof createMinistrySchema>;

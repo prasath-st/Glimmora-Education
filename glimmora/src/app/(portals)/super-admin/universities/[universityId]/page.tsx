@@ -17,9 +17,7 @@ import {
 import {
   useSuperAdminUniversityDetail,
   useUpdateUniversity,
-  useSuperAdminMinistries,
 } from "@/lib/hooks/use-super-admin";
-import type { Ministry } from "@/lib/api/types/super-admin.types";
 import { PageHeader } from "@/components/shared/misc/page-header";
 import { StatCard } from "@/components/shared/misc/stat-card";
 import { StatusBadge } from "@/components/shared/feedback/status-badge";
@@ -48,12 +46,6 @@ export default function SuperAdminUniversityDetailPage({
     refetch,
   } = useSuperAdminUniversityDetail(universityId);
   const updateUniversity = useUpdateUniversity();
-  const { data: ministriesData } = useSuperAdminMinistries({ pageSize: 50 });
-
-  // Find ministries that have this university linked
-  const linkedMinistries: Ministry[] = (ministriesData?.data ?? []).filter(
-    (m: Ministry) => m.linkedUniversityIds.includes(universityId)
-  );
 
   const [confirmDialog, setConfirmDialog] = useState<{
     open: boolean;
@@ -270,34 +262,6 @@ export default function SuperAdminUniversityDetailPage({
             </div>
           </div>
         </div>
-      </div>
-
-      {/* Linked Ministries */}
-      <div className="rounded-xl border border-border bg-card p-6">
-        <h3 className="text-sm font-semibold">Oversight Bodies</h3>
-        <p className="mt-0.5 text-xs text-muted-foreground">Ministries that oversee this university</p>
-        {linkedMinistries.length === 0 ? (
-          <p className="mt-4 text-sm text-muted-foreground">No ministries linked to this university yet.</p>
-        ) : (
-          <div className="mt-4 space-y-2">
-            {linkedMinistries.map((m) => (
-              <Link
-                key={m.id}
-                href={`/super-admin/ministries/${m.id}`}
-                className="flex items-center justify-between rounded-lg border border-border px-4 py-3 transition-colors hover:bg-muted/50"
-              >
-                <div className="flex items-center gap-3">
-                  <Building2 className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm font-medium">{m.name}</p>
-                    <p className="text-xs text-muted-foreground">{m.country}</p>
-                  </div>
-                </div>
-                <StatusBadge variant="success" dot>{m.status}</StatusBadge>
-              </Link>
-            ))}
-          </div>
-        )}
       </div>
 
       {/* Admin Actions */}

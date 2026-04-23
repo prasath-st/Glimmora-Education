@@ -7,7 +7,6 @@ import type {
   AuditLogEntry,
   AdminUser,
   RoleDefinition,
-  Integration,
   BudgetOverview,
   AiModel,
   BiasReport,
@@ -18,6 +17,10 @@ import type {
   InstitutionSettings,
   CreateUserRequest,
   IssueCredentialRequest,
+  AdminCourse,
+  CreateCourseRequest,
+  Semester,
+  CreateSemesterRequest,
 } from "@/lib/api/types/admin.types";
 import type { PaginationMeta, PortalRole } from "@/lib/api/types/common.types";
 import {
@@ -27,7 +30,6 @@ import {
   generateAuditLog,
   generateUsers,
   generateRoles,
-  generateIntegrations,
   generateBudgetOverview,
   generateAiModels,
   generateBiasReports,
@@ -36,6 +38,8 @@ import {
   generateReportTemplates,
   generateReports,
   generateSettings,
+  generateSemesters,
+  generateCourses,
 } from "@/mocks/data/generators/admin.generator";
 
 // ─── Generate data once at module level ───────────────────────────────────────
@@ -46,7 +50,6 @@ let compliancePulse: CompliancePulse = generateCompliancePulse();
 let auditLog: AuditLogEntry[] = generateAuditLog(100);
 let users: AdminUser[] = generateUsers(60);
 let roles: RoleDefinition[] = generateRoles();
-const integrations: Integration[] = generateIntegrations();
 const budget: BudgetOverview = generateBudgetOverview();
 const aiModels: AiModel[] = generateAiModels();
 const biasReports: BiasReport[] = generateBiasReports();
@@ -55,6 +58,8 @@ let credentials: AdminCredential[] = generateCredentials(30);
 const reportTemplates: ReportTemplate[] = generateReportTemplates();
 let generatedReports: GeneratedReport[] = generateReports();
 let settings: InstitutionSettings = generateSettings();
+let semesters: Semester[] = generateSemesters();
+let courses: AdminCourse[] = generateCourses();
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -297,6 +302,46 @@ export const adminHandlers = [
     return HttpResponse.json({ data: newUser }, { status: 201 });
   }),
 
+  http.post("/api/admin/users/bulk", async ({ request }) => {
+    await randomDelay();
+    const body = (await request.json()) as {
+      users?: { email: string; name: string; role: string; department: string }[];
+    };
+
+    if (!body.users || body.users.length === 0) {
+      return validationError({ users: ["At least one user is required"] });
+    }
+
+    const now = new Date().toISOString();
+    const newUsers: AdminUser[] = body.users.map((u) => ({
+      id: `usr_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      email: u.email,
+      name: u.name,
+      role: u.role as AdminUser["role"],
+      department: u.department,
+      status: "active" as const,
+      lastLoginAt: null,
+      avatarUrl: null,
+      tenantId: "tenant_glimmora_main",
+      createdAt: now,
+      updatedAt: now,
+    }));
+
+    users = [...newUsers, ...users];
+
+    // Update role user counts
+    for (const u of newUsers) {
+      roles = roles.map((r) =>
+        r.role === u.role ? { ...r, userCount: r.userCount + 1 } : r
+      );
+    }
+
+    return HttpResponse.json(
+      { data: { imported: newUsers.length, errors: 0 } },
+      { status: 201 }
+    );
+  }),
+
   http.patch("/api/admin/users/:userId", async ({ params, request }) => {
     await randomDelay();
     const userId = params.userId as string;
@@ -366,12 +411,6 @@ export const adminHandlers = [
       body.allowed;
 
     return HttpResponse.json({ data: roles[roleIdx] });
-  }),
-
-  // ── Integrations ──────────────────────────────────────────────────────────
-  http.get("/api/admin/integrations", async () => {
-    await randomDelay();
-    return HttpResponse.json({ data: integrations });
   }),
 
   // ── Budget ────────────────────────────────────────────────────────────────
@@ -613,5 +652,207 @@ export const adminHandlers = [
     };
 
     return HttpResponse.json({ data: settings });
+  }),
+
+  // ── Courses ──────────────────────────────────────────────────────────────
+  http.get("/api/admin/courses", async ({ request }) => {
+    await randomDelay();
+    const url = new URL(request.url);
+    const search = url.searchParams.get("search");
+    const department = url.searchParams.get("department");
+    const semester = url.searchParams.get("semester");
+    const status = url.searchParams.get("status");
+
+    let filtered = [...courses];
+
+    if (department) {
+      filtered = filtered.filter((c) => c.department === department);
+    }
+    if (semester) {
+      filtered = filtered.filter((c) => c.semesterId === semester);
+    }
+    if (status && ["draft", "active", "archived"].includes(status)) {
+      filtered = filtered.filter((c) => c.status === status);
+    }
+    filtered = searchFilter(filtered, search, [
+      "name",
+      "code",
+      "facultyName",
+    ] as (keyof AdminCourse)[]);
+
+    const result = paginate(filtered, url);
+    return HttpResponse.json({ data: result.data, meta: result.meta });
+  }),
+
+  http.post("/api/admin/courses", async ({ request }) => {
+    await randomDelay();
+    const body = (await request.json()) as CreateCourseRequest;
+    const errors: Record<string, string[]> = {};
+
+    if (!body.code) errors.code = ["Course code is required"];
+    if (!body.name) errors.name = ["Course name is required"];
+    if (!body.description) errors.description = ["Description is required"];
+    if (!body.credits || body.credits < 1) errors.credits = ["Credits must be at least 1"];
+    if (!body.department) errors.department = ["Department is required"];
+    if (!body.semesterId) errors.semesterId = ["Semester is required"];
+    if (!body.facultyId) errors.facultyId = ["Faculty is required"];
+    if (!body.maxCapacity || body.maxCapacity < 1) errors.maxCapacity = ["Capacity must be at least 1"];
+
+    if (courses.some((c) => c.code === body.code)) {
+      errors.code = ["A course with this code already exists"];
+    }
+
+    if (Object.keys(errors).length > 0) return validationError(errors);
+
+    const sem = semesters.find((s) => s.id === body.semesterId);
+    const now = new Date().toISOString();
+    const newCourse: AdminCourse = {
+      id: `crs_${Date.now()}`,
+      code: body.code,
+      name: body.name,
+      description: body.description,
+      credits: body.credits,
+      department: body.department,
+      semesterId: body.semesterId,
+      semesterName: sem?.name ?? "Unknown",
+      facultyId: body.facultyId,
+      facultyName: "Assigned Faculty",
+      enrolledCount: 0,
+      maxCapacity: body.maxCapacity,
+      status: "draft",
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    courses = [newCourse, ...courses];
+
+    // Update semester course count
+    if (sem) {
+      semesters = semesters.map((s) =>
+        s.id === body.semesterId ? { ...s, courseCount: s.courseCount + 1 } : s
+      );
+    }
+
+    return HttpResponse.json({ data: newCourse }, { status: 201 });
+  }),
+
+  http.get("/api/admin/courses/:id", async ({ params }) => {
+    await randomDelay();
+    const course = courses.find((c) => c.id === params.id);
+    if (!course) return notFound("Course");
+    return HttpResponse.json({ data: course });
+  }),
+
+  http.patch("/api/admin/courses/:id", async ({ params, request }) => {
+    await randomDelay();
+    const courseId = params.id as string;
+    const body = (await request.json()) as Partial<AdminCourse>;
+
+    const idx = courses.findIndex((c) => c.id === courseId);
+    if (idx === -1) return notFound("Course");
+
+    const now = new Date().toISOString();
+    courses[idx] = {
+      ...courses[idx],
+      ...body,
+      id: courseId,
+      updatedAt: now,
+    };
+
+    return HttpResponse.json({ data: courses[idx] });
+  }),
+
+  http.post("/api/admin/courses/:id/enroll", async ({ params, request }) => {
+    await randomDelay();
+    const courseId = params.id as string;
+    const body = (await request.json()) as { studentIds?: string[] };
+
+    const idx = courses.findIndex((c) => c.id === courseId);
+    if (idx === -1) return notFound("Course");
+
+    if (!body.studentIds || body.studentIds.length === 0) {
+      return validationError({ studentIds: ["At least one student ID is required"] });
+    }
+
+    const course = courses[idx];
+    const newCount = course.enrolledCount + body.studentIds.length;
+    if (newCount > course.maxCapacity) {
+      return validationError({
+        studentIds: [`Enrollment would exceed capacity (${course.maxCapacity}). Currently enrolled: ${course.enrolledCount}`],
+      });
+    }
+
+    const now = new Date().toISOString();
+    courses[idx] = {
+      ...courses[idx],
+      enrolledCount: newCount,
+      updatedAt: now,
+    };
+
+    return HttpResponse.json({
+      data: {
+        courseId,
+        enrolledCount: newCount,
+        newStudents: body.studentIds.length,
+      },
+    });
+  }),
+
+  // ── Semesters ────────────────────────────────────────────────────────────
+  http.get("/api/admin/semesters", async () => {
+    await randomDelay();
+    return HttpResponse.json({ data: semesters });
+  }),
+
+  http.post("/api/admin/semesters", async ({ request }) => {
+    await randomDelay();
+    const body = (await request.json()) as CreateSemesterRequest;
+    const errors: Record<string, string[]> = {};
+
+    if (!body.name) errors.name = ["Semester name is required"];
+    if (!body.year) errors.year = ["Year is required"];
+    if (!body.startDate) errors.startDate = ["Start date is required"];
+    if (!body.endDate) errors.endDate = ["End date is required"];
+
+    if (body.startDate && body.endDate && new Date(body.startDate) >= new Date(body.endDate)) {
+      errors.endDate = ["End date must be after start date"];
+    }
+
+    if (Object.keys(errors).length > 0) return validationError(errors);
+
+    const now = new Date().toISOString();
+    const newSemester: Semester = {
+      id: `sem_${Date.now()}`,
+      name: body.name,
+      year: body.year,
+      startDate: body.startDate,
+      endDate: body.endDate,
+      status: "upcoming",
+      courseCount: 0,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    semesters = [...semesters, newSemester];
+    return HttpResponse.json({ data: newSemester }, { status: 201 });
+  }),
+
+  http.patch("/api/admin/semesters/:id", async ({ params, request }) => {
+    await randomDelay();
+    const semId = params.id as string;
+    const body = (await request.json()) as Partial<Semester>;
+
+    const idx = semesters.findIndex((s) => s.id === semId);
+    if (idx === -1) return notFound("Semester");
+
+    const now = new Date().toISOString();
+    semesters[idx] = {
+      ...semesters[idx],
+      ...body,
+      id: semId,
+      updatedAt: now,
+    };
+
+    return HttpResponse.json({ data: semesters[idx] });
   }),
 ];

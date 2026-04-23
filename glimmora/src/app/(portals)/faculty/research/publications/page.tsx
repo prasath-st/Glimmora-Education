@@ -133,7 +133,7 @@ export default function FacultyResearchPublicationsPage() {
       />
 
       <p className="text-xs text-muted-foreground -mt-4">
-        Publication data synced from Scopus and institutional records.
+        Publication data from institutional records.
       </p>
 
       {/* Filters */}

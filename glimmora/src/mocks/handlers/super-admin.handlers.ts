@@ -1,9 +1,7 @@
 import { http, HttpResponse, delay } from "msw";
 import type {
   University,
-  Ministry,
   CreateUniversityRequest,
-  CreateMinistryRequest,
   PlatformMonitoring,
   PlatformAuditEntry,
   PlatformSettings,
@@ -11,7 +9,6 @@ import type {
 import {
   generateSuperAdminDashboard,
   generateUniversities,
-  generateMinistries,
   generatePlatformMonitoring,
   generatePlatformAuditLog,
   generatePlatformSettings,
@@ -22,7 +19,6 @@ const randomDelay = () => delay(faker.number.int({ min: 200, max: 600 }));
 
 const dashboard = generateSuperAdminDashboard();
 const universities: University[] = generateUniversities();
-const ministries: Ministry[] = generateMinistries();
 const monitoring: PlatformMonitoring = generatePlatformMonitoring();
 const auditLog: PlatformAuditEntry[] = generatePlatformAuditLog();
 let platformSettings: PlatformSettings = generatePlatformSettings();
@@ -101,101 +97,6 @@ export const superAdminHandlers = [
     const body = (await request.json()) as Partial<University>;
     Object.assign(university, body, { updatedAt: new Date().toISOString() });
     return HttpResponse.json({ data: university });
-  }),
-
-  // ── Ministries ────────────────────────────────────────────────────────
-  http.get("/api/super-admin/ministries", async ({ request }) => {
-    await randomDelay();
-    const url = new URL(request.url);
-    const search = url.searchParams.get("search")?.toLowerCase();
-    const status = url.searchParams.get("status");
-    const page = Number(url.searchParams.get("page") || "1");
-    const pageSize = Number(url.searchParams.get("pageSize") || "20");
-
-    let filtered = [...ministries];
-    if (search) {
-      filtered = filtered.filter(
-        (m) =>
-          m.name.toLowerCase().includes(search) ||
-          m.contactName.toLowerCase().includes(search)
-      );
-    }
-    if (status && status !== "all") {
-      filtered = filtered.filter((m) => m.status === status);
-    }
-
-    const total = filtered.length;
-    const start = (page - 1) * pageSize;
-    const paginated = filtered.slice(start, start + pageSize);
-
-    return HttpResponse.json({
-      data: paginated,
-      meta: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) },
-    });
-  }),
-
-  http.get("/api/super-admin/ministries/:id", async ({ params }) => {
-    await randomDelay();
-    const ministry = ministries.find((m) => m.id === params.id);
-    if (!ministry) {
-      return new HttpResponse(null, { status: 404 });
-    }
-    // Include linked university details
-    const linkedUniversities = universities.filter((u) =>
-      ministry.linkedUniversityIds.includes(u.id)
-    );
-    return HttpResponse.json({
-      data: { ...ministry, linkedUniversities },
-    });
-  }),
-
-  http.post("/api/super-admin/ministries", async ({ request }) => {
-    await randomDelay();
-    const body = (await request.json()) as CreateMinistryRequest;
-    const newMinistry: Ministry = {
-      id: `ministry_${String(ministries.length + 1).padStart(2, "0")}`,
-      ...body,
-      status: "active",
-      linkedUniversityIds: [],
-      linkedUniversityCount: 0,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    ministries.push(newMinistry);
-    return HttpResponse.json({ data: newMinistry }, { status: 201 });
-  }),
-
-  http.patch("/api/super-admin/ministries/:id", async ({ params, request }) => {
-    await randomDelay();
-    const ministry = ministries.find((m) => m.id === params.id);
-    if (!ministry) {
-      return new HttpResponse(null, { status: 404 });
-    }
-    const body = (await request.json()) as Partial<Ministry>;
-    Object.assign(ministry, body, { updatedAt: new Date().toISOString() });
-    return HttpResponse.json({ data: ministry });
-  }),
-
-  http.patch("/api/super-admin/ministries/:id/link", async ({ params, request }) => {
-    await randomDelay();
-    const ministry = ministries.find((m) => m.id === params.id);
-    if (!ministry) {
-      return new HttpResponse(null, { status: 404 });
-    }
-    const body = (await request.json()) as { universityId: string; action: "link" | "unlink" };
-    if (body.action === "link") {
-      if (!ministry.linkedUniversityIds.includes(body.universityId)) {
-        ministry.linkedUniversityIds.push(body.universityId);
-        ministry.linkedUniversityCount = ministry.linkedUniversityIds.length;
-      }
-    } else {
-      ministry.linkedUniversityIds = ministry.linkedUniversityIds.filter(
-        (id) => id !== body.universityId
-      );
-      ministry.linkedUniversityCount = ministry.linkedUniversityIds.length;
-    }
-    ministry.updatedAt = new Date().toISOString();
-    return HttpResponse.json({ data: ministry });
   }),
 
   // ── Monitoring ───────────────────────────────────────────────────────

@@ -22,7 +22,6 @@ import {
   ShieldCheck,
   ScrollText,
   UserCog,
-  Link2,
   Wallet,
   Bot,
   FileBarChart,
@@ -33,6 +32,7 @@ import {
   GitCompare,
   Award,
   DollarSign,
+  Calendar,
   type LucideIcon,
 } from "lucide-react";
 import type { PortalRole } from "./portals";
@@ -49,6 +49,34 @@ export interface NavSection {
 }
 
 export const PORTAL_NAVIGATION: Record<PortalRole, NavSection[]> = {
+  super_admin: [
+    {
+      label: "Overview",
+      items: [
+        { label: "Dashboard", href: "/super-admin/dashboard", icon: LayoutDashboard },
+      ],
+    },
+    {
+      label: "Customers",
+      items: [
+        { label: "Universities", href: "/super-admin/universities", icon: Building2 },
+      ],
+    },
+    {
+      label: "Platform",
+      items: [
+        { label: "Monitoring", href: "/super-admin/monitoring", icon: BarChart3 },
+        { label: "Audit Log", href: "/super-admin/audit-log", icon: ScrollText },
+      ],
+    },
+    {
+      label: "Account",
+      items: [
+        { label: "Settings", href: "/super-admin/settings", icon: Settings },
+      ],
+    },
+  ],
+
   student: [
     {
       label: "Overview",
@@ -139,7 +167,8 @@ export const PORTAL_NAVIGATION: Record<PortalRole, NavSection[]> = {
       items: [
         { label: "Admissions", href: "/admin/admissions", icon: UserPlus },
         { label: "Users & Roles", href: "/admin/users", icon: UserCog },
-        { label: "Integrations", href: "/admin/integrations", icon: Link2 },
+        { label: "Course Catalog", href: "/admin/courses", icon: GraduationCap },
+        { label: "Semesters", href: "/admin/semesters", icon: Calendar },
         { label: "Budget & Resources", href: "/admin/budget", icon: Wallet },
       ],
     },
@@ -220,40 +249,4 @@ export const PORTAL_NAVIGATION: Record<PortalRole, NavSection[]> = {
     },
   ],
 
-  ministry: [
-    {
-      label: "Overview",
-      items: [
-        { label: "Dashboard", href: "/ministry/dashboard", icon: LayoutDashboard },
-        { label: "Institutions", href: "/ministry/institutions", icon: Landmark },
-      ],
-    },
-    {
-      label: "Oversight",
-      items: [
-        { label: "Compliance", href: "/ministry/compliance", icon: ShieldCheck },
-        { label: "Quality Indicators", href: "/ministry/quality", icon: Award },
-      ],
-    },
-    {
-      label: "Strategic",
-      items: [
-        { label: "Policy Simulation", href: "/ministry/simulation", icon: Globe },
-        { label: "Scenario Comparison", href: "/ministry/scenarios", icon: GitCompare },
-        { label: "Budget Intelligence", href: "/ministry/budget", icon: DollarSign },
-      ],
-    },
-    {
-      label: "Reporting",
-      items: [
-        { label: "Reports", href: "/ministry/reports", icon: FileBarChart },
-      ],
-    },
-    {
-      label: "System",
-      items: [
-        { label: "Settings", href: "/ministry/settings", icon: Settings },
-      ],
-    },
-  ],
 };

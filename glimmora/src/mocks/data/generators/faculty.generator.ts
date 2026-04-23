@@ -13,6 +13,14 @@ import type {
   FacultyPublication,
   AiBriefing,
   FacultyProfile,
+  CourseModule,
+  CourseMaterial,
+  FacultyAssignment,
+  AssignmentRubric,
+  StudentSubmission,
+  GradebookEntry,
+  AttendanceSession,
+  AttendanceRecord,
 } from "@/lib/api/types/faculty.types";
 import type { RiskLevel, InterventionStatus } from "@/lib/api/types/common.types";
 
@@ -1008,4 +1016,272 @@ export function generateFacultyProfile(): FacultyProfile {
       { platform: "ORCID", url: "https://orcid.org/0000-0002-1234-5678" },
     ],
   };
+}
+
+// ─── LMS Generators ──────────────────────────────────────────────────────────
+
+const MODULE_TEMPLATES: { title: string; description: string; materials: { title: string; type: CourseMaterial["type"] }[] }[] = [
+  {
+    title: "Module 1: Foundations & Prerequisites",
+    description: "Core concepts and mathematical foundations needed for the course. Reviews prerequisite knowledge and establishes baseline understanding.",
+    materials: [
+      { title: "Course Syllabus & Overview", type: "pdf" },
+      { title: "Foundational Concepts Lecture", type: "video" },
+      { title: "Mathematical Prerequisites Review", type: "slides" },
+      { title: "Supplementary Reading List", type: "link" },
+    ],
+  },
+  {
+    title: "Module 2: Core Theory",
+    description: "In-depth exploration of the core theoretical framework. Includes proofs, derivations, and analytical techniques.",
+    materials: [
+      { title: "Core Theory Lecture Notes", type: "pdf" },
+      { title: "Theory Deep Dive - Part 1", type: "video" },
+      { title: "Theory Deep Dive - Part 2", type: "video" },
+      { title: "Practice Problems Set", type: "pdf" },
+    ],
+  },
+  {
+    title: "Module 3: Algorithms & Implementation",
+    description: "Hands-on implementation of core algorithms. Bridges theory to practice with coding exercises and lab sessions.",
+    materials: [
+      { title: "Algorithm Design Slides", type: "slides" },
+      { title: "Live Coding Session Recording", type: "video" },
+      { title: "Implementation Guide", type: "pdf" },
+      { title: "GitHub Starter Code Repository", type: "link" },
+    ],
+  },
+  {
+    title: "Module 4: Advanced Topics",
+    description: "Extension of core concepts to advanced applications. Covers state-of-the-art approaches and recent research developments.",
+    materials: [
+      { title: "Advanced Topics Lecture", type: "video" },
+      { title: "Research Paper Summaries", type: "pdf" },
+      { title: "Case Study Presentation", type: "slides" },
+    ],
+  },
+  {
+    title: "Module 5: Project & Applications",
+    description: "Capstone module focused on real-world application. Students apply learned concepts to practical projects.",
+    materials: [
+      { title: "Project Guidelines", type: "pdf" },
+      { title: "Example Project Walkthrough", type: "video" },
+      { title: "Evaluation Rubric", type: "pdf" },
+      { title: "Dataset Repository", type: "link" },
+    ],
+  },
+];
+
+export function generateCourseModules(courseId: string): CourseModule[] {
+  const moduleCount = faker.number.int({ min: 3, max: 5 });
+  const templates = MODULE_TEMPLATES.slice(0, moduleCount);
+
+  return templates.map((t, order) => {
+    const moduleId = id("mod");
+    const materialCount = faker.number.int({ min: 2, max: t.materials.length });
+    const selectedMaterials = t.materials.slice(0, materialCount);
+
+    const materials: CourseMaterial[] = selectedMaterials.map((m) => ({
+      id: id("mat"),
+      moduleId,
+      title: m.title,
+      type: m.type,
+      url: m.type === "link"
+        ? `https://resources.university.edu/${faker.string.alphanumeric(8)}`
+        : `/uploads/courses/${courseId}/${faker.string.alphanumeric(12)}.${m.type === "pdf" ? "pdf" : m.type === "video" ? "mp4" : "pptx"}`,
+      fileSize: m.type !== "link" ? faker.number.int({ min: 512000, max: 52428800 }) : undefined,
+      duration: m.type === "video" ? faker.number.int({ min: 600, max: 5400 }) : undefined,
+      uploadedAt: pastDate(faker.number.int({ min: 7, max: 90 })),
+    }));
+
+    return {
+      id: moduleId,
+      courseId,
+      title: t.title,
+      description: t.description,
+      order: order + 1,
+      materials,
+    };
+  });
+}
+
+const ASSIGNMENT_TEMPLATES: { title: string; description: string; type: FacultyAssignment["type"]; weight: number; maxScore: number }[] = [
+  { title: "Homework 1: Foundations", description: "Apply foundational concepts through analytical problems and short coding exercises.", type: "assignment", weight: 10, maxScore: 100 },
+  { title: "Quiz 1: Prerequisite Check", description: "Quick assessment of prerequisite knowledge and early course material.", type: "quiz", weight: 5, maxScore: 50 },
+  { title: "Homework 2: Core Implementation", description: "Implement core algorithms from scratch with correctness and efficiency analysis.", type: "assignment", weight: 10, maxScore: 100 },
+  { title: "Midterm Exam", description: "Comprehensive exam covering Modules 1-3, including theory and problem solving.", type: "exam", weight: 20, maxScore: 100 },
+  { title: "Project Milestone 1: Proposal", description: "Submit project proposal with problem statement, dataset description, and methodology plan.", type: "project", weight: 10, maxScore: 100 },
+  { title: "Homework 3: Advanced Topics", description: "Problem set covering advanced algorithms, optimization, and analysis techniques.", type: "assignment", weight: 10, maxScore: 100 },
+  { title: "Final Project Submission", description: "Complete project with implementation, evaluation, report, and presentation slides.", type: "project", weight: 25, maxScore: 100 },
+];
+
+export function generateFacultyAssignments(courseId: string): FacultyAssignment[] {
+  const count = faker.number.int({ min: 5, max: 7 });
+  const templates = ASSIGNMENT_TEMPLATES.slice(0, count);
+  const statuses: FacultyAssignment["status"][] = ["published", "published", "published", "closed", "published", "draft", "draft"];
+
+  return templates.map((t, i) => {
+    const status = statuses[i % statuses.length];
+    const totalStudents = faker.number.int({ min: 25, max: 45 });
+    const submissionCount = status === "draft" ? 0 : faker.number.int({ min: Math.floor(totalStudents * 0.6), max: totalStudents });
+    const gradedCount = status === "closed" ? submissionCount : status === "published" ? faker.number.int({ min: 0, max: submissionCount }) : 0;
+
+    const rubricCount = faker.number.int({ min: 2, max: 3 });
+    const rubricTemplates: AssignmentRubric[] = [
+      { criterion: "Correctness", description: "Solution produces correct results for all test cases", maxPoints: Math.floor(t.maxScore * 0.4) },
+      { criterion: "Code Quality", description: "Clean, well-documented code with proper structure and naming", maxPoints: Math.floor(t.maxScore * 0.3) },
+      { criterion: "Analysis & Discussion", description: "Thorough analysis of results with insightful discussion", maxPoints: Math.floor(t.maxScore * 0.3) },
+    ];
+
+    return {
+      id: id("asg"),
+      courseId,
+      title: t.title,
+      description: t.description,
+      type: t.type,
+      dueDate: status === "closed" ? pastDate(faker.number.int({ min: 14, max: 60 })) : futureDate(faker.number.int({ min: 3, max: 45 })),
+      maxScore: t.maxScore,
+      weight: t.weight,
+      status,
+      submissionCount,
+      gradedCount,
+      rubric: rubricTemplates.slice(0, rubricCount),
+    };
+  });
+}
+
+const STUDENT_NAME_POOL = [
+  "Alice Johnson", "Bob Williams", "Carol Martinez", "David Brown", "Eva Chen",
+  "Frank Kim", "Grace Patel", "Henry Nguyen", "Irene Thompson", "James Garcia",
+  "Karen Lee", "Liam Davis", "Monica Wilson", "Nathan Taylor", "Olivia Anderson",
+];
+
+export function generateStudentSubmissions(assignmentId: string): StudentSubmission[] {
+  const count = faker.number.int({ min: 8, max: 15 });
+
+  return Array.from({ length: count }, (_, i) => {
+    const studentName = STUDENT_NAME_POOL[i % STUDENT_NAME_POOL.length];
+    const isGraded = faker.datatype.boolean(0.6);
+    const isLate = faker.datatype.boolean(0.15);
+    const score = isGraded ? faker.number.int({ min: 45, max: 100 }) : undefined;
+
+    return {
+      id: id("sub"),
+      assignmentId,
+      studentId: id("stu"),
+      studentName,
+      submittedAt: pastDate(faker.number.int({ min: 1, max: 30 })),
+      fileName: `${studentName.split(" ")[0].toLowerCase()}_${assignmentId.slice(-6)}.${pick(["pdf", "zip", "py", "ipynb"])}`,
+      fileUrl: `/uploads/submissions/${faker.string.alphanumeric(16)}`,
+      score,
+      feedback: isGraded
+        ? pick([
+            "Good work overall. Strong implementation with clear documentation.",
+            "Solid effort. Some edge cases missed in the analysis section.",
+            "Excellent submission. Above-average quality in both code and writeup.",
+            "Meets expectations. Consider expanding the discussion of results.",
+            "Below average. Key concepts were not properly applied. See detailed notes.",
+            "Great improvement from the last assignment. Keep it up!",
+            "Partially correct. The algorithmic approach needs revision.",
+          ])
+        : undefined,
+      status: isGraded ? "graded" : isLate ? "late" : "submitted",
+    };
+  });
+}
+
+export function generateGradebook(courseId: string): GradebookEntry[] {
+  const assignments = generateFacultyAssignments(courseId);
+  const studentCount = faker.number.int({ min: 12, max: 18 });
+
+  return Array.from({ length: studentCount }, (_, i) => {
+    const studentName = STUDENT_NAME_POOL[i % STUDENT_NAME_POOL.length];
+    let weightedSum = 0;
+    let totalWeight = 0;
+
+    const assignmentScores = assignments.map((a) => {
+      const hasSubmitted = faker.datatype.boolean(0.85);
+      const score = hasSubmitted ? faker.number.int({ min: 40, max: 100 }) : null;
+      if (score !== null) {
+        weightedSum += (score / a.maxScore) * a.weight;
+        totalWeight += a.weight;
+      }
+      return {
+        assignmentId: a.id,
+        title: a.title,
+        score,
+        maxScore: a.maxScore,
+        weight: a.weight,
+        status: score !== null ? "graded" : "pending",
+      };
+    });
+
+    const weightedAverage = totalWeight > 0 ? roundTo((weightedSum / totalWeight) * 100, 1) : 0;
+
+    return {
+      studentId: id("stu"),
+      studentName,
+      assignments: assignmentScores,
+      weightedAverage,
+    };
+  });
+}
+
+const SESSION_TOPICS = [
+  "Introduction & Course Overview",
+  "Fundamentals Review",
+  "Core Concept: Definitions & Properties",
+  "Algorithm Design Strategies",
+  "Complexity Analysis",
+  "Hands-On Lab: Implementation",
+  "Midterm Review Session",
+  "Advanced Technique: Optimization",
+  "Guest Lecture: Industry Applications",
+  "Research Frontiers Discussion",
+  "Project Work Session",
+  "Peer Code Review Workshop",
+  "Advanced Analysis Methods",
+  "Case Study: Real-World System",
+  "Final Review & Q&A",
+];
+
+export function generateAttendanceSessions(courseId: string): AttendanceSession[] {
+  const sessionCount = faker.number.int({ min: 10, max: 15 });
+  const studentCount = 15;
+  const studentNames = STUDENT_NAME_POOL.slice(0, studentCount);
+
+  return Array.from({ length: sessionCount }, (_, i) => {
+    const sessionDate = new Date(now);
+    sessionDate.setDate(sessionDate.getDate() - (sessionCount - i) * 3); // every ~3 days
+    const topic = SESSION_TOPICS[i % SESSION_TOPICS.length];
+
+    const records: AttendanceRecord[] = studentNames.map((name) => {
+      const roll = faker.number.float({ min: 0, max: 1 });
+      let status: AttendanceRecord["status"];
+      if (roll < 0.75) status = "present";
+      else if (roll < 0.88) status = "absent";
+      else status = "late";
+
+      return {
+        studentId: id("stu"),
+        studentName: name,
+        status,
+      };
+    });
+
+    const presentCount = records.filter((r) => r.status === "present").length;
+    const absentCount = records.filter((r) => r.status === "absent").length;
+    const lateCount = records.filter((r) => r.status === "late").length;
+
+    return {
+      id: id("att"),
+      courseId,
+      date: isoDate(sessionDate),
+      topic,
+      records,
+      presentCount,
+      absentCount,
+      lateCount,
+    };
+  });
 }

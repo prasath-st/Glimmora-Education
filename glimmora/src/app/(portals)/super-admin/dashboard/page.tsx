@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import {
-  Building2, Landmark, GraduationCap, BookOpen,
+  Building2, GraduationCap, BookOpen,
   ArrowRight, ArrowUpRight, Activity, ScrollText,
 } from "lucide-react";
 import {
@@ -34,7 +34,7 @@ function DashboardLoading() {
       <Skeleton className="h-9 w-56" />
       <Skeleton className="mt-2 h-5 w-72" />
       <div className="mt-10 grid grid-cols-2 gap-5 lg:grid-cols-4">
-        {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-32 rounded-lg" />)}
+        {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-32 rounded-lg" />)}
       </div>
       <div className="mt-10 grid grid-cols-1 gap-6 lg:grid-cols-3">
         <Skeleton className="h-80 rounded-lg lg:col-span-2" />
@@ -52,7 +52,6 @@ export default function SuperAdminDashboardPage() {
 
   const stats = [
     { label: "Universities", value: data.totalUniversities, sub: `${data.activeUniversities} active`, icon: Building2, href: "/super-admin/universities" },
-    { label: "Ministries", value: data.totalMinistries, sub: "oversight bodies", icon: Landmark, href: "/super-admin/ministries" },
     { label: "Students", value: formatCompact(data.totalStudents), sub: "enrolled", icon: GraduationCap },
     { label: "Faculty", value: formatCompact(data.totalFaculty), sub: "across institutions", icon: BookOpen },
   ];
@@ -89,7 +88,7 @@ export default function SuperAdminDashboardPage() {
         </div>
 
         {/* ── Stat cards with shadow ────────────────────────────── */}
-        <div className="mt-10 grid grid-cols-2 gap-5 lg:grid-cols-4">
+        <div className="mt-10 grid grid-cols-2 gap-5 lg:grid-cols-3">
           {stats.map((stat) => {
             const Icon = stat.icon;
             const card = (
@@ -150,7 +149,6 @@ export default function SuperAdminDashboardPage() {
             <div className="mt-5 space-y-2">
               {[
                 { label: "Universities", href: "/super-admin/universities", icon: Building2, sub: `${data.activeUniversities} active, ${data.suspendedUniversities} suspended` },
-                { label: "Ministries", href: "/super-admin/ministries", icon: Landmark, sub: `${data.totalMinistries} oversight bodies` },
                 { label: "Monitoring", href: "/super-admin/monitoring", icon: Activity, sub: "Platform health" },
                 { label: "Audit Log", href: "/super-admin/audit-log", icon: ScrollText, sub: "Activity trail" },
               ].map((link) => {

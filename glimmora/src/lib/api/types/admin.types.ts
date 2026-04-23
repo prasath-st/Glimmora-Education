@@ -5,7 +5,6 @@ import type {
   PortalRole,
   RiskLevel,
   ComplianceStatus,
-  IntegrationHealth,
   CredentialStatus,
   ModelStatus,
 } from "./common.types";
@@ -17,8 +16,6 @@ export interface AdminDashboard {
   graduation: { rate: number; trend: number };
   compliance: { score: number; status: ComplianceStatus; deviations: number };
   facultyStudentRatio: number;
-  activeIntegrations: number;
-  totalIntegrations: number;
   enrollmentTrend: { month: string; count: number }[];
 }
 
@@ -118,20 +115,6 @@ export interface RoleDefinition {
 export interface Permission {
   module: string;
   actions: { name: string; allowed: boolean }[];
-}
-
-// === Integrations ===
-export interface Integration extends Identifiable {
-  name: string;
-  type: "lms" | "sis" | "erp" | "hrms" | "research" | "auth" | "other";
-  provider: string;
-  health: IntegrationHealth;
-  lastSyncAt: string;
-  nextSyncAt: string;
-  recordsSynced: number;
-  errorCount: number;
-  uptime: number;
-  syncHistory: { date: string; records: number; errors: number; duration: number }[];
 }
 
 // === Budget ===
@@ -240,6 +223,55 @@ export interface GeneratedReport extends Identifiable, Timestamps {
   downloadUrl?: string;
   generatedBy: string;
   fileSize?: number;
+}
+
+// === Courses ===
+export interface AdminCourse extends Identifiable, Timestamps {
+  code: string;
+  name: string;
+  description: string;
+  credits: number;
+  department: string;
+  semesterId: string;
+  semesterName: string;
+  facultyId: string;
+  facultyName: string;
+  enrolledCount: number;
+  maxCapacity: number;
+  status: "draft" | "active" | "archived";
+}
+
+export interface CreateCourseRequest {
+  code: string;
+  name: string;
+  description: string;
+  credits: number;
+  department: string;
+  semesterId: string;
+  facultyId: string;
+  maxCapacity: number;
+}
+
+export interface BulkEnrollRequest {
+  courseId: string;
+  studentIds: string[];
+}
+
+// === Semesters ===
+export interface Semester extends Identifiable, Timestamps {
+  name: string;
+  year: string;
+  startDate: string;
+  endDate: string;
+  status: "upcoming" | "active" | "completed";
+  courseCount: number;
+}
+
+export interface CreateSemesterRequest {
+  name: string;
+  year: string;
+  startDate: string;
+  endDate: string;
 }
 
 // === Settings ===

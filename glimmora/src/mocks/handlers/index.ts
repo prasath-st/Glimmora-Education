@@ -4,8 +4,8 @@ import { facultyHandlers } from "./faculty.handlers";
 import { adminHandlers } from "./admin.handlers";
 import { placementHandlers } from "./placement.handlers";
 import { researchHandlers } from "./research.handlers";
-import { ministryHandlers } from "./ministry.handlers";
 import { admissionsHandlers } from "./admissions.handlers";
 import { tutorHandlers } from "./tutor.handlers";
+import { superAdminHandlers } from "./super-admin.handlers";
 
-export const handlers = [...authHandlers, ...studentHandlers, ...facultyHandlers, ...adminHandlers, ...placementHandlers, ...researchHandlers, ...ministryHandlers, ...admissionsHandlers, ...tutorHandlers];
+export const handlers = [...authHandlers, ...studentHandlers, ...facultyHandlers, ...adminHandlers, ...placementHandlers, ...researchHandlers, ...admissionsHandlers, ...tutorHandlers, ...superAdminHandlers];

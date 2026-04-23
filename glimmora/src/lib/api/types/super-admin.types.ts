@@ -5,7 +5,6 @@ export interface SuperAdminDashboard {
   totalUniversities: number;
   activeUniversities: number;
   suspendedUniversities: number;
-  totalMinistries: number;
   totalUsers: number;
   totalStudents: number;
   totalFaculty: number;
@@ -47,24 +46,6 @@ export interface CreateUniversityRequest {
   adminName: string;
 }
 
-// === Ministries ===
-export interface Ministry extends Identifiable, Timestamps {
-  name: string;
-  country: string;
-  status: "active" | "suspended";
-  contactEmail: string;
-  contactName: string;
-  linkedUniversityIds: string[];
-  linkedUniversityCount: number;
-}
-
-export interface CreateMinistryRequest {
-  name: string;
-  country: string;
-  contactEmail: string;
-  contactName: string;
-}
-
 // === Monitoring ===
 export interface PlatformMonitoring {
   systemStatus: "healthy" | "degraded" | "down";
@@ -93,7 +74,7 @@ export interface PlatformAuditEntry extends Identifiable {
   actorName: string;
   actorEmail: string;
   actorRole: string;
-  action: "create_university" | "suspend_university" | "reactivate_university" | "create_ministry" | "link_university" | "unlink_university" | "update_settings" | "login" | "logout";
+  action: "create_university" | "suspend_university" | "reactivate_university" | "update_settings" | "login" | "logout";
   target: string;
   targetId: string;
   details: string;

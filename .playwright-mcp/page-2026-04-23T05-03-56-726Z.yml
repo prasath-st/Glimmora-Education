@@ -1,0 +1,364 @@
+- generic:
+  - button "Open Next.js Dev Tools" [ref=e7] [cursor=pointer]:
+    - img [ref=e8]
+  - alert
+  - generic:
+    - generic:
+      - generic:
+        - complementary:
+          - generic:
+            - generic:
+              - img
+            - generic:
+              - generic: Glimmora
+              - generic: Command
+          - navigation:
+            - generic:
+              - generic:
+                - paragraph: Overview
+                - list:
+                  - listitem:
+                    - link:
+                      - /url: /super-admin/dashboard
+                      - img
+                      - generic: Dashboard
+              - generic:
+                - paragraph: Customers
+                - list:
+                  - listitem:
+                    - link:
+                      - /url: /super-admin/universities
+                      - img
+                      - generic: Universities
+                  - listitem:
+                    - link:
+                      - /url: /super-admin/ministries
+                      - img
+                      - generic: Ministries
+              - generic:
+                - paragraph: Platform
+                - list:
+                  - listitem:
+                    - link:
+                      - /url: /super-admin/monitoring
+                      - img
+                      - generic: Monitoring
+                  - listitem:
+                    - link:
+                      - /url: /super-admin/audit-log
+                      - img
+                      - generic: Audit Log
+              - generic:
+                - paragraph: Account
+                - list:
+                  - listitem:
+                    - link:
+                      - /url: /super-admin/settings
+                      - img
+                      - generic: Settings
+          - generic:
+            - button:
+              - img
+              - generic: Collapse
+        - generic:
+          - banner:
+            - generic:
+              - navigation:
+                - generic:
+                  - link:
+                    - /url: /super-admin/dashboard
+                    - text: Super Admin
+                - generic:
+                  - img
+                  - generic: Universities
+            - generic:
+              - button:
+                - img
+                - generic: Search…
+                - generic: ⌘K
+            - generic:
+              - button:
+                - img
+              - generic:
+                - button:
+                  - generic: P
+                  - generic:
+                    - generic: Platform Admin
+                    - generic: Super Admin
+                  - img
+          - main:
+            - generic:
+              - generic:
+                - generic:
+                  - generic:
+                    - img
+                  - generic:
+                    - heading [level=1]: Universities
+                    - paragraph: Manage university tenants
+                - generic:
+                  - button:
+                    - img
+                    - text: Create University
+              - generic:
+                - generic:
+                  - img
+                  - textbox:
+                    - /placeholder: Search universities...
+                - combobox
+              - generic:
+                - generic:
+                  - generic:
+                    - table:
+                      - rowgroup:
+                        - row:
+                          - columnheader:
+                            - generic:
+                              - text: Name
+                              - img
+                          - columnheader:
+                            - generic:
+                              - text: Domain
+                              - img
+                          - columnheader:
+                            - generic:
+                              - text: Admin
+                              - img
+                          - columnheader:
+                            - generic:
+                              - text: Users
+                              - img
+                          - columnheader:
+                            - generic:
+                              - text: Status
+                              - img
+                          - columnheader:
+                            - generic:
+                              - text: Created
+                              - img
+                          - columnheader:
+                            - generic: Actions
+                      - rowgroup:
+                        - row:
+                          - cell:
+                            - generic:
+                              - paragraph: Jadavpur University
+                              - paragraph: Kolkata, India
+                          - cell: jaduniv.edu.in
+                          - cell:
+                            - generic:
+                              - paragraph: Dexter Reinger
+                              - paragraph: admin@jaduniv.edu.in
+                          - cell: 12,326
+                          - cell:
+                            - generic: active
+                          - cell: Jan 19, 2026
+                          - cell:
+                            - button [expanded]:
+                              - img
+                        - row:
+                          - cell:
+                            - generic:
+                              - paragraph: Manipal Academy
+                              - paragraph: Manipal, India
+                          - cell: manipal.edu
+                          - cell:
+                            - generic:
+                              - paragraph: Vincenza Barton
+                              - paragraph: admin@manipal.edu
+                          - cell: 9,852
+                          - cell:
+                            - generic: active
+                          - cell: Jan 3, 2026
+                          - cell:
+                            - button:
+                              - img
+                        - row:
+                          - cell:
+                            - generic:
+                              - paragraph: VIT University
+                              - paragraph: Vellore, India
+                          - cell: vit.ac.in
+                          - cell:
+                            - generic:
+                              - paragraph: Marlee Hessel
+                              - paragraph: admin@vit.ac.in
+                          - cell: 5,162
+                          - cell:
+                            - generic: active
+                          - cell: Dec 18, 2025
+                          - cell:
+                            - button:
+                              - img
+                        - row:
+                          - cell:
+                            - generic:
+                              - paragraph: IIT Madras
+                              - paragraph: Chennai, India
+                          - cell: iitm.ac.in
+                          - cell:
+                            - generic:
+                              - paragraph: Nathanial Zboncak
+                              - paragraph: admin@iitm.ac.in
+                          - cell: 14,994
+                          - cell:
+                            - generic: active
+                          - cell: Nov 28, 2025
+                          - cell:
+                            - button:
+                              - img
+                        - row:
+                          - cell:
+                            - generic:
+                              - paragraph: Anna University
+                              - paragraph: Chennai, India
+                          - cell: annauniv.edu
+                          - cell:
+                            - generic:
+                              - paragraph: Lauryn Waelchi PhD
+                              - paragraph: admin@annauniv.edu
+                          - cell: 5,368
+                          - cell:
+                            - generic: active
+                          - cell: Nov 23, 2025
+                          - cell:
+                            - button:
+                              - img
+                        - row:
+                          - cell:
+                            - generic:
+                              - paragraph: NIT Trichy
+                              - paragraph: Tiruchirappalli, India
+                          - cell: nitt.edu
+                          - cell:
+                            - generic:
+                              - paragraph: Winnifred Hilpert
+                              - paragraph: admin@nitt.edu
+                          - cell: 14,611
+                          - cell:
+                            - generic: suspended
+                          - cell: Nov 15, 2025
+                          - cell:
+                            - button:
+                              - img
+                        - row:
+                          - cell:
+                            - generic:
+                              - paragraph: Osmania University
+                              - paragraph: Hyderabad, India
+                          - cell: osmania.ac.in
+                          - cell:
+                            - generic:
+                              - paragraph: Evie Herman-Zemlak
+                              - paragraph: admin@osmania.ac.in
+                          - cell: 11,940
+                          - cell:
+                            - generic: active
+                          - cell: Nov 2, 2025
+                          - cell:
+                            - button:
+                              - img
+                        - row:
+                          - cell:
+                            - generic:
+                              - paragraph: IIT Bombay
+                              - paragraph: Mumbai, India
+                          - cell: iitb.ac.in
+                          - cell:
+                            - generic:
+                              - paragraph: Tabitha Goodwin IV
+                              - paragraph: admin@iitb.ac.in
+                          - cell: 8,825
+                          - cell:
+                            - generic: active
+                          - cell: Oct 21, 2025
+                          - cell:
+                            - button:
+                              - img
+                        - row:
+                          - cell:
+                            - generic:
+                              - paragraph: SRM University
+                              - paragraph: Chennai, India
+                          - cell: srmist.edu.in
+                          - cell:
+                            - generic:
+                              - paragraph: Gerard Cronin
+                              - paragraph: admin@srmist.edu.in
+                          - cell: 11,062
+                          - cell:
+                            - generic: suspended
+                          - cell: Aug 11, 2025
+                          - cell:
+                            - button:
+                              - img
+                        - row:
+                          - cell:
+                            - generic:
+                              - paragraph: BITS Pilani
+                              - paragraph: Pilani, India
+                          - cell: bits-pilani.ac.in
+                          - cell:
+                            - generic:
+                              - paragraph: Mr. Malcolm Rohan
+                              - paragraph: admin@bits-pilani.ac.in
+                          - cell: 11,255
+                          - cell:
+                            - generic: active
+                          - cell: Aug 2, 2025
+                          - cell:
+                            - button:
+                              - img
+                        - row:
+                          - cell:
+                            - generic:
+                              - paragraph: Amrita University
+                              - paragraph: Coimbatore, India
+                          - cell: amrita.edu
+                          - cell:
+                            - generic:
+                              - paragraph: Zander Price
+                              - paragraph: admin@amrita.edu
+                          - cell: 11,567
+                          - cell:
+                            - generic: active
+                          - cell: Jul 24, 2025
+                          - cell:
+                            - button:
+                              - img
+                        - row:
+                          - cell:
+                            - generic:
+                              - paragraph: University of Delhi
+                              - paragraph: New Delhi, India
+                          - cell: du.ac.in
+                          - cell:
+                            - generic:
+                              - paragraph: Bernard Kuphal
+                              - paragraph: admin@du.ac.in
+                          - cell: 11,601
+                          - cell:
+                            - generic: active
+                          - cell: Jun 5, 2025
+                          - cell:
+                            - button:
+                              - img
+  - generic:
+    - button:
+      - img
+  - region "Notifications alt+T"
+  - generic: "0"
+  - menu "University actions" [active] [ref=e715]:
+    - menuitem "View Details" [ref=e716] [cursor=pointer]:
+      - img [ref=e717]
+      - text: View Details
+    - separator [ref=e720]
+    - menuitem "Suspend" [ref=e721] [cursor=pointer]:
+      - img [ref=e722]
+      - generic [ref=e725]: Suspend
+    - separator [ref=e726]
+    - menuitem "Reset Password" [ref=e727] [cursor=pointer]:
+      - img [ref=e728]
+      - text: Reset Password
+    - menuitem "Resend Activation Email" [ref=e731] [cursor=pointer]:
+      - img [ref=e732]
+      - text: Resend Activation Email

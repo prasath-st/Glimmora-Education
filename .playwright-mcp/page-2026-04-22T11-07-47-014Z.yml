@@ -1,0 +1,8 @@
+- generic [active] [ref=e1]:
+  - alert [ref=e2]
+  - generic [ref=e4]:
+    - img [ref=e5]
+    - paragraph [ref=e7]: Loading...
+  - button "Dev Role Switcher" [ref=e9]:
+    - img [ref=e10]
+  - region "Notifications alt+T"

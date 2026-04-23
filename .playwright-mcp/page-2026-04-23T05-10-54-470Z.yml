@@ -1,0 +1,290 @@
+- generic [active] [ref=e1]:
+  - button "Open Next.js Dev Tools" [ref=e7] [cursor=pointer]:
+    - img [ref=e8]
+  - alert [ref=e11]
+  - generic [ref=e71]:
+    - complementary [ref=e72]:
+      - generic [ref=e73]:
+        - img [ref=e75]
+        - generic [ref=e77]:
+          - generic [ref=e78]: Glimmora
+          - generic [ref=e79]: Command
+      - navigation [ref=e81]:
+        - generic [ref=e82]:
+          - generic [ref=e83]:
+            - paragraph [ref=e84]: Overview
+            - list [ref=e85]:
+              - listitem [ref=e86]:
+                - link "Dashboard" [ref=e87] [cursor=pointer]:
+                  - /url: /super-admin/dashboard
+                  - img [ref=e89]
+                  - generic [ref=e94]: Dashboard
+          - generic [ref=e95]:
+            - paragraph [ref=e96]: Customers
+            - list [ref=e97]:
+              - listitem [ref=e98]:
+                - link "Universities" [ref=e99] [cursor=pointer]:
+                  - /url: /super-admin/universities
+                  - img [ref=e100]
+                  - generic [ref=e104]: Universities
+              - listitem [ref=e105]:
+                - link "Ministries" [ref=e106] [cursor=pointer]:
+                  - /url: /super-admin/ministries
+                  - img [ref=e107]
+                  - generic [ref=e109]: Ministries
+          - generic [ref=e110]:
+            - paragraph [ref=e111]: Platform
+            - list [ref=e112]:
+              - listitem [ref=e113]:
+                - link "Monitoring" [ref=e114] [cursor=pointer]:
+                  - /url: /super-admin/monitoring
+                  - img [ref=e115]
+                  - generic [ref=e117]: Monitoring
+              - listitem [ref=e118]:
+                - link "Audit Log" [ref=e119] [cursor=pointer]:
+                  - /url: /super-admin/audit-log
+                  - img [ref=e120]
+                  - generic [ref=e123]: Audit Log
+          - generic [ref=e124]:
+            - paragraph [ref=e125]: Account
+            - list [ref=e126]:
+              - listitem [ref=e127]:
+                - link "Settings" [ref=e128] [cursor=pointer]:
+                  - /url: /super-admin/settings
+                  - img [ref=e129]
+                  - generic [ref=e132]: Settings
+      - button "Collapse" [ref=e134]:
+        - img [ref=e135]
+        - generic [ref=e138]: Collapse
+    - generic [ref=e139]:
+      - banner [ref=e140]:
+        - navigation [ref=e142]:
+          - link "Super Admin" [ref=e144] [cursor=pointer]:
+            - /url: /super-admin/dashboard
+          - generic [ref=e1180]:
+            - img [ref=e1181]
+            - generic [ref=e1183]: Ministries
+        - button "Search… ⌘K" [ref=e150]:
+          - img [ref=e151]
+          - generic [ref=e154]: Search…
+          - generic [ref=e155]: ⌘K
+        - generic [ref=e156]:
+          - button [ref=e157]:
+            - img [ref=e158]
+          - button "P Platform Admin Super Admin" [ref=e163]:
+            - generic [ref=e164]: P
+            - generic [ref=e165]:
+              - generic [ref=e166]: Platform Admin
+              - generic [ref=e167]: Super Admin
+            - img [ref=e168]
+      - main [ref=e170]:
+        - generic [ref=e1184]:
+          - generic [ref=e1185]:
+            - generic [ref=e1186]:
+              - img [ref=e1188]
+              - generic [ref=e1190]:
+                - heading "Ministries" [level=1] [ref=e1191]
+                - paragraph [ref=e1192]: Manage oversight bodies
+            - button "Create Ministry" [ref=e1194]:
+              - img [ref=e1195]
+              - text: Create Ministry
+          - generic [ref=e1197]:
+            - img [ref=e1198]
+            - textbox "Search ministries..." [ref=e1201]
+          - table [ref=e1205]:
+            - rowgroup [ref=e1206]:
+              - row "Name Country Contact Linked Universities Status Created Actions" [ref=e1207]:
+                - columnheader "Name" [ref=e1208]:
+                  - generic [ref=e1209] [cursor=pointer]:
+                    - text: Name
+                    - img [ref=e1210]
+                - columnheader "Country" [ref=e1213]:
+                  - generic [ref=e1214] [cursor=pointer]:
+                    - text: Country
+                    - img [ref=e1215]
+                - columnheader "Contact" [ref=e1218]:
+                  - generic [ref=e1219] [cursor=pointer]:
+                    - text: Contact
+                    - img [ref=e1220]
+                - columnheader "Linked Universities" [ref=e1223]:
+                  - generic [ref=e1224] [cursor=pointer]:
+                    - text: Linked Universities
+                    - img [ref=e1225]
+                - columnheader "Status" [ref=e1228]:
+                  - generic [ref=e1229] [cursor=pointer]:
+                    - text: Status
+                    - img [ref=e1230]
+                - columnheader "Created" [ref=e1233]:
+                  - generic [ref=e1234] [cursor=pointer]:
+                    - text: Created
+                    - img [ref=e1235]
+                - columnheader "Actions" [ref=e1238]:
+                  - generic [ref=e1239]: Actions
+            - rowgroup [ref=e1240]:
+              - row "Ministry of Education India Walker Swaniawski Estel_Heaney@gov.in 8 active Feb 13, 2025" [ref=e1241] [cursor=pointer]:
+                - cell "Ministry of Education" [ref=e1242]
+                - cell "India" [ref=e1243]
+                - cell "Walker Swaniawski Estel_Heaney@gov.in" [ref=e1244]:
+                  - generic [ref=e1295]:
+                    - paragraph [ref=e1296]: Walker Swaniawski
+                    - paragraph [ref=e1297]: Estel_Heaney@gov.in
+                - cell "8" [ref=e1248]
+                - cell "active" [ref=e1249]:
+                  - generic [ref=e1298]: active
+                - cell "Feb 13, 2025" [ref=e1252]
+                - cell [ref=e1253]:
+                  - button [ref=e1300]:
+                    - img [ref=e1301]
+              - row "University Grants Commission India Mr. Lonzo Farrell Jerome21@gov.in 7 active Mar 16, 2025" [ref=e1259] [cursor=pointer]:
+                - cell "University Grants Commission" [ref=e1260]
+                - cell "India" [ref=e1261]
+                - cell "Mr. Lonzo Farrell Jerome21@gov.in" [ref=e1262]:
+                  - generic [ref=e1305]:
+                    - paragraph [ref=e1306]: Mr. Lonzo Farrell
+                    - paragraph [ref=e1307]: Jerome21@gov.in
+                - cell "7" [ref=e1266]
+                - cell "active" [ref=e1267]:
+                  - generic [ref=e1308]: active
+                - cell "Mar 16, 2025" [ref=e1270]
+                - cell [ref=e1271]:
+                  - button [ref=e1310]:
+                    - img [ref=e1311]
+              - row "All India Council for Technical Education India Leonard Hand Brady.Jakubowski@gov.in 4 active Jan 14, 2025" [ref=e1277] [cursor=pointer]:
+                - cell "All India Council for Technical Education" [ref=e1278]
+                - cell "India" [ref=e1279]
+                - cell "Leonard Hand Brady.Jakubowski@gov.in" [ref=e1280]:
+                  - generic [ref=e1315]:
+                    - paragraph [ref=e1316]: Leonard Hand
+                    - paragraph [ref=e1317]: Brady.Jakubowski@gov.in
+                - cell "4" [ref=e1284]
+                - cell "active" [ref=e1285]:
+                  - generic [ref=e1318]: active
+                - cell "Jan 14, 2025" [ref=e1288]
+                - cell [ref=e1289]:
+                  - button [ref=e1320]:
+                    - img [ref=e1321]
+          - generic [ref=e1327]:
+            - generic [ref=e1328]:
+              - generic [ref=e1329]:
+                - heading "Ministry of Education" [level=2] [ref=e1330]
+                - paragraph [ref=e1331]: Ministry details and linked universities
+              - button [ref=e1332]:
+                - img [ref=e1333]
+            - generic [ref=e1337]:
+              - generic [ref=e1339]: active
+              - generic [ref=e1341]:
+                - heading "Ministry Information" [level=3] [ref=e1342]
+                - generic [ref=e1343]:
+                  - generic [ref=e1344]:
+                    - img [ref=e1345]
+                    - generic [ref=e1348]:
+                      - paragraph [ref=e1349]: Country
+                      - paragraph [ref=e1350]: India
+                  - generic [ref=e1351]:
+                    - img [ref=e1352]
+                    - generic [ref=e1355]:
+                      - paragraph [ref=e1356]: Contact Email
+                      - paragraph [ref=e1357]: Estel_Heaney@gov.in
+                  - generic [ref=e1358]:
+                    - img [ref=e1359]
+                    - generic [ref=e1362]:
+                      - paragraph [ref=e1363]: Contact Name
+                      - paragraph [ref=e1364]: Walker Swaniawski
+                  - generic [ref=e1365]:
+                    - img [ref=e1366]
+                    - generic [ref=e1368]:
+                      - paragraph [ref=e1369]: Created
+                      - paragraph [ref=e1370]: Feb 13, 2025
+              - generic [ref=e1371]:
+                - generic [ref=e1372]:
+                  - generic [ref=e1373]:
+                    - heading "Linked Universities" [level=3] [ref=e1374]
+                    - paragraph [ref=e1375]: 8 universities under oversight
+                  - button "Link University" [ref=e1376]:
+                    - img [ref=e1377]
+                    - text: Link University
+                - generic [ref=e1378]:
+                  - generic [ref=e1379]:
+                    - generic [ref=e1380]:
+                      - img [ref=e1382]
+                      - generic [ref=e1386]:
+                        - paragraph [ref=e1387]: Jadavpur University
+                        - paragraph [ref=e1388]: Kolkata, India · jaduniv.edu.in
+                    - generic [ref=e1389]:
+                      - generic [ref=e1390]: active
+                      - button "Unlink university" [ref=e1392]:
+                        - img [ref=e1393]
+                  - generic [ref=e1396]:
+                    - generic [ref=e1397]:
+                      - img [ref=e1399]
+                      - generic [ref=e1403]:
+                        - paragraph [ref=e1404]: Manipal Academy
+                        - paragraph [ref=e1405]: Manipal, India · manipal.edu
+                    - generic [ref=e1406]:
+                      - generic [ref=e1407]: active
+                      - button "Unlink university" [ref=e1409]:
+                        - img [ref=e1410]
+                  - generic [ref=e1413]:
+                    - generic [ref=e1414]:
+                      - img [ref=e1416]
+                      - generic [ref=e1420]:
+                        - paragraph [ref=e1421]: IIT Madras
+                        - paragraph [ref=e1422]: Chennai, India · iitm.ac.in
+                    - generic [ref=e1423]:
+                      - generic [ref=e1424]: active
+                      - button "Unlink university" [ref=e1426]:
+                        - img [ref=e1427]
+                  - generic [ref=e1430]:
+                    - generic [ref=e1431]:
+                      - img [ref=e1433]
+                      - generic [ref=e1437]:
+                        - paragraph [ref=e1438]: Anna University
+                        - paragraph [ref=e1439]: Chennai, India · annauniv.edu
+                    - generic [ref=e1440]:
+                      - generic [ref=e1441]: active
+                      - button "Unlink university" [ref=e1443]:
+                        - img [ref=e1444]
+                  - generic [ref=e1447]:
+                    - generic [ref=e1448]:
+                      - img [ref=e1450]
+                      - generic [ref=e1454]:
+                        - paragraph [ref=e1455]: Osmania University
+                        - paragraph [ref=e1456]: Hyderabad, India · osmania.ac.in
+                    - generic [ref=e1457]:
+                      - generic [ref=e1458]: active
+                      - button "Unlink university" [ref=e1460]:
+                        - img [ref=e1461]
+                  - generic [ref=e1464]:
+                    - generic [ref=e1465]:
+                      - img [ref=e1467]
+                      - generic [ref=e1471]:
+                        - paragraph [ref=e1472]: IIT Bombay
+                        - paragraph [ref=e1473]: Mumbai, India · iitb.ac.in
+                    - generic [ref=e1474]:
+                      - generic [ref=e1475]: active
+                      - button "Unlink university" [ref=e1477]:
+                        - img [ref=e1478]
+                  - generic [ref=e1481]:
+                    - generic [ref=e1482]:
+                      - img [ref=e1484]
+                      - generic [ref=e1488]:
+                        - paragraph [ref=e1489]: BITS Pilani
+                        - paragraph [ref=e1490]: Pilani, India · bits-pilani.ac.in
+                    - generic [ref=e1491]:
+                      - generic [ref=e1492]: active
+                      - button "Unlink university" [ref=e1494]:
+                        - img [ref=e1495]
+                  - generic [ref=e1498]:
+                    - generic [ref=e1499]:
+                      - img [ref=e1501]
+                      - generic [ref=e1505]:
+                        - paragraph [ref=e1506]: University of Delhi
+                        - paragraph [ref=e1507]: New Delhi, India · du.ac.in
+                    - generic [ref=e1508]:
+                      - generic [ref=e1509]: active
+                      - button "Unlink university" [ref=e1511]:
+                        - img [ref=e1512]
+  - button "Dev Role Switcher" [ref=e18]:
+    - img [ref=e19]
+  - region "Notifications alt+T"
+  - generic [ref=e394]: "0"

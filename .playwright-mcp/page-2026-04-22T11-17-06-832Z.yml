@@ -1,0 +1,164 @@
+- generic [ref=e1]:
+  - button "Open Next.js Dev Tools" [ref=e7] [cursor=pointer]:
+    - img [ref=e8]
+  - alert [ref=e11]
+  - generic [ref=e66]:
+    - complementary [ref=e67]:
+      - generic [ref=e68]:
+        - img [ref=e70]
+        - generic [ref=e72]:
+          - generic [ref=e73]: Glimmora
+          - generic [ref=e74]: Command
+      - navigation [ref=e76]:
+        - generic [ref=e77]:
+          - generic [ref=e78]:
+            - paragraph [ref=e79]: Overview
+            - list [ref=e80]:
+              - listitem [ref=e81]:
+                - link "Dashboard" [ref=e82] [cursor=pointer]:
+                  - /url: /super-admin/dashboard
+                  - img [ref=e83]
+                  - generic [ref=e88]: Dashboard
+          - generic [ref=e89]:
+            - paragraph [ref=e90]: Customers
+            - list [ref=e91]:
+              - listitem [ref=e92]:
+                - link "Universities" [ref=e93] [cursor=pointer]:
+                  - /url: /super-admin/universities
+                  - img [ref=e94]
+                  - generic [ref=e98]: Universities
+              - listitem [ref=e99]:
+                - link "Ministries" [ref=e100] [cursor=pointer]:
+                  - /url: /super-admin/ministries
+                  - img [ref=e102]
+                  - generic [ref=e104]: Ministries
+          - generic [ref=e105]:
+            - paragraph [ref=e106]: Platform
+            - list [ref=e107]:
+              - listitem [ref=e108]:
+                - link "Monitoring" [active] [ref=e109] [cursor=pointer]:
+                  - /url: /super-admin/monitoring
+                  - img [ref=e110]
+                  - generic [ref=e112]: Monitoring
+              - listitem [ref=e113]:
+                - link "Audit Log" [ref=e114] [cursor=pointer]:
+                  - /url: /super-admin/audit-log
+                  - img [ref=e115]
+                  - generic [ref=e118]: Audit Log
+          - generic [ref=e119]:
+            - paragraph [ref=e120]: Account
+            - list [ref=e121]:
+              - listitem [ref=e122]:
+                - link "Settings" [ref=e123] [cursor=pointer]:
+                  - /url: /super-admin/settings
+                  - img [ref=e124]
+                  - generic [ref=e127]: Settings
+      - generic [ref=e128]:
+        - generic [ref=e129]:
+          - generic [ref=e130]: P
+          - generic [ref=e131]:
+            - paragraph [ref=e132]: Platform Admin
+            - paragraph [ref=e133]: superadmin@glimmora.dev
+        - button "Collapse" [ref=e134]:
+          - img [ref=e135]
+          - generic [ref=e138]: Collapse
+    - generic [ref=e139]:
+      - banner [ref=e140]:
+        - navigation [ref=e142]:
+          - link "Super Admin" [ref=e144] [cursor=pointer]:
+            - /url: /super-admin/dashboard
+          - generic [ref=e145]:
+            - img [ref=e146]
+            - generic [ref=e148]: Ministries
+        - button "Search… ⌘K" [ref=e150]:
+          - img [ref=e151]
+          - generic [ref=e154]: Search…
+          - generic [ref=e155]: ⌘K
+        - generic [ref=e156]:
+          - button [ref=e157]:
+            - img [ref=e158]
+          - button "P Platform Admin Super Admin" [ref=e163]:
+            - generic [ref=e164]: P
+            - generic [ref=e165]:
+              - generic [ref=e166]: Platform Admin
+              - generic [ref=e167]: Super Admin
+            - img [ref=e168]
+      - main [ref=e170]:
+        - generic [ref=e171]:
+          - generic [ref=e172]:
+            - generic [ref=e173]:
+              - img [ref=e175]
+              - generic [ref=e177]:
+                - heading "Ministries" [level=1] [ref=e178]
+                - paragraph [ref=e179]: Manage oversight bodies
+            - button "Create Ministry" [ref=e181]:
+              - img [ref=e182]
+              - text: Create Ministry
+          - generic [ref=e184]:
+            - img [ref=e185]
+            - textbox "Search ministries..." [ref=e188]
+          - table [ref=e192]:
+            - rowgroup [ref=e193]:
+              - row "Name Country Contact Linked Universities Status Created" [ref=e194]:
+                - columnheader "Name" [ref=e195]:
+                  - generic [ref=e196] [cursor=pointer]:
+                    - text: Name
+                    - img [ref=e197]
+                - columnheader "Country" [ref=e200]:
+                  - generic [ref=e201] [cursor=pointer]:
+                    - text: Country
+                    - img [ref=e202]
+                - columnheader "Contact" [ref=e205]:
+                  - generic [ref=e206] [cursor=pointer]:
+                    - text: Contact
+                    - img [ref=e207]
+                - columnheader "Linked Universities" [ref=e210]:
+                  - generic [ref=e211] [cursor=pointer]:
+                    - text: Linked Universities
+                    - img [ref=e212]
+                - columnheader "Status" [ref=e215]:
+                  - generic [ref=e216] [cursor=pointer]:
+                    - text: Status
+                    - img [ref=e217]
+                - columnheader "Created" [ref=e220]:
+                  - generic [ref=e221] [cursor=pointer]:
+                    - text: Created
+                    - img [ref=e222]
+            - rowgroup [ref=e225]:
+              - row "Ministry of Education India Walker Swaniawski Estel_Heaney@gov.in 8 active Feb 13, 2025" [ref=e226] [cursor=pointer]:
+                - cell "Ministry of Education" [ref=e227]
+                - cell "India" [ref=e228]
+                - cell "Walker Swaniawski Estel_Heaney@gov.in" [ref=e229]:
+                  - generic [ref=e230]:
+                    - paragraph [ref=e231]: Walker Swaniawski
+                    - paragraph [ref=e232]: Estel_Heaney@gov.in
+                - cell "8" [ref=e233]
+                - cell "active" [ref=e234]:
+                  - generic [ref=e235]: active
+                - cell "Feb 13, 2025" [ref=e237]
+              - row "University Grants Commission India Mr. Lonzo Farrell Jerome21@gov.in 7 active Mar 16, 2025" [ref=e238] [cursor=pointer]:
+                - cell "University Grants Commission" [ref=e239]
+                - cell "India" [ref=e240]
+                - cell "Mr. Lonzo Farrell Jerome21@gov.in" [ref=e241]:
+                  - generic [ref=e242]:
+                    - paragraph [ref=e243]: Mr. Lonzo Farrell
+                    - paragraph [ref=e244]: Jerome21@gov.in
+                - cell "7" [ref=e245]
+                - cell "active" [ref=e246]:
+                  - generic [ref=e247]: active
+                - cell "Mar 16, 2025" [ref=e249]
+              - row "All India Council for Technical Education India Leonard Hand Brady.Jakubowski@gov.in 4 active Jan 14, 2025" [ref=e250] [cursor=pointer]:
+                - cell "All India Council for Technical Education" [ref=e251]
+                - cell "India" [ref=e252]
+                - cell "Leonard Hand Brady.Jakubowski@gov.in" [ref=e253]:
+                  - generic [ref=e254]:
+                    - paragraph [ref=e255]: Leonard Hand
+                    - paragraph [ref=e256]: Brady.Jakubowski@gov.in
+                - cell "4" [ref=e257]
+                - cell "active" [ref=e258]:
+                  - generic [ref=e259]: active
+                - cell "Jan 14, 2025" [ref=e261]
+  - button "Dev Role Switcher" [ref=e54]:
+    - img [ref=e55]
+  - region "Notifications alt+T"
+  - generic [ref=e262]: "0"

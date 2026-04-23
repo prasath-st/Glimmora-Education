@@ -2,7 +2,6 @@ import { faker } from "@faker-js/faker";
 import type {
   SuperAdminDashboard,
   University,
-  Ministry,
   RecentOnboarding,
   PlatformMonitoring,
   ServiceStatus,
@@ -25,12 +24,6 @@ const UNIVERSITY_DATA: { name: string; shortName: string; city: string; domain: 
   { name: "Amrita University", shortName: "AMRITA", city: "Coimbatore", domain: "amrita.edu" },
   { name: "SRM University", shortName: "SRM", city: "Chennai", domain: "srmist.edu.in" },
   { name: "NIT Trichy", shortName: "NITT", city: "Tiruchirappalli", domain: "nitt.edu" },
-];
-
-const MINISTRY_DATA: { name: string; country: string }[] = [
-  { name: "Ministry of Education", country: "India" },
-  { name: "University Grants Commission", country: "India" },
-  { name: "All India Council for Technical Education", country: "India" },
 ];
 
 function generateUniversityList(): University[] {
@@ -56,24 +49,6 @@ function generateUniversityList(): University[] {
   });
 }
 
-function generateMinistryList(universities: University[]): Ministry[] {
-  return MINISTRY_DATA.map((m, i) => {
-    const linkedIds = universities.slice(0, faker.number.int({ min: 3, max: 8 })).map((u) => u.id);
-    return {
-      id: `ministry_${String(i + 1).padStart(2, "0")}`,
-      name: m.name,
-      country: m.country,
-      status: "active" as const,
-      contactEmail: faker.internet.email({ provider: "gov.in" }),
-      contactName: faker.person.fullName(),
-      linkedUniversityIds: linkedIds,
-      linkedUniversityCount: linkedIds.length,
-      createdAt: faker.date.between({ from: "2025-01-01", to: "2025-06-01" }).toISOString(),
-      updatedAt: faker.date.recent({ days: 14 }).toISOString(),
-    };
-  });
-}
-
 function generateRecentOnboardings(universities: University[]): RecentOnboarding[] {
   return universities
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
@@ -89,7 +64,6 @@ function generateRecentOnboardings(universities: University[]): RecentOnboarding
 }
 
 const universities = generateUniversityList();
-const ministries = generateMinistryList(universities);
 
 export function generateSuperAdminDashboard(): SuperAdminDashboard {
   const totalStudents = universities.reduce((sum, u) => sum + u.studentCount, 0);
@@ -100,7 +74,6 @@ export function generateSuperAdminDashboard(): SuperAdminDashboard {
     totalUniversities: universities.length,
     activeUniversities: universities.filter((u) => u.status === "active").length,
     suspendedUniversities: universities.filter((u) => u.status === "suspended").length,
-    totalMinistries: ministries.length,
     totalUsers,
     totalStudents,
     totalFaculty,
@@ -122,10 +95,6 @@ export function generateSuperAdminDashboard(): SuperAdminDashboard {
 
 export function generateUniversities(): University[] {
   return universities;
-}
-
-export function generateMinistries(): Ministry[] {
-  return ministries;
 }
 
 // ── Platform Monitoring ──────────────────────────────────────────────────
@@ -208,14 +177,11 @@ export function generatePlatformAuditLog(): PlatformAuditEntry[] {
   const actions: PlatformAuditEntry["action"][] = [
     "create_university",
     "suspend_university",
-    "create_ministry",
-    "link_university",
     "login",
     "update_settings",
   ];
 
   const universityNames = UNIVERSITY_DATA.map((u) => u.name);
-  const ministryNames = MINISTRY_DATA.map((m) => m.name);
 
   const ipAddresses = [
     "203.122.45.67",
@@ -254,21 +220,6 @@ export function generatePlatformAuditLog(): PlatformAuditEntry[] {
         target = uName;
         targetId = `univ_${String(faker.number.int({ min: 1, max: 12 })).padStart(2, "0")}`;
         details = `Suspended university "${uName}" due to compliance review`;
-        break;
-      }
-      case "create_ministry": {
-        const mName = ministryNames[faker.number.int({ min: 0, max: ministryNames.length - 1 })];
-        target = mName;
-        targetId = `ministry_${String(faker.number.int({ min: 1, max: 3 })).padStart(2, "0")}`;
-        details = `Created ministry "${mName}" with initial configuration`;
-        break;
-      }
-      case "link_university": {
-        const mName = ministryNames[faker.number.int({ min: 0, max: ministryNames.length - 1 })];
-        const uName = universityNames[faker.number.int({ min: 0, max: universityNames.length - 1 })];
-        target = mName;
-        targetId = `ministry_${String(faker.number.int({ min: 1, max: 3 })).padStart(2, "0")}`;
-        details = `Linked "${uName}" to "${mName}"`;
         break;
       }
       case "login": {

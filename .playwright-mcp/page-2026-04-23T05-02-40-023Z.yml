@@ -1,0 +1,251 @@
+- generic [active] [ref=e1]:
+  - button "Open Next.js Dev Tools" [ref=e7] [cursor=pointer]:
+    - img [ref=e8]
+  - alert [ref=e11]
+  - generic [ref=e71]:
+    - complementary [ref=e72]:
+      - generic [ref=e73]:
+        - img [ref=e75]
+        - generic [ref=e77]:
+          - generic [ref=e78]: Glimmora
+          - generic [ref=e79]: Command
+      - navigation [ref=e81]:
+        - generic [ref=e82]:
+          - generic [ref=e83]:
+            - paragraph [ref=e84]: Overview
+            - list [ref=e85]:
+              - listitem [ref=e86]:
+                - link "Dashboard" [ref=e87] [cursor=pointer]:
+                  - /url: /super-admin/dashboard
+                  - img [ref=e89]
+                  - generic [ref=e94]: Dashboard
+          - generic [ref=e95]:
+            - paragraph [ref=e96]: Customers
+            - list [ref=e97]:
+              - listitem [ref=e98]:
+                - link "Universities" [ref=e99] [cursor=pointer]:
+                  - /url: /super-admin/universities
+                  - img [ref=e100]
+                  - generic [ref=e104]: Universities
+              - listitem [ref=e105]:
+                - link "Ministries" [ref=e106] [cursor=pointer]:
+                  - /url: /super-admin/ministries
+                  - img [ref=e107]
+                  - generic [ref=e109]: Ministries
+          - generic [ref=e110]:
+            - paragraph [ref=e111]: Platform
+            - list [ref=e112]:
+              - listitem [ref=e113]:
+                - link "Monitoring" [ref=e114] [cursor=pointer]:
+                  - /url: /super-admin/monitoring
+                  - img [ref=e115]
+                  - generic [ref=e117]: Monitoring
+              - listitem [ref=e118]:
+                - link "Audit Log" [ref=e119] [cursor=pointer]:
+                  - /url: /super-admin/audit-log
+                  - img [ref=e120]
+                  - generic [ref=e123]: Audit Log
+          - generic [ref=e124]:
+            - paragraph [ref=e125]: Account
+            - list [ref=e126]:
+              - listitem [ref=e127]:
+                - link "Settings" [ref=e128] [cursor=pointer]:
+                  - /url: /super-admin/settings
+                  - img [ref=e129]
+                  - generic [ref=e132]: Settings
+      - button "Collapse" [ref=e134]:
+        - img [ref=e135]
+        - generic [ref=e138]: Collapse
+    - generic [ref=e139]:
+      - banner [ref=e140]:
+        - navigation [ref=e142]:
+          - link "Super Admin" [ref=e144] [cursor=pointer]:
+            - /url: /super-admin/dashboard
+          - generic [ref=e145]:
+            - img [ref=e146]
+            - generic [ref=e148]: Dashboard
+        - button "Search… ⌘K" [ref=e150]:
+          - img [ref=e151]
+          - generic [ref=e154]: Search…
+          - generic [ref=e155]: ⌘K
+        - generic [ref=e156]:
+          - button [ref=e157]:
+            - img [ref=e158]
+          - button "P Platform Admin Super Admin" [ref=e163]:
+            - generic [ref=e164]: P
+            - generic [ref=e165]:
+              - generic [ref=e166]: Platform Admin
+              - generic [ref=e167]: Super Admin
+            - img [ref=e168]
+      - main [ref=e170]:
+        - generic [ref=e171]:
+          - generic [ref=e172]:
+            - generic [ref=e173]:
+              - heading "Good morning" [level=1] [ref=e174]
+              - paragraph [ref=e175]: Thursday, April 23, 2026· Platform command center
+            - generic [ref=e180]: All systems operational
+          - generic [ref=e181]:
+            - link "Universities 12 10 active" [ref=e182] [cursor=pointer]:
+              - /url: /super-admin/universities
+              - generic [ref=e184]:
+                - paragraph [ref=e185]: Universities
+                - img [ref=e187]
+              - paragraph [ref=e191]: "12"
+              - paragraph [ref=e192]: 10 active
+              - img [ref=e193]
+            - link "Ministries 3 oversight bodies" [ref=e196] [cursor=pointer]:
+              - /url: /super-admin/ministries
+              - generic [ref=e198]:
+                - paragraph [ref=e199]: Ministries
+                - img [ref=e201]
+              - paragraph [ref=e203]: "3"
+              - paragraph [ref=e204]: oversight bodies
+              - img [ref=e205]
+            - generic [ref=e208]:
+              - generic [ref=e210]:
+                - paragraph [ref=e211]: Students
+                - img [ref=e213]
+              - paragraph [ref=e216]: 122.2K
+              - paragraph [ref=e217]: enrolled across all institutions
+            - generic [ref=e218]:
+              - generic [ref=e220]:
+                - paragraph [ref=e221]: Faculty
+                - img [ref=e223]
+              - paragraph [ref=e225]: 5.8K
+              - paragraph [ref=e226]: across all institutions
+          - generic [ref=e227]:
+            - generic [ref=e228]:
+              - generic [ref=e229]:
+                - generic [ref=e230]:
+                  - heading "University Growth" [level=2] [ref=e231]
+                  - paragraph [ref=e232]: Last 10 months
+                - generic [ref=e233]:
+                  - img [ref=e234]
+                  - generic [ref=e237]: +500%
+              - application [ref=e240]:
+                - generic [ref=e251]:
+                  - generic [ref=e252]:
+                    - generic [ref=e254]: Jul
+                    - generic [ref=e256]: Aug
+                    - generic [ref=e258]: Sep
+                    - generic [ref=e260]: Oct
+                    - generic [ref=e262]: Nov
+                    - generic [ref=e264]: Dec
+                    - generic [ref=e266]: Jan
+                    - generic [ref=e268]: Feb
+                    - generic [ref=e270]: Mar
+                    - generic [ref=e272]: Apr
+                  - generic [ref=e273]:
+                    - generic [ref=e275]: "0"
+                    - generic [ref=e277]: "3"
+                    - generic [ref=e279]: "6"
+                    - generic [ref=e281]: "9"
+                    - generic [ref=e283]: "12"
+            - generic [ref=e284]:
+              - link "Universities 10 active, 2 suspended" [ref=e285] [cursor=pointer]:
+                - /url: /super-admin/universities
+                - img [ref=e287]
+                - generic [ref=e291]:
+                  - paragraph [ref=e292]: Universities
+                  - paragraph [ref=e293]: 10 active, 2 suspended
+                - img [ref=e294]
+              - link "Ministries 3 oversight bodies" [ref=e296] [cursor=pointer]:
+                - /url: /super-admin/ministries
+                - img [ref=e298]
+                - generic [ref=e300]:
+                  - paragraph [ref=e301]: Ministries
+                  - paragraph [ref=e302]: 3 oversight bodies
+                - img [ref=e303]
+              - link "Monitoring Platform health & services" [ref=e305] [cursor=pointer]:
+                - /url: /super-admin/monitoring
+                - img [ref=e307]
+                - generic [ref=e309]:
+                  - paragraph [ref=e310]: Monitoring
+                  - paragraph [ref=e311]: Platform health & services
+                - img [ref=e312]
+              - link "Audit Log Recent platform activity" [ref=e314] [cursor=pointer]:
+                - /url: /super-admin/audit-log
+                - img [ref=e316]
+                - generic [ref=e319]:
+                  - paragraph [ref=e320]: Audit Log
+                  - paragraph [ref=e321]: Recent platform activity
+                - img [ref=e322]
+          - generic [ref=e324]:
+            - generic [ref=e325]:
+              - generic [ref=e326]:
+                - heading "Recent Onboardings" [level=2] [ref=e327]
+                - paragraph [ref=e328]: Latest university activations
+              - link "View all" [ref=e329] [cursor=pointer]:
+                - /url: /super-admin/universities
+                - text: View all
+                - img [ref=e330]
+            - generic [ref=e332]:
+              - link "JU Jadavpur University Dexter Reinger · admin@jaduniv.edu.in 3 months ago 12,326 users" [ref=e333] [cursor=pointer]:
+                - /url: /super-admin/universities/univ_05
+                - generic [ref=e334]:
+                  - generic [ref=e335]: JU
+                  - generic [ref=e336]:
+                    - paragraph [ref=e337]: Jadavpur University
+                    - paragraph [ref=e338]: Dexter Reinger · admin@jaduniv.edu.in
+                - generic [ref=e339]:
+                  - paragraph [ref=e340]: 3 months ago
+                  - paragraph [ref=e341]: 12,326 users
+              - link "MA Manipal Academy Vincenza Barton · admin@manipal.edu 4 months ago 9,852 users" [ref=e342] [cursor=pointer]:
+                - /url: /super-admin/universities/univ_08
+                - generic [ref=e343]:
+                  - generic [ref=e344]: MA
+                  - generic [ref=e345]:
+                    - paragraph [ref=e346]: Manipal Academy
+                    - paragraph [ref=e347]: Vincenza Barton · admin@manipal.edu
+                - generic [ref=e348]:
+                  - paragraph [ref=e349]: 4 months ago
+                  - paragraph [ref=e350]: 9,852 users
+              - link "VU VIT University Marlee Hessel · admin@vit.ac.in 4 months ago 5,162 users" [ref=e351] [cursor=pointer]:
+                - /url: /super-admin/universities/univ_09
+                - generic [ref=e352]:
+                  - generic [ref=e353]: VU
+                  - generic [ref=e354]:
+                    - paragraph [ref=e355]: VIT University
+                    - paragraph [ref=e356]: Marlee Hessel · admin@vit.ac.in
+                - generic [ref=e357]:
+                  - paragraph [ref=e358]: 4 months ago
+                  - paragraph [ref=e359]: 5,162 users
+              - link "IM IIT Madras Nathanial Zboncak · admin@iitm.ac.in 5 months ago 14,994 users" [ref=e360] [cursor=pointer]:
+                - /url: /super-admin/universities/univ_06
+                - generic [ref=e361]:
+                  - generic [ref=e362]: IM
+                  - generic [ref=e363]:
+                    - paragraph [ref=e364]: IIT Madras
+                    - paragraph [ref=e365]: Nathanial Zboncak · admin@iitm.ac.in
+                - generic [ref=e366]:
+                  - paragraph [ref=e367]: 5 months ago
+                  - paragraph [ref=e368]: 14,994 users
+              - link "AU Anna University Lauryn Waelchi PhD · admin@annauniv.edu 5 months ago 5,368 users" [ref=e369] [cursor=pointer]:
+                - /url: /super-admin/universities/univ_04
+                - generic [ref=e370]:
+                  - generic [ref=e371]: AU
+                  - generic [ref=e372]:
+                    - paragraph [ref=e373]: Anna University
+                    - paragraph [ref=e374]: Lauryn Waelchi PhD · admin@annauniv.edu
+                - generic [ref=e375]:
+                  - paragraph [ref=e376]: 5 months ago
+                  - paragraph [ref=e377]: 5,368 users
+          - generic [ref=e378]:
+            - generic [ref=e379]:
+              - generic [ref=e380]:
+                - paragraph [ref=e381]: Total Users
+                - paragraph [ref=e382]: 128,563
+              - generic [ref=e384]:
+                - paragraph [ref=e385]: Active Rate
+                - paragraph [ref=e386]: 83%
+              - generic [ref=e388]:
+                - paragraph [ref=e389]: Suspended
+                - paragraph [ref=e390]: "2"
+            - link "View monitoring" [ref=e391] [cursor=pointer]:
+              - /url: /super-admin/monitoring
+              - img [ref=e392]
+              - text: View monitoring
+  - button "Dev Role Switcher" [ref=e18]:
+    - img [ref=e19]
+  - region "Notifications alt+T"
+  - generic [ref=e394]: "0"

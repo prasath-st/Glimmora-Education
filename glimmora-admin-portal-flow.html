@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Glimmora — University Admin Portal Flow Diagram</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: #f8f9fc; color: #1a1a2e; }
+  .header { background: linear-gradient(135deg, #4a3aba 0%, #302586 100%); color: white; padding: 40px; text-align: center; }
+  .header h1 { font-size: 28px; font-weight: 700; }
+  .header p { margin-top: 8px; font-size: 15px; opacity: 0.8; }
+  .legend { display: flex; gap: 24px; justify-content: center; margin-top: 20px; flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+  .legend-dot { width: 12px; height: 12px; border-radius: 3px; }
+  .container { max-width: 1400px; margin: 0 auto; padding: 40px 24px; }
+
+  /* Navigation Overview */
+  .nav-section { margin-bottom: 48px; }
+  .nav-section h2 { font-size: 22px; font-weight: 700; margin-bottom: 20px; color: #4a3aba; }
+  .nav-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; }
+  .nav-group { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+  .nav-group-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: #4a3aba; margin-bottom: 12px; }
+  .nav-item { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 8px; font-size: 13px; margin-bottom: 4px; cursor: pointer; transition: all 0.2s; }
+  .nav-item:hover { background: #f0edff; }
+  .nav-item .dot { width: 8px; height: 8px; border-radius: 50%; }
+  .nav-item .path { font-size: 11px; color: #888; margin-left: auto; font-family: monospace; }
+
+  /* Flow Diagram */
+  .flow-section { margin-bottom: 48px; }
+  .flow-section h2 { font-size: 22px; font-weight: 700; margin-bottom: 8px; color: #4a3aba; }
+  .flow-section > p { font-size: 14px; color: #666; margin-bottom: 24px; }
+
+  .flow-diagram { position: relative; }
+  .flow-row { display: flex; align-items: flex-start; gap: 20px; margin-bottom: 32px; position: relative; }
+  .flow-row::before { content: ''; position: absolute; left: 24px; top: 48px; bottom: -32px; width: 2px; background: #e0dff5; }
+  .flow-row:last-child::before { display: none; }
+
+  .flow-step { width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; color: white; flex-shrink: 0; position: relative; z-index: 1; }
+
+  .flow-card { flex: 1; background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+  .flow-card h3 { font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+  .flow-card h3 .badge { font-size: 10px; padding: 2px 8px; border-radius: 20px; font-weight: 600; }
+  .flow-card .desc { font-size: 13px; color: #555; margin-top: 6px; line-height: 1.6; }
+  .flow-card .actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+  .flow-card .action { font-size: 11px; padding: 4px 10px; border-radius: 6px; background: #f0edff; color: #4a3aba; font-weight: 500; }
+  .flow-card .action.create { background: #e8f5e9; color: #2e7d32; }
+  .flow-card .action.danger { background: #fce4ec; color: #c62828; }
+  .flow-card .action.nav { background: #e3f2fd; color: #1565c0; }
+  .flow-card .connections { margin-top: 12px; font-size: 12px; color: #888; }
+  .flow-card .connections span { color: #4a3aba; font-weight: 500; cursor: pointer; }
+
+  /* Page Detail Cards */
+  .detail-section { margin-bottom: 48px; }
+  .detail-section h2 { font-size: 22px; font-weight: 700; margin-bottom: 24px; color: #4a3aba; }
+  .detail-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+  .detail-card { background: white; border-radius: 12px; padding: 24px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); border-left: 4px solid; }
+  .detail-card.overview { border-color: #4a3aba; }
+  .detail-card.governance { border-color: #e05a35; }
+  .detail-card.management { border-color: #0d9668; }
+  .detail-card.intelligence { border-color: #d97706; }
+  .detail-card.system { border-color: #64748b; }
+  .detail-card h3 { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+  .detail-card .url { font-size: 12px; font-family: monospace; color: #4a3aba; margin-bottom: 12px; }
+  .detail-card .detail-desc { font-size: 13px; color: #555; margin-bottom: 12px; line-height: 1.5; }
+  .detail-card .detail-section-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #999; margin-top: 16px; margin-bottom: 8px; }
+  .detail-card ul { list-style: none; padding: 0; }
+  .detail-card li { font-size: 12px; padding: 4px 0; color: #444; display: flex; align-items: flex-start; gap: 6px; }
+  .detail-card li::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: #4a3aba; margin-top: 5px; flex-shrink: 0; }
+  .detail-card .endpoints { margin-top: 12px; }
+  .detail-card .endpoint { font-size: 11px; font-family: monospace; background: #f8f8ff; padding: 4px 8px; border-radius: 4px; margin-bottom: 4px; display: inline-block; margin-right: 4px; }
+  .detail-card .endpoint.get { color: #0d9668; }
+  .detail-card .endpoint.post { color: #d97706; }
+  .detail-card .endpoint.patch { color: #4a3aba; }
+
+  /* Journey Maps */
+  .journey-section { margin-bottom: 48px; }
+  .journey-section h2 { font-size: 22px; font-weight: 700; margin-bottom: 24px; color: #4a3aba; }
+  .journey-card { background: white; border-radius: 12px; padding: 24px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); margin-bottom: 20px; }
+  .journey-card h3 { font-size: 16px; font-weight: 600; margin-bottom: 16px; }
+  .journey-steps { display: flex; flex-wrap: wrap; gap: 8px; }
+  .journey-step { display: flex; align-items: center; gap: 6px; font-size: 12px; background: #f8f8ff; padding: 6px 12px; border-radius: 20px; }
+  .journey-step .num { width: 20px; height: 20px; border-radius: 50%; background: #4a3aba; color: white; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; }
+  .journey-arrow { color: #ccc; font-size: 16px; display: flex; align-items: center; }
+
+  /* Interconnection Map */
+  .interconnect-section { margin-bottom: 48px; }
+  .interconnect-section h2 { font-size: 22px; font-weight: 700; margin-bottom: 24px; color: #4a3aba; }
+  .interconnect-table { width: 100%; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+  .interconnect-table th { background: #4a3aba; color: white; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; padding: 14px 16px; text-align: left; }
+  .interconnect-table td { padding: 12px 16px; border-bottom: 1px solid #f0f0f0; font-size: 13px; vertical-align: top; }
+  .interconnect-table tr:last-child td { border-bottom: none; }
+  .interconnect-table .from { font-weight: 600; color: #4a3aba; white-space: nowrap; }
+  .interconnect-table .to { font-family: monospace; font-size: 12px; color: #0d9668; }
+  .interconnect-table .trigger { font-size: 12px; color: #666; }
+
+  @media (max-width: 1024px) {
+    .nav-grid { grid-template-columns: repeat(3, 1fr); }
+    .detail-grid { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 768px) {
+    .nav-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Glimmora Education Platform</h1>
+  <p>University Admin Portal — Complete End-to-End User Flow Diagram</p>
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#4a3aba"></div> Overview</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#e05a35"></div> Governance</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#0d9668"></div> Management</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#d97706"></div> Intelligence</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#64748b"></div> System</div>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- Navigation Overview -->
+  <div class="nav-section">
+    <h2>1. Navigation Architecture</h2>
+    <div class="nav-grid">
+      <div class="nav-group">
+        <div class="nav-group-title">Overview</div>
+        <div class="nav-item"><div class="dot" style="background:#4a3aba"></div> Dashboard <span class="path">/admin/dashboard</span></div>
+        <div class="nav-item"><div class="dot" style="background:#4a3aba"></div> Analytics <span class="path">/admin/analytics</span></div>
+      </div>
+      <div class="nav-group">
+        <div class="nav-group-title">Governance</div>
+        <div class="nav-item"><div class="dot" style="background:#e05a35"></div> Compliance <span class="path">/admin/compliance</span></div>
+        <div class="nav-item"><div class="dot" style="background:#e05a35"></div> Audit Trail <span class="path">/admin/compliance/audit-trail</span></div>
+      </div>
+      <div class="nav-group">
+        <div class="nav-group-title">Management</div>
+        <div class="nav-item"><div class="dot" style="background:#0d9668"></div> Admissions <span class="path">/admin/admissions</span></div>
+        <div class="nav-item"><div class="dot" style="background:#0d9668"></div> Users & Roles <span class="path">/admin/users</span></div>
+        <div class="nav-item"><div class="dot" style="background:#0d9668"></div> Course Catalog <span class="path">/admin/courses</span></div>
+        <div class="nav-item"><div class="dot" style="background:#0d9668"></div> Semesters <span class="path">/admin/semesters</span></div>
+        <div class="nav-item"><div class="dot" style="background:#0d9668"></div> Budget <span class="path">/admin/budget</span></div>
+      </div>
+      <div class="nav-group">
+        <div class="nav-group-title">Intelligence</div>
+        <div class="nav-item"><div class="dot" style="background:#d97706"></div> AI Governance <span class="path">/admin/ai-governance</span></div>
+        <div class="nav-item"><div class="dot" style="background:#d97706"></div> Credentials <span class="path">/admin/credentials</span></div>
+        <div class="nav-item"><div class="dot" style="background:#d97706"></div> Reports <span class="path">/admin/reports</span></div>
+      </div>
+      <div class="nav-group">
+        <div class="nav-group-title">System</div>
+        <div class="nav-item"><div class="dot" style="background:#64748b"></div> Settings <span class="path">/admin/settings</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Primary Flow Diagram -->
+  <div class="flow-section">
+    <h2>2. Primary User Flow</h2>
+    <p>The typical admin journey from login through daily operations</p>
+
+    <div class="flow-diagram">
+      <div class="flow-row">
+        <div class="flow-step" style="background:#4a3aba">1</div>
+        <div class="flow-card">
+          <h3>Login & Entry <span class="badge" style="background:#e8f5e9;color:#2e7d32">Entry Point</span></h3>
+          <div class="desc">Admin logs in via <code>/login</code> with credentials. Redirected to <code>/admin/dashboard</code>. Auth state stored in Zustand. Session persists until logout.</div>
+          <div class="actions">
+            <span class="action nav">Navigate to Dashboard</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="flow-row">
+        <div class="flow-step" style="background:#4a3aba">2</div>
+        <div class="flow-card">
+          <h3>Dashboard — Command Center <span class="badge" style="background:#f0edff;color:#4a3aba">Overview</span></h3>
+          <div class="desc">Institutional health at a glance: enrollment trends, retention, graduation rate, compliance score, faculty-student ratio. Shows recent compliance deviations and active semester info.</div>
+          <div class="actions">
+            <span class="action nav">View Compliance Deviations</span>
+            <span class="action nav">Check Analytics</span>
+            <span class="action">View Active Courses</span>
+            <span class="action">View Current Semester</span>
+          </div>
+          <div class="connections">Connects to: <span>/admin/compliance</span> · <span>/admin/analytics</span></div>
+        </div>
+      </div>
+
+      <div class="flow-row">
+        <div class="flow-step" style="background:#4a3aba">3</div>
+        <div class="flow-card">
+          <h3>Analytics — Deep Dive</h3>
+          <div class="desc">KPI cards with trends, department performance comparison (bar chart), enrollment history (area chart), and department details table with GPA, retention, placement data.</div>
+          <div class="actions">
+            <span class="action">View KPIs</span>
+            <span class="action">Compare Departments</span>
+            <span class="action">Historical Trends</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="flow-row">
+        <div class="flow-step" style="background:#e05a35">4</div>
+        <div class="flow-card">
+          <h3>Compliance — Regulatory Monitoring <span class="badge" style="background:#fce4ec;color:#c62828">Critical</span></h3>
+          <div class="desc">Overall compliance score gauge, framework scores (GDPR, FERPA), expandable compliance categories with pass/fail/warning checks, and deviation management with resolution workflow.</div>
+          <div class="actions">
+            <span class="action">View Score Gauge</span>
+            <span class="action">Expand Categories</span>
+            <span class="action create">Resolve Deviations</span>
+            <span class="action nav">View Audit Trail</span>
+          </div>
+          <div class="connections">Connects to: <span>/admin/compliance/audit-trail</span></div>
+        </div>
+      </div>
+
+      <div class="flow-row">
+        <div class="flow-step" style="background:#e05a35">5</div>
+        <div class="flow-card">
+          <h3>Audit Trail — Activity Tracking</h3>
+          <div class="desc">System-wide log of all admin actions: timestamp, user, role, action type, resource, details, IP, outcome. Filterable by action type, role, and searchable.</div>
+          <div class="actions">
+            <span class="action">Search Entries</span>
+            <span class="action">Filter by Action</span>
+            <span class="action">Filter by Role</span>
+            <span class="action">Paginate</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="flow-row">
+        <div class="flow-step" style="background:#0d9668">6</div>
+        <div class="flow-card">
+          <h3>Admissions — Application Management <span class="badge" style="background:#e8f5e9;color:#2e7d32">AI-Powered</span></h3>
+          <div class="desc">Application pipeline visualization (Submitted → Under Review → Interview → Accepted/Rejected/Waitlisted), department capacity charts, monthly trends, demographics. Links to applications list and AI predictions.</div>
+          <div class="actions">
+            <span class="action nav">Review Applications</span>
+            <span class="action nav">View AI Predictions</span>
+            <span class="action">Filter by Pipeline Stage</span>
+            <span class="action">View Demographics</span>
+          </div>
+          <div class="connections">Connects to: <span>/admin/admissions/applications</span> · <span>/admin/admissions/predictions</span></div>
+        </div>
+      </div>
+
+      <div class="flow-row">
+        <div class="flow-step" style="background:#0d9668">7</div>
+        <div class="flow-card">
+          <h3>Users & Roles — Access Management</h3>
+          <div class="desc">User list with search/filter by role/status. Create single users, bulk import via CSV, view user details. Separate Roles & Permissions page with RBAC permission matrix.</div>
+          <div class="actions">
+            <span class="action create">Create User</span>
+            <span class="action create">Bulk Import CSV</span>
+            <span class="action nav">View User Detail</span>
+            <span class="action nav">Manage Roles</span>
+            <span class="action">Download Template</span>
+          </div>
+          <div class="connections">Connects to: <span>/admin/users/{id}</span> · <span>/admin/users/roles</span></div>
+        </div>
+      </div>
+
+      <div class="flow-row">
+        <div class="flow-step" style="background:#0d9668">8</div>
+        <div class="flow-card">
+          <h3>Course Catalog — Curriculum Management</h3>
+          <div class="desc">Course list with department/semester/status filters. Create courses (Draft → Active → Archived). Enroll students via search or CSV. Enrollment progress bars showing capacity.</div>
+          <div class="actions">
+            <span class="action create">Create Course</span>
+            <span class="action create">Enroll Students</span>
+            <span class="action">Search & Filter</span>
+            <span class="action">View Enrollment</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="flow-row">
+        <div class="flow-step" style="background:#0d9668">9</div>
+        <div class="flow-card">
+          <h3>Semesters — Academic Calendar</h3>
+          <div class="desc">Semester cards showing name, year, status (Upcoming/Active/Completed), date range, and course count. Create new semesters with date validation.</div>
+          <div class="actions">
+            <span class="action create">Create Semester</span>
+            <span class="action">View Status</span>
+            <span class="action">View Course Count</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="flow-row">
+        <div class="flow-step" style="background:#0d9668">10</div>
+        <div class="flow-card">
+          <h3>Budget & Resources — Financial Overview</h3>
+          <div class="desc">Total budget, spent, remaining, utilization rate gauge. Monthly spend trend, department allocation vs actual spend comparison. Budget alerts by severity (overspend, approaching limit, anomaly).</div>
+          <div class="actions">
+            <span class="action">View Utilization</span>
+            <span class="action">Monthly Trends</span>
+            <span class="action">Department Comparison</span>
+            <span class="action danger">Budget Alerts</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="flow-row">
+        <div class="flow-step" style="background:#d97706">11</div>
+        <div class="flow-card">
+          <h3>AI Governance — Model Oversight <span class="badge" style="background:#fff8e1;color:#d97706">AI</span></h3>
+          <div class="desc">Overview of AI models: count, accuracy, bias scores. Links to Model Registry (detailed model cards with fairness metrics) and Bias Reports (demographic audits with recommendations).</div>
+          <div class="actions">
+            <span class="action nav">Model Registry</span>
+            <span class="action nav">Bias Reports</span>
+            <span class="action">Override Log</span>
+          </div>
+          <div class="connections">Connects to: <span>/admin/ai-governance/models</span> · <span>/admin/ai-governance/bias-reports</span></div>
+        </div>
+      </div>
+
+      <div class="flow-row">
+        <div class="flow-step" style="background:#d97706">12</div>
+        <div class="flow-card">
+          <h3>Credentials — Digital Credential Management</h3>
+          <div class="desc">Issue, manage, and revoke student credentials (Degree, Certificate, Badge, Transcript). Search/filter by type and status. Revocation requires documented reason.</div>
+          <div class="actions">
+            <span class="action create">Issue Credential</span>
+            <span class="action danger">Revoke Credential</span>
+            <span class="action">Search & Filter</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="flow-row">
+        <div class="flow-step" style="background:#d97706">13</div>
+        <div class="flow-card">
+          <h3>Reports — Institutional Reporting</h3>
+          <div class="desc">Browse report templates (Compliance, Enrollment, Financial, Performance, Custom). Generate reports with template-specific parameters. Download completed reports. Monitor generation status.</div>
+          <div class="actions">
+            <span class="action create">Generate Report</span>
+            <span class="action">Download PDF/Excel</span>
+            <span class="action">Monitor Status</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="flow-row">
+        <div class="flow-step" style="background:#64748b">14</div>
+        <div class="flow-card">
+          <h3>Settings — Institution Configuration</h3>
+          <div class="desc">General settings (name, timezone, locale, branding). Data sharing policies (ministry sharing, anonymization, public profile). Data retention policies. Color theme customization.</div>
+          <div class="actions">
+            <span class="action create">Save Settings</span>
+            <span class="action">Configure Branding</span>
+            <span class="action">Data Sharing Toggles</span>
+            <span class="action">Retention Policies</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Interconnection Map -->
+  <div class="interconnect-section">
+    <h2>3. Page Interconnections</h2>
+    <table class="interconnect-table">
+      <thead>
+        <tr><th>From Page</th><th>To Page</th><th>Trigger / Action</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="from">Login</td><td class="to">/admin/dashboard</td><td class="trigger">Successful authentication → redirect</td></tr>
+        <tr><td class="from">Dashboard</td><td class="to">/admin/compliance</td><td class="trigger">Click "View all" in Recent Compliance Deviations</td></tr>
+        <tr><td class="from">Dashboard</td><td class="to">/admin/analytics</td><td class="trigger">Click metric cards for deep dive</td></tr>
+        <tr><td class="from">Compliance</td><td class="to">/admin/compliance/audit-trail</td><td class="trigger">Click "Audit Trail" button in header</td></tr>
+        <tr><td class="from">Compliance</td><td class="to">/admin/compliance/audit-trail</td><td class="trigger">Click link in deviation resolution success message</td></tr>
+        <tr><td class="from">Admissions</td><td class="to">/admin/admissions/applications</td><td class="trigger">Click "Review Applications" or pipeline segment</td></tr>
+        <tr><td class="from">Admissions</td><td class="to">/admin/admissions/predictions</td><td class="trigger">Click "View Predictions" card</td></tr>
+        <tr><td class="from">Users & Roles</td><td class="to">/admin/users/{userId}</td><td class="trigger">Click on any user row in the table</td></tr>
+        <tr><td class="from">Users & Roles</td><td class="to">/admin/users/roles</td><td class="trigger">Navigate to Roles & Permissions sub-page</td></tr>
+        <tr><td class="from">User Detail</td><td class="to">/admin/users</td><td class="trigger">Click back button</td></tr>
+        <tr><td class="from">AI Governance</td><td class="to">/admin/ai-governance/models</td><td class="trigger">Click "Model Registry" card</td></tr>
+        <tr><td class="from">AI Governance</td><td class="to">/admin/ai-governance/bias-reports</td><td class="trigger">Click "Bias & Fairness Reports" card</td></tr>
+        <tr><td class="from">AI Models</td><td class="to">/admin/ai-governance</td><td class="trigger">Click back button</td></tr>
+        <tr><td class="from">Bias Reports</td><td class="to">/admin/ai-governance</td><td class="trigger">Click back button</td></tr>
+        <tr><td class="from">All Pages</td><td class="to">/admin/settings</td><td class="trigger">Click "Settings" in sidebar navigation</td></tr>
+        <tr><td class="from">Header Menu</td><td class="to">/login</td><td class="trigger">Click "Sign out" in user dropdown</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- User Journey Examples -->
+  <div class="journey-section">
+    <h2>4. Key User Journeys</h2>
+
+    <div class="journey-card">
+      <h3>Journey A: New Course Setup & Student Enrollment</h3>
+      <div class="journey-steps">
+        <div class="journey-step"><span class="num">1</span> Semesters</div>
+        <div class="journey-arrow">→</div>
+        <div class="journey-step"><span class="num">2</span> Create Semester</div>
+        <div class="journey-arrow">→</div>
+        <div class="journey-step"><span class="num">3</span> Courses</div>
+        <div class="journey-arrow">→</div>
+        <div class="journey-step"><span class="num">4</span> Create Course (Draft)</div>
+        <div class="journey-arrow">→</div>
+        <div class="journey-step"><span class="num">5</span> Enroll Students</div>
+        <div class="journey-arrow">→</div>
+        <div class="journey-step"><span class="num">6</span> Search/Select Students</div>
+        <div class="journey-arrow">→</div>
+        <div class="journey-step"><span class="num">7</span> Confirm Enrollment</div>
+        <div class="journey-arrow">→</div>
+        <div class="journey-step"><span class="num">8</span> Success Toast</div>
+      </div>
+    </div>
+
+    <div class="journey-card">
+      <h3>Journey B: Compliance Deviation Resolution</h3>
+      <div class="journey-steps">
+        <div class="journey-step"><span class="num">1</span> Dashboard</div>
+        <div class="journey-arrow">→</div>
+        <div class="journey-step"><span class="num">2</span> See Deviation Alert</div>
+        <div class="journey-arrow">→</div>
+        <div class="journey-step"><span class="num">3</span> Click "View all"</div>
+        <div class="journey-arrow">→</div>
+        <div class="journey-step"><span class="num">4</span> Compliance Page</div>
+        <div class="journey-arrow">→</div>
+        <div class="journey-step"><span class="num">5</span> Click "Resolve"</div>
+        <div class="journey-arrow">→</div>
+        <div class="journey-step"><span class="num">6</span> Enter Resolution</div>
+        <div class="journey-arrow">→</div>
+        <div class="journey-step"><span class="num">7</span> Submit</div>
+        <div class="journey-arrow">→</div>
+        <div class="journey-step"><span class="num">8</span> View in Audit Trail</div>
+      </div>
+    </div>
+
+    <div class="journey-card">
+      <h3>Journey C: Bulk User Onboarding</h3>
+      <div class="journey-steps">
+        <div class="journey-step"><span class="num">1</span> Users Page</div>
+        <div class="journey-arrow">→</div>
+        <div class="journey-step"><span class="num">2</span> Click "Import Users"</div>
+        <div class="journey-arrow">→</div>
+        <div class="journey-step"><span class="num">3</span> Download Template</div>
+        <div class="journey-arrow">→</div>
+        <div class="journey-step"><span class="num">4</span> Fill CSV in Excel</div>
+        <div class="journey-arrow">→</div>
+        <div class="journey-step"><span class="num">5</span> Upload CSV</div>
+        <div class="journey-arrow">→</div>
+        <div class="journey-step"><span class="num">6</span> Preview & Validate</div>
+        <div class="journey-arrow">→</div>
+        <div class="journey-step"><span class="num">7</span> Import</div>
+        <div class="journey-arrow">→</div>
+        <div class="journey-step"><span class="num">8</span> Emails Sent</div>
+      </div>
+    </div>
+
+    <div class="journey-card">
+      <h3>Journey D: Credential Lifecycle</h3>
+      <div class="journey-steps">
+        <div class="journey-step"><span class="num">1</span> Credentials Page</div>
+        <div class="journey-arrow">→</div>
+        <div class="journey-step"><span class="num">2</span> Issue Credential</div>
+        <div class="journey-arrow">→</div>
+        <div class="journey-step"><span class="num">3</span> Fill Form</div>
+        <div class="journey-arrow">→</div>
+        <div class="journey-step"><span class="num">4</span> Pending Verification</div>
+        <div class="journey-arrow">→</div>
+        <div class="journey-step"><span class="num">5</span> Active</div>
+        <div class="journey-arrow">→</div>
+        <div class="journey-step"><span class="num">6</span> (If needed) Revoke</div>
+        <div class="journey-arrow">→</div>
+        <div class="journey-step"><span class="num">7</span> Enter Reason</div>
+        <div class="journey-arrow">→</div>
+        <div class="journey-step"><span class="num">8</span> Revoked</div>
+      </div>
+    </div>
+
+    <div class="journey-card">
+      <h3>Journey E: AI Model Bias Investigation</h3>
+      <div class="journey-steps">
+        <div class="journey-step"><span class="num">1</span> AI Governance</div>
+        <div class="journey-arrow">→</div>
+        <div class="journey-step"><span class="num">2</span> Check Avg Bias Score</div>
+        <div class="journey-arrow">→</div>
+        <div class="journey-step"><span class="num">3</span> Bias Reports</div>
+        <div class="journey-arrow">→</div>
+        <div class="journey-step"><span class="num">4</span> Expand Model Report</div>
+        <div class="journey-arrow">→</div>
+        <div class="journey-step"><span class="num">5</span> Review Demographics</div>
+        <div class="journey-arrow">→</div>
+        <div class="journey-step"><span class="num">6</span> Read Recommendations</div>
+        <div class="journey-arrow">→</div>
+        <div class="journey-step"><span class="num">7</span> Model Registry</div>
+        <div class="journey-arrow">→</div>
+        <div class="journey-step"><span class="num">8</span> Review Fairness Metrics</div>
+      </div>
+    </div>
+
+    <div class="journey-card">
+      <h3>Journey F: Report Generation & Download</h3>
+      <div class="journey-steps">
+        <div class="journey-step"><span class="num">1</span> Reports Page</div>
+        <div class="journey-arrow">→</div>
+        <div class="journey-step"><span class="num">2</span> Browse Templates</div>
+        <div class="journey-arrow">→</div>
+        <div class="journey-step"><span class="num">3</span> Click Template</div>
+        <div class="journey-arrow">→</div>
+        <div class="journey-step"><span class="num">4</span> Fill Parameters</div>
+        <div class="journey-arrow">→</div>
+        <div class="journey-step"><span class="num">5</span> Generate</div>
+        <div class="journey-arrow">→</div>
+        <div class="journey-step"><span class="num">6</span> Status: Generating</div>
+        <div class="journey-arrow">→</div>
+        <div class="journey-step"><span class="num">7</span> Status: Completed</div>
+        <div class="journey-arrow">→</div>
+        <div class="journey-step"><span class="num">8</span> Download</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CRUD Summary -->
+  <div class="detail-section">
+    <h2>5. CRUD Operations by Page</h2>
+    <div class="detail-grid">
+      <div class="detail-card management">
+        <h3>Users & Roles</h3>
+        <div class="url">/admin/users</div>
+        <div class="detail-section-title">Operations</div>
+        <ul>
+          <li><strong>Create:</strong> Single user (dialog) + Bulk CSV import</li>
+          <li><strong>Read:</strong> User list with search/filter/pagination, User detail page</li>
+          <li><strong>Update:</strong> Edit user role, department, status</li>
+          <li><strong>Delete:</strong> N/A (status change to Suspended instead)</li>
+        </ul>
+        <div class="detail-section-title">API Endpoints</div>
+        <div class="endpoints">
+          <span class="endpoint get">GET /api/admin/users</span>
+          <span class="endpoint get">GET /api/admin/users/{id}</span>
+          <span class="endpoint post">POST /api/admin/users</span>
+          <span class="endpoint post">POST /api/admin/users/bulk</span>
+          <span class="endpoint patch">PATCH /api/admin/users/{id}</span>
+        </div>
+      </div>
+
+      <div class="detail-card management">
+        <h3>Course Catalog</h3>
+        <div class="url">/admin/courses</div>
+        <div class="detail-section-title">Operations</div>
+        <ul>
+          <li><strong>Create:</strong> New course (dialog with department/semester/faculty selection)</li>
+          <li><strong>Read:</strong> Course list with multi-filter, enrollment progress bars</li>
+          <li><strong>Update:</strong> Course status (Draft → Active → Archived)</li>
+          <li><strong>Enroll:</strong> Add students via search or CSV</li>
+        </ul>
+        <div class="detail-section-title">API Endpoints</div>
+        <div class="endpoints">
+          <span class="endpoint get">GET /api/admin/courses</span>
+          <span class="endpoint post">POST /api/admin/courses</span>
+          <span class="endpoint post">POST /api/admin/courses/{id}/enroll</span>
+        </div>
+      </div>
+
+      <div class="detail-card management">
+        <h3>Semesters</h3>
+        <div class="url">/admin/semesters</div>
+        <div class="detail-section-title">Operations</div>
+        <ul>
+          <li><strong>Create:</strong> New semester with date validation</li>
+          <li><strong>Read:</strong> Semester cards with status/dates/course count</li>
+          <li><strong>Update:</strong> Status transitions (Upcoming → Active → Completed)</li>
+        </ul>
+        <div class="detail-section-title">API Endpoints</div>
+        <div class="endpoints">
+          <span class="endpoint get">GET /api/admin/semesters</span>
+          <span class="endpoint post">POST /api/admin/semesters</span>
+        </div>
+      </div>
+
+      <div class="detail-card intelligence">
+        <h3>Credentials</h3>
+        <div class="url">/admin/credentials</div>
+        <div class="detail-section-title">Operations</div>
+        <ul>
+          <li><strong>Create:</strong> Issue credential (Degree/Certificate/Badge/Transcript)</li>
+          <li><strong>Read:</strong> Credential list with type/status filters</li>
+          <li><strong>Revoke:</strong> Revoke active credential (requires documented reason)</li>
+        </ul>
+        <div class="detail-section-title">API Endpoints</div>
+        <div class="endpoints">
+          <span class="endpoint get">GET /api/admin/credentials</span>
+          <span class="endpoint post">POST /api/admin/credentials</span>
+          <span class="endpoint post">POST /api/admin/credentials/{id}/revoke</span>
+        </div>
+      </div>
+
+      <div class="detail-card governance">
+        <h3>Compliance</h3>
+        <div class="url">/admin/compliance</div>
+        <div class="detail-section-title">Operations</div>
+        <ul>
+          <li><strong>Read:</strong> Compliance score, framework scores, categories, deviations</li>
+          <li><strong>Update:</strong> Resolve deviations (requires resolution description)</li>
+        </ul>
+        <div class="detail-section-title">API Endpoints</div>
+        <div class="endpoints">
+          <span class="endpoint get">GET /api/admin/compliance/pulse</span>
+          <span class="endpoint get">GET /api/admin/compliance/deviations</span>
+          <span class="endpoint patch">PATCH /api/admin/compliance/deviations/{id}</span>
+        </div>
+      </div>
+
+      <div class="detail-card intelligence">
+        <h3>Reports</h3>
+        <div class="url">/admin/reports</div>
+        <div class="detail-section-title">Operations</div>
+        <ul>
+          <li><strong>Create:</strong> Generate report from template with custom parameters</li>
+          <li><strong>Read:</strong> Browse templates, view generated reports list</li>
+          <li><strong>Download:</strong> Download completed reports (PDF/Excel)</li>
+        </ul>
+        <div class="detail-section-title">API Endpoints</div>
+        <div class="endpoints">
+          <span class="endpoint get">GET /api/admin/reports/templates</span>
+          <span class="endpoint get">GET /api/admin/reports/generated</span>
+          <span class="endpoint post">POST /api/admin/reports/generate</span>
+        </div>
+      </div>
+
+      <div class="detail-card system">
+        <h3>Settings</h3>
+        <div class="url">/admin/settings</div>
+        <div class="detail-section-title">Operations</div>
+        <ul>
+          <li><strong>Read:</strong> Current institution settings</li>
+          <li><strong>Update:</strong> General, data sharing, retention, branding</li>
+        </ul>
+        <div class="detail-section-title">API Endpoints</div>
+        <div class="endpoints">
+          <span class="endpoint get">GET /api/admin/settings</span>
+          <span class="endpoint patch">PATCH /api/admin/settings</span>
+        </div>
+      </div>
+
+      <div class="detail-card intelligence">
+        <h3>AI Governance</h3>
+        <div class="url">/admin/ai-governance</div>
+        <div class="detail-section-title">Operations</div>
+        <ul>
+          <li><strong>Read:</strong> Model overview, model registry, bias reports, override log</li>
+          <li><strong>Navigate:</strong> Models detail, bias reports detail</li>
+        </ul>
+        <div class="detail-section-title">API Endpoints</div>
+        <div class="endpoints">
+          <span class="endpoint get">GET /api/admin/ai-governance/overview</span>
+          <span class="endpoint get">GET /api/admin/ai-governance/models</span>
+          <span class="endpoint get">GET /api/admin/ai-governance/bias-reports</span>
+          <span class="endpoint get">GET /api/admin/ai-governance/overrides</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Summary Stats -->
+  <div style="background:white;border-radius:12px;padding:32px;box-shadow:0 2px 12px rgba(0,0,0,0.06);text-align:center;margin-top:40px">
+    <h2 style="font-size:22px;font-weight:700;color:#4a3aba;margin-bottom:24px">Portal Summary</h2>
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:24px">
+      <div>
+        <div style="font-size:36px;font-weight:800;color:#4a3aba">16</div>
+        <div style="font-size:13px;color:#888;margin-top:4px">Total Pages</div>
+      </div>
+      <div>
+        <div style="font-size:36px;font-weight:800;color:#0d9668">28</div>
+        <div style="font-size:13px;color:#888;margin-top:4px">API Endpoints</div>
+      </div>
+      <div>
+        <div style="font-size:36px;font-weight:800;color:#d97706">12</div>
+        <div style="font-size:13px;color:#888;margin-top:4px">Dialogs/Drawers</div>
+      </div>
+      <div>
+        <div style="font-size:36px;font-weight:800;color:#e05a35">6</div>
+        <div style="font-size:13px;color:#888;margin-top:4px">User Journeys</div>
+      </div>
+      <div>
+        <div style="font-size:36px;font-weight:800;color:#64748b">5</div>
+        <div style="font-size:13px;color:#888;margin-top:4px">Nav Sections</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

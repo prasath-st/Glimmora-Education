@@ -185,7 +185,7 @@ export default function LoginPage() {
               { email: "admin@glimmora.dev", label: "Admin" },
               { email: "research@glimmora.dev", label: "Research" },
               { email: "placement@glimmora.dev", label: "Placement" },
-              { email: "ministry@glimmora.dev", label: "Ministry" },
+              { email: "superadmin@glimmora.dev", label: "Super Admin" },
             ].map((account) => (
               <button
                 key={account.email}

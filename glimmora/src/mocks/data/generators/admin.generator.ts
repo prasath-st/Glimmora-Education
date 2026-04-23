@@ -9,7 +9,6 @@ import type {
   AdminUser,
   RoleDefinition,
   Permission,
-  Integration,
   BudgetOverview,
   BudgetAlert,
   AiModel,
@@ -20,12 +19,13 @@ import type {
   ReportParameter,
   GeneratedReport,
   InstitutionSettings,
+  Semester,
+  AdminCourse,
 } from "@/lib/api/types/admin.types";
 import type {
   PortalRole,
   RiskLevel,
   ComplianceStatus,
-  IntegrationHealth,
   CredentialStatus,
   ModelStatus,
 } from "@/lib/api/types/common.types";
@@ -221,8 +221,6 @@ export function generateAdminDashboard(): AdminDashboard {
       deviations: faker.number.int({ min: 2, max: 6 }),
     },
     facultyStudentRatio: roundTo(faker.number.float({ min: 15, max: 22 }), 1),
-    activeIntegrations: 6,
-    totalIntegrations: 8,
     enrollmentTrend,
   };
 }
@@ -418,7 +416,7 @@ export function generateAuditLog(count: number = 100): AuditLogEntry[] {
       permission_change: `Modified permissions for ${pick(MODULES)} module`,
       credential_issue: `Issued ${pick(["degree", "certificate", "badge"])} credential`,
       compliance_review: `Completed compliance review for ${pick(DEPARTMENTS)}`,
-      integration_sync: `Triggered sync for ${pick(["Canvas LMS", "Moodle LMS", "SAP ERP", "Keycloak SSO"])}`,
+      integration_sync: `Triggered sync for ${pick(["Student Records", "Financial System", "HR System", "SSO Provider"])}`,
     };
 
     return {
@@ -517,6 +515,13 @@ export function generateRoles(): RoleDefinition[] {
       AI: ["view"], Reports: ["view", "export"],
       Settings: [],
     },
+    super_admin: {
+      Dashboard: ["view"], Students: ["view", "create", "edit", "delete", "export"],
+      Courses: ["view", "create", "edit", "delete", "export"], Research: ["view", "create", "edit", "export"],
+      Compliance: ["view", "create", "edit", "export"], Users: ["view", "create", "edit", "delete"],
+      AI: ["view", "create", "edit"], Reports: ["view", "create", "export"],
+      Settings: ["view", "edit"],
+    },
   };
 
   return roleDefs.map(({ role, label, description, userCount }) => {
@@ -530,42 +535,6 @@ export function generateRoles(): RoleDefinition[] {
     }));
 
     return { role, label, description, userCount, permissions };
-  });
-}
-
-export function generateIntegrations(): Integration[] {
-  const integrationDefs = [
-    { name: "Canvas LMS", type: "lms" as const, provider: "Instructure", health: "healthy" as IntegrationHealth, records: 45200, uptime: 99.8 },
-    { name: "Moodle LMS", type: "lms" as const, provider: "Moodle HQ", health: "degraded" as IntegrationHealth, records: 12800, uptime: 97.2 },
-    { name: "SAP ERP", type: "erp" as const, provider: "SAP SE", health: "healthy" as IntegrationHealth, records: 8400, uptime: 99.5 },
-    { name: "Oracle PeopleSoft", type: "sis" as const, provider: "Oracle Corporation", health: "healthy" as IntegrationHealth, records: 62300, uptime: 99.9 },
-    { name: "Scopus API", type: "research" as const, provider: "Elsevier", health: "healthy" as IntegrationHealth, records: 3200, uptime: 99.1 },
-    { name: "Payroll System", type: "hrms" as const, provider: "ADP", health: "healthy" as IntegrationHealth, records: 2100, uptime: 99.7 },
-    { name: "Keycloak SSO", type: "auth" as const, provider: "Red Hat", health: "healthy" as IntegrationHealth, records: 14500, uptime: 99.95 },
-    { name: "S3 Storage", type: "other" as const, provider: "Amazon Web Services", health: "down" as IntegrationHealth, records: 128000, uptime: 94.3 },
-  ];
-
-  return integrationDefs.map((def) => {
-    const syncHistory = Array.from({ length: 7 }, (_, i) => ({
-      date: pastDate(Math.max(1, (i + 1) * 1)),
-      records: faker.number.int({ min: Math.round(def.records * 0.01), max: Math.round(def.records * 0.05) }),
-      errors: def.health === "down" ? faker.number.int({ min: 10, max: 50 }) : faker.number.int({ min: 0, max: 3 }),
-      duration: faker.number.int({ min: 12, max: 180 }),
-    }));
-
-    return {
-      id: id("int"),
-      name: def.name,
-      type: def.type,
-      provider: def.provider,
-      health: def.health,
-      lastSyncAt: pastDate(Math.max(1, def.health === "down" ? 3 : 1)),
-      nextSyncAt: futureDate(Math.max(1, 1)),
-      recordsSynced: def.records,
-      errorCount: def.health === "down" ? faker.number.int({ min: 15, max: 48 }) : faker.number.int({ min: 0, max: 5 }),
-      uptime: def.uptime,
-      syncHistory,
-    };
   });
 }
 
@@ -937,4 +906,77 @@ export function generateSettings(): InstitutionSettings {
       analyticsData: 5,
     },
   };
+}
+
+export function generateSemesters(): Semester[] {
+  return [
+    { id: "sem_01", name: "Fall 2024", year: "2024", startDate: "2024-08-15", endDate: "2024-12-20", status: "completed", courseCount: 45, createdAt: "2024-06-01T00:00:00Z", updatedAt: "2024-12-20T00:00:00Z" },
+    { id: "sem_02", name: "Spring 2025", year: "2025", startDate: "2025-01-10", endDate: "2025-05-15", status: "completed", courseCount: 48, createdAt: "2024-11-01T00:00:00Z", updatedAt: "2025-05-15T00:00:00Z" },
+    { id: "sem_03", name: "Fall 2025", year: "2025", startDate: "2025-08-15", endDate: "2025-12-20", status: "completed", courseCount: 52, createdAt: "2025-06-01T00:00:00Z", updatedAt: "2025-12-20T00:00:00Z" },
+    { id: "sem_04", name: "Spring 2026", year: "2026", startDate: "2026-01-12", endDate: "2026-05-20", status: "active", courseCount: 50, createdAt: "2025-11-01T00:00:00Z", updatedAt: "2026-04-01T00:00:00Z" },
+    { id: "sem_05", name: "Fall 2026", year: "2026", startDate: "2026-08-18", endDate: "2026-12-22", status: "upcoming", courseCount: 0, createdAt: "2026-03-01T00:00:00Z", updatedAt: "2026-03-01T00:00:00Z" },
+  ];
+}
+
+export function generateCourses(): AdminCourse[] {
+  const courseDefs: { code: string; name: string; dept: string; credits: number }[] = [
+    { code: "CS301", name: "Data Structures & Algorithms", dept: "Computer Science", credits: 4 },
+    { code: "CS405", name: "Machine Learning", dept: "Computer Science", credits: 4 },
+    { code: "CS302", name: "Operating Systems", dept: "Computer Science", credits: 3 },
+    { code: "CS410", name: "Computer Networks", dept: "Computer Science", credits: 3 },
+    { code: "CS420", name: "Cloud Computing", dept: "Computer Science", credits: 3 },
+    { code: "EE201", name: "Circuit Analysis", dept: "Electrical Engineering", credits: 4 },
+    { code: "EE305", name: "Digital Signal Processing", dept: "Electrical Engineering", credits: 3 },
+    { code: "EE410", name: "VLSI Design", dept: "Electrical Engineering", credits: 4 },
+    { code: "ME201", name: "Thermodynamics", dept: "Mechanical Engineering", credits: 4 },
+    { code: "ME302", name: "Fluid Mechanics", dept: "Mechanical Engineering", credits: 3 },
+    { code: "ME405", name: "Robotics Engineering", dept: "Mechanical Engineering", credits: 3 },
+    { code: "MA201", name: "Linear Algebra", dept: "Mathematics", credits: 3 },
+    { code: "MA301", name: "Probability & Statistics", dept: "Mathematics", credits: 3 },
+    { code: "PH201", name: "Quantum Mechanics", dept: "Physics", credits: 4 },
+    { code: "PH305", name: "Solid State Physics", dept: "Physics", credits: 3 },
+    { code: "BA301", name: "Financial Management", dept: "Business Administration", credits: 3 },
+    { code: "BA405", name: "Strategic Marketing", dept: "Business Administration", credits: 3 },
+    { code: "BA410", name: "Operations Research", dept: "Business Administration", credits: 3 },
+    { code: "BT201", name: "Molecular Biology", dept: "Biotechnology", credits: 4 },
+    { code: "BT305", name: "Genetic Engineering", dept: "Biotechnology", credits: 4 },
+    { code: "CE201", name: "Structural Analysis", dept: "Civil Engineering", credits: 4 },
+    { code: "CE302", name: "Geotechnical Engineering", dept: "Civil Engineering", credits: 3 },
+    { code: "CS450", name: "Deep Learning", dept: "Computer Science", credits: 4 },
+    { code: "EE420", name: "Power Systems", dept: "Electrical Engineering", credits: 3 },
+    { code: "BA420", name: "Entrepreneurship & Innovation", dept: "Business Administration", credits: 3 },
+  ];
+
+  const facultyNames = [
+    "Dr. Aarav Sharma", "Dr. Priya Patel", "Dr. Rahul Gupta", "Dr. Sneha Singh",
+    "Dr. Vikram Kumar", "Dr. Ananya Reddy", "Dr. Rohan Nair", "Dr. Kavya Joshi",
+    "Dr. Aditya Menon", "Dr. Meera Iyer", "Dr. Arjun Verma", "Dr. Divya Chatterjee",
+    "Dr. Siddharth Banerjee", "Dr. Nisha Das", "Dr. Karan Mukherjee",
+  ];
+
+  return courseDefs.map((def, i) => {
+    const statusRoll = faker.number.float({ min: 0, max: 1 });
+    const status: "draft" | "active" | "archived" = statusRoll < 0.82 ? "active" : statusRoll < 0.92 ? "draft" : "archived";
+    const maxCapacity = faker.number.int({ min: 120, max: 200 });
+    const enrolledCount = status === "active" ? faker.number.int({ min: 30, max: Math.min(120, maxCapacity) }) : status === "draft" ? 0 : faker.number.int({ min: 80, max: maxCapacity });
+    const faculty = facultyNames[i % facultyNames.length];
+
+    return {
+      id: `crs_${String(i + 1).padStart(3, "0")}`,
+      code: def.code,
+      name: def.name,
+      description: `Comprehensive study of ${def.name.toLowerCase()} covering fundamental and advanced topics in ${def.dept}.`,
+      credits: def.credits,
+      department: def.dept,
+      semesterId: "sem_04",
+      semesterName: "Spring 2026",
+      facultyId: `fac_${String((i % facultyNames.length) + 1).padStart(3, "0")}`,
+      facultyName: faculty,
+      enrolledCount,
+      maxCapacity,
+      status,
+      createdAt: "2025-11-15T00:00:00Z",
+      updatedAt: pastDate(Math.max(1, faker.number.int({ min: 1, max: 30 }))),
+    };
+  });
 }

@@ -1,0 +1,51 @@
+- generic [ref=e1]:
+  - button "Open Next.js Dev Tools" [ref=e7] [cursor=pointer]:
+    - img [ref=e8]
+  - alert [ref=e11]
+  - generic [ref=e28]:
+    - generic [ref=e29]:
+      - generic [ref=e30]:
+        - img [ref=e32]
+        - generic [ref=e35]: Glimmora
+      - generic [ref=e36]:
+        - heading "Education Intelligence Infrastructure" [level=2] [ref=e37]:
+          - text: Education Intelligence
+          - text: Infrastructure
+        - paragraph [ref=e38]: AI-native platform unifying student development, research intelligence, placement matching, compliance monitoring, and institutional strategy across universities worldwide.
+      - paragraph [ref=e39]: © 2026 Glimmora. All rights reserved.
+    - generic [ref=e42]:
+      - generic [ref=e43]:
+        - heading "Welcome back!" [level=1] [ref=e44]
+        - paragraph [ref=e45]: Sign in to access your portal
+      - generic [ref=e46]:
+        - generic [ref=e47]:
+          - text: Email
+          - textbox "Email" [active] [ref=e48]:
+            - /placeholder: you@university.edu
+            - text: superadmin@glimmora.dev
+          - paragraph [ref=e69]: Email is required
+        - generic [ref=e49]:
+          - text: Password
+          - generic [ref=e50]:
+            - textbox "Password" [ref=e51]:
+              - /placeholder: Enter your password
+              - text: glimmora123
+            - button [ref=e52]:
+              - img [ref=e53]
+          - paragraph [ref=e70]: Password is required
+        - link "Forgot password?" [ref=e57] [cursor=pointer]:
+          - /url: /forgot-password
+        - button "Sign in" [ref=e58]
+      - generic [ref=e59]:
+        - paragraph [ref=e60]: "Development Accounts (password: glimmora123)"
+        - generic [ref=e61]:
+          - button "Student" [ref=e62]
+          - button "Faculty" [ref=e63]
+          - button "Admin" [ref=e64]
+          - button "Research" [ref=e65]
+          - button "Placement" [ref=e66]
+          - button "Ministry" [ref=e67]
+          - button "Super Admin" [ref=e68]
+  - button "Dev Role Switcher" [ref=e18]:
+    - img [ref=e19]
+  - region "Notifications alt+T"

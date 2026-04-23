@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect } from "react";
 import {
   Plus, Loader2, X, MoreHorizontal, Eye, Pencil, ShieldBan, ShieldCheck, Send,
   Search, Users, GraduationCap, UserCog, Globe, MapPin, Mail, Calendar,
-  Landmark, ChevronDown,
+  ChevronDown,
 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -12,7 +12,7 @@ import { toast } from "sonner";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import {
   useSuperAdminUniversities, useSuperAdminUniversityDetail,
-  useCreateUniversity, useUpdateUniversity, useSuperAdminMinistries,
+  useCreateUniversity, useUpdateUniversity,
 } from "@/lib/hooks/use-super-admin";
 import { createUniversitySchema, type CreateUniversityFormData } from "@/lib/schemas/super-admin.schema";
 import { ErrorState } from "@/components/shared/feedback/error-state";
@@ -64,8 +64,6 @@ function DetailDrawer({ id, open, onClose, onToggle, onResend }: {
   id: string | null; open: boolean; onClose: () => void; onToggle: (u: University) => void; onResend: (u: University) => void;
 }) {
   const { data: u, isLoading } = useSuperAdminUniversityDetail(id ?? "");
-  const { data: minData } = useSuperAdminMinistries({ pageSize: 100 });
-  const linked = (minData?.data ?? []).filter((m) => m.linkedUniversityIds.includes(id ?? ""));
 
   return (
     <SlideDrawer open={open} onClose={onClose} title={u?.name ?? "University"} description={u ? `${u.shortName} — ${u.city}, ${u.country}` : undefined} width="lg"
@@ -126,26 +124,6 @@ function DetailDrawer({ id, open, onClose, onToggle, onResend }: {
             </div>
           </div>
 
-          {/* Oversight */}
-          {linked.length > 0 && (
-            <div>
-              <h3 className="mb-3 text-sm font-semibold">Oversight Bodies</h3>
-              <div className="divide-y divide-border/30">
-                {linked.map((m) => (
-                  <div key={m.id} className="flex items-center justify-between py-3 first:pt-0 last:pb-0">
-                    <div className="flex items-center gap-3">
-                      <Landmark className="h-4 w-4 text-primary-400" />
-                      <div>
-                        <p className="text-sm font-medium">{m.name}</p>
-                        <p className="text-xs text-muted-foreground">{m.country}</p>
-                      </div>
-                    </div>
-                    <span className={cn("text-xs font-semibold capitalize", m.status === "active" ? "text-success" : "text-danger")}>{m.status}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       )}
     </SlideDrawer>

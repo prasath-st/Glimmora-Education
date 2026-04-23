@@ -2,12 +2,13 @@
 
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { UserCog, Plus, Loader2, X } from "lucide-react";
+import { UserCog, Plus, Loader2, X, Upload, Download } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as Dialog from "@radix-ui/react-dialog";
 import { type ColumnDef } from "@tanstack/react-table";
-import { useAdminUsers, useCreateUser } from "@/lib/hooks/use-admin";
+import { useAdminUsers, useCreateUser, useBulkImportUsers } from "@/lib/hooks/use-admin";
+import { FileUpload } from "@/components/shared/forms/file-upload";
 import {
   createUserSchema,
   type CreateUserFormData,
@@ -214,9 +215,290 @@ function CreateUserDialog({
   );
 }
 
+interface ParsedRow {
+  email: string;
+  name: string;
+  role: string;
+  department: string;
+  valid: boolean;
+  error?: string;
+}
+
+function parseCSV(text: string): ParsedRow[] {
+  const lines = text.split(/\r?\n/).filter((l) => l.trim());
+  if (lines.length < 2) return [];
+
+  const header = lines[0].toLowerCase().split(",").map((h) => h.trim());
+  const emailIdx = header.indexOf("email");
+  const nameIdx = header.indexOf("name");
+  const roleIdx = header.indexOf("role");
+  const deptIdx = header.indexOf("department");
+
+  if (emailIdx === -1 || nameIdx === -1 || roleIdx === -1 || deptIdx === -1) {
+    return [];
+  }
+
+  const validRoles = ["student", "faculty", "admin", "research", "placement", "ministry"];
+
+  return lines.slice(1).map((line) => {
+    const cols = line.split(",").map((c) => c.trim());
+    const email = cols[emailIdx] || "";
+    const name = cols[nameIdx] || "";
+    const role = cols[roleIdx] || "";
+    const department = cols[deptIdx] || "";
+
+    const errors: string[] = [];
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.push("invalid email");
+    if (!name) errors.push("missing name");
+    if (!validRoles.includes(role.toLowerCase())) errors.push("invalid role");
+    if (!department) errors.push("missing department");
+
+    return {
+      email,
+      name,
+      role: role.toLowerCase(),
+      department,
+      valid: errors.length === 0,
+      error: errors.length > 0 ? errors.join(", ") : undefined,
+    };
+  });
+}
+
+function ImportUsersDialog({
+  open,
+  onOpenChange,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const bulkImport = useBulkImportUsers();
+  const [parsedRows, setParsedRows] = useState<ParsedRow[]>([]);
+  const [parseError, setParseError] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
+
+  const validRows = parsedRows.filter((r) => r.valid);
+  const errorRows = parsedRows.filter((r) => !r.valid);
+
+  const handleFilesChange = useCallback((files: File[]) => {
+    setParsedRows([]);
+    setParseError("");
+    setSuccessMsg("");
+
+    if (files.length === 0) return;
+
+    const file = files[0];
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const text = e.target?.result as string;
+      const rows = parseCSV(text);
+      if (rows.length === 0) {
+        setParseError(
+          "Could not parse the CSV. Ensure columns: email, name, role, department"
+        );
+      } else {
+        setParsedRows(rows);
+      }
+    };
+    reader.onerror = () => setParseError("Failed to read file.");
+    reader.readAsText(file);
+  }, []);
+
+  const handleImport = useCallback(async () => {
+    if (validRows.length === 0) return;
+    try {
+      await bulkImport.mutateAsync({
+        users: validRows.map((r) => ({
+          email: r.email,
+          name: r.name,
+          role: r.role,
+          department: r.department,
+        })),
+      });
+      setSuccessMsg(
+        `Successfully imported ${validRows.length} user${validRows.length > 1 ? "s" : ""}. Activation emails sent.`
+      );
+      setParsedRows([]);
+      setTimeout(() => {
+        setSuccessMsg("");
+        onOpenChange(false);
+      }, 1500);
+    } catch {
+      // error shown via mutation state
+    }
+  }, [validRows, bulkImport, onOpenChange]);
+
+  const handleDownloadTemplate = useCallback(() => {
+    const csv =
+      "email,name,role,department\njohn@university.edu,John Smith,student,Computer Science\njane@university.edu,Jane Doe,faculty,Mathematics\n";
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "user-import-template.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  }, []);
+
+  return (
+    <Dialog.Root
+      open={open}
+      onOpenChange={(v) => {
+        if (!v) {
+          setParsedRows([]);
+          setParseError("");
+          setSuccessMsg("");
+          bulkImport.reset();
+        }
+        onOpenChange(v);
+      }}
+    >
+      <Dialog.Portal>
+        <Dialog.Overlay className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
+        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-xl border border-border bg-card p-6 shadow-lg max-h-[90vh] overflow-y-auto data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95">
+          <div className="flex items-center justify-between">
+            <Dialog.Title className="text-lg font-semibold">
+              Import Users
+            </Dialog.Title>
+            <Dialog.Close className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+              <X className="h-4 w-4" />
+            </Dialog.Close>
+          </div>
+          <Dialog.Description className="mt-1 text-sm text-muted-foreground">
+            Upload a CSV file with columns: email, name, role, department
+          </Dialog.Description>
+
+          <div className="mt-4 space-y-4">
+            {/* Template download */}
+            <div className="rounded-lg border border-border bg-muted/50 p-3">
+              <p className="text-xs font-medium text-muted-foreground mb-2">
+                Expected CSV format:
+              </p>
+              <pre className="text-xs font-mono text-muted-foreground bg-background rounded p-2 overflow-x-auto">
+{`email,name,role,department
+john@university.edu,John Smith,student,Computer Science
+jane@university.edu,Jane Doe,faculty,Mathematics`}
+              </pre>
+              <button
+                type="button"
+                onClick={handleDownloadTemplate}
+                className="mt-2 flex items-center gap-1.5 text-xs font-medium text-portal-accent hover:underline"
+              >
+                <Download className="h-3 w-3" />
+                Download template CSV
+              </button>
+            </div>
+
+            {/* File upload */}
+            <FileUpload
+              label="Upload CSV file"
+              accept=".csv"
+              maxSize={5}
+              onFilesChange={handleFilesChange}
+              error={parseError}
+            />
+
+            {/* Parse results */}
+            {parsedRows.length > 0 && (
+              <div className="space-y-3">
+                <div className="flex items-center gap-3 text-sm">
+                  <span>
+                    Found <span className="font-semibold">{parsedRows.length}</span> row{parsedRows.length > 1 ? "s" : ""}.
+                  </span>
+                  <span className="text-success font-medium">
+                    {validRows.length} valid
+                  </span>
+                  {errorRows.length > 0 && (
+                    <span className="text-danger font-medium">
+                      {errorRows.length} error{errorRows.length > 1 ? "s" : ""}
+                    </span>
+                  )}
+                </div>
+
+                {/* Preview table */}
+                <div className="rounded-lg border border-border overflow-hidden">
+                  <div className="max-h-48 overflow-y-auto">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="border-b border-border bg-muted/50">
+                          <th className="px-2 py-1.5 text-left font-medium">Email</th>
+                          <th className="px-2 py-1.5 text-left font-medium">Name</th>
+                          <th className="px-2 py-1.5 text-left font-medium">Role</th>
+                          <th className="px-2 py-1.5 text-left font-medium">Dept</th>
+                          <th className="px-2 py-1.5 text-left font-medium">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {parsedRows.slice(0, 5).map((row, i) => (
+                          <tr
+                            key={i}
+                            className={`border-b border-border last:border-0 ${!row.valid ? "bg-danger/5" : ""}`}
+                          >
+                            <td className="px-2 py-1.5 truncate max-w-[120px]">{row.email}</td>
+                            <td className="px-2 py-1.5 truncate max-w-[100px]">{row.name}</td>
+                            <td className="px-2 py-1.5">{row.role}</td>
+                            <td className="px-2 py-1.5 truncate max-w-[100px]">{row.department}</td>
+                            <td className="px-2 py-1.5">
+                              {row.valid ? (
+                                <span className="text-success">OK</span>
+                              ) : (
+                                <span className="text-danger" title={row.error}>{row.error}</span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  {parsedRows.length > 5 && (
+                    <p className="px-2 py-1.5 text-xs text-muted-foreground border-t border-border bg-muted/30">
+                      ...and {parsedRows.length - 5} more row{parsedRows.length - 5 > 1 ? "s" : ""}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {bulkImport.isError && (
+              <p className="text-xs text-danger">
+                Failed to import users. Please check the file and try again.
+              </p>
+            )}
+            {successMsg && (
+              <p className="text-xs text-success">{successMsg}</p>
+            )}
+
+            <div className="flex justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => onOpenChange(false)}
+                className="rounded-lg border border-border px-4 py-2 text-sm font-medium transition-colors hover:bg-muted"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleImport}
+                disabled={bulkImport.isPending || validRows.length === 0}
+                className="flex items-center gap-2 rounded-lg bg-portal-accent px-4 py-2 text-sm font-medium text-portal-accent-foreground transition-colors hover:bg-portal-accent-hover disabled:opacity-50"
+              >
+                {bulkImport.isPending && (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                )}
+                <Upload className="h-3.5 w-3.5" />
+                Import {validRows.length > 0 ? `${validRows.length} User${validRows.length > 1 ? "s" : ""}` : "Users"}
+              </button>
+            </div>
+          </div>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
+  );
+}
+
 export default function AdminUsersPage() {
   const router = useRouter();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
@@ -249,13 +531,22 @@ export default function AdminUsersPage() {
         title="Users"
         description="Manage users, roles, and access across the institution"
         actions={
-          <button
-            onClick={() => setDialogOpen(true)}
-            className="flex items-center gap-2 rounded-lg bg-portal-accent px-4 py-2 text-sm font-medium text-portal-accent-foreground transition-colors hover:bg-portal-accent-hover"
-          >
-            <Plus className="h-4 w-4" />
-            Create User
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setImportOpen(true)}
+              className="flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-medium transition-colors hover:bg-muted"
+            >
+              <Upload className="h-4 w-4" />
+              Import Users
+            </button>
+            <button
+              onClick={() => setDialogOpen(true)}
+              className="flex items-center gap-2 rounded-lg bg-portal-accent px-4 py-2 text-sm font-medium text-portal-accent-foreground transition-colors hover:bg-portal-accent-hover"
+            >
+              <Plus className="h-4 w-4" />
+              Create User
+            </button>
+          </div>
         }
       />
 
@@ -343,6 +634,7 @@ export default function AdminUsersPage() {
       )}
 
       <CreateUserDialog open={dialogOpen} onOpenChange={setDialogOpen} />
+      <ImportUsersDialog open={importOpen} onOpenChange={setImportOpen} />
     </div>
   );
 }

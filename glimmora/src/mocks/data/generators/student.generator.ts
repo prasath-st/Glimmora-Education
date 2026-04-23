@@ -21,6 +21,9 @@ import type {
   NotificationPreferences,
   Notification,
   WorkExperience,
+  StudentCourseModule,
+  StudentCourseMaterial,
+  AssignmentDetail,
 } from "@/lib/api/types/student.types";
 import type {
   AppealStatus,
@@ -338,8 +341,6 @@ function generateSingleCourse(
     schedule: status === "active" ? `${pick(days)} ${pick(times)}` : undefined,
     room: status === "active" ? pick(rooms) : undefined,
     assignments,
-    lmsUrl: `https://canvas.university.edu/courses/${faker.string.alphanumeric(6)}`,
-    dataSource: "Canvas LMS",
     createdAt: pastDate(200),
     updatedAt: nowStr,
   };
@@ -1702,4 +1703,155 @@ export function generateNotifications(count: number = 8): Notification[] {
     id: id("notif"),
     createdAt: pastDate(i + 1),
   }));
+}
+
+// ─── Course Modules Generator (LMS Content) ─────────────────────────────────
+
+const MODULE_TEMPLATES: {
+  title: string;
+  description: string;
+  materials: { title: string; type: StudentCourseMaterial["type"]; fileSize?: number; duration?: number }[];
+}[] = [
+  {
+    title: "Module 1: Foundations & Introduction",
+    description: "Core concepts, terminology, and the historical context of the subject. Sets up the foundational knowledge needed for the rest of the course.",
+    materials: [
+      { title: "Lecture 1: Course Overview & Introduction", type: "video", duration: 3420 },
+      { title: "Course Syllabus & Schedule", type: "pdf", fileSize: 245000 },
+      { title: "Lecture 1 Slides: Foundations", type: "slides", fileSize: 1800000 },
+      { title: "Supplementary Reading - Historical Context", type: "link" },
+    ],
+  },
+  {
+    title: "Module 2: Core Concepts & Theory",
+    description: "Deep dive into the theoretical framework. Covers formal definitions, proofs of key theorems, and the mathematical underpinnings.",
+    materials: [
+      { title: "Lecture 2: Formal Definitions & Notation", type: "video", duration: 4080 },
+      { title: "Lecture 3: Theoretical Analysis", type: "video", duration: 3780 },
+      { title: "Lecture 2-3 Slides: Core Theory", type: "slides", fileSize: 2400000 },
+      { title: "Practice Problems Set A.pdf", type: "pdf", fileSize: 180000 },
+    ],
+  },
+  {
+    title: "Module 3: Algorithms & Implementation",
+    description: "Translating theory into practice. Covers major algorithms, their time and space complexity, and implementation strategies.",
+    materials: [
+      { title: "Lecture 4: Algorithm Design Techniques", type: "video", duration: 3960 },
+      { title: "Week 3 Lab Exercise.pdf", type: "pdf", fileSize: 320000 },
+      { title: "Lecture 4 Slides: Algorithms", type: "slides", fileSize: 2100000 },
+    ],
+  },
+  {
+    title: "Module 4: Advanced Topics & Applications",
+    description: "Explores advanced use cases, optimization techniques, and real-world applications of the material covered in previous modules.",
+    materials: [
+      { title: "Lecture 5: Optimization & Trade-offs", type: "video", duration: 4200 },
+      { title: "Lecture 6: Real-World Case Studies", type: "video", duration: 3600 },
+      { title: "Case Study: Industry Application.pdf", type: "pdf", fileSize: 540000 },
+      { title: "External Resource - Research Paper", type: "link" },
+    ],
+  },
+  {
+    title: "Module 5: Review & Exam Preparation",
+    description: "Comprehensive review of all course material. Includes practice exams, study guides, and commonly tested concepts.",
+    materials: [
+      { title: "Review Session Recording", type: "video", duration: 5400 },
+      { title: "Study Guide & Key Concepts.pdf", type: "pdf", fileSize: 420000 },
+      { title: "Practice Exam with Solutions.pdf", type: "pdf", fileSize: 380000 },
+    ],
+  },
+];
+
+export function generateStudentCourseModules(courseId: string): StudentCourseModule[] {
+  const moduleCount = faker.number.int({ min: 3, max: 5 });
+  const selected = MODULE_TEMPLATES.slice(0, moduleCount);
+
+  return selected.map((template, index) => ({
+    id: id("mod"),
+    title: template.title,
+    description: template.description,
+    order: index + 1,
+    materials: template.materials.map((mat) => ({
+      id: id("mat"),
+      title: mat.title,
+      type: mat.type,
+      url: mat.type === "link"
+        ? `https://resources.glimmora.dev/${faker.string.alphanumeric(8)}`
+        : mat.type === "video"
+          ? `https://video.glimmora.dev/courses/${courseId}/${faker.string.alphanumeric(10)}`
+          : `https://files.glimmora.dev/courses/${courseId}/${faker.string.alphanumeric(10)}.${mat.type === "pdf" ? "pdf" : "pptx"}`,
+      fileSize: mat.fileSize,
+      duration: mat.duration,
+    })),
+  }));
+}
+
+// ─── Assignment Detail Generator (LMS) ───────────────────────────────────────
+
+const RUBRIC_TEMPLATES: { criterion: string; description: string; maxPoints: number }[][] = [
+  [
+    { criterion: "Correctness", description: "Solution produces correct output for all test cases and edge cases.", maxPoints: 40 },
+    { criterion: "Code Quality", description: "Clean, readable code with proper naming conventions, comments, and modular structure.", maxPoints: 30 },
+    { criterion: "Analysis", description: "Thorough time and space complexity analysis with proper Big-O notation.", maxPoints: 30 },
+  ],
+  [
+    { criterion: "Understanding", description: "Demonstrates clear understanding of core concepts and their applications.", maxPoints: 50 },
+    { criterion: "Presentation", description: "Well-organized work with clear explanations and proper formatting.", maxPoints: 25 },
+    { criterion: "Completeness", description: "All required sections are addressed with sufficient depth.", maxPoints: 25 },
+  ],
+  [
+    { criterion: "Implementation", description: "Fully functional implementation meeting all specified requirements.", maxPoints: 45 },
+    { criterion: "Testing", description: "Comprehensive test coverage including unit tests and integration tests.", maxPoints: 25 },
+    { criterion: "Documentation", description: "Clear documentation including setup instructions, API docs, and design decisions.", maxPoints: 30 },
+  ],
+];
+
+export function generateAssignmentDetail(assignment: Assignment): AssignmentDetail {
+  const rubricTemplate = RUBRIC_TEMPLATES[faker.number.int({ min: 0, max: RUBRIC_TEMPLATES.length - 1 })];
+
+  // Scale rubric maxPoints to match assignment maxScore
+  const templateTotal = rubricTemplate.reduce((sum, r) => sum + r.maxPoints, 0);
+  const rubric = rubricTemplate.map((r) => ({
+    ...r,
+    maxPoints: Math.round((r.maxPoints / templateTotal) * assignment.maxScore),
+  }));
+
+  // Determine if there should be a submission
+  const hasSubmission = ["submitted", "graded", "late"].includes(assignment.status);
+  let submission: AssignmentDetail["submission"] | undefined;
+
+  if (hasSubmission) {
+    const isGraded = assignment.status === "graded";
+    const isLate = assignment.status === "late";
+
+    submission = {
+      id: id("sub"),
+      fileName: `${assignment.title.replace(/[^a-zA-Z0-9\s]/g, "").replace(/\s+/g, "_")}_submission.pdf`,
+      fileUrl: `https://files.glimmora.dev/submissions/${faker.string.alphanumeric(12)}.pdf`,
+      submittedAt: assignment.submittedAt ?? pastDate(faker.number.int({ min: 1, max: 14 })),
+      score: isGraded ? assignment.score : undefined,
+      feedback: isGraded && assignment.feedback ? assignment.feedback : isGraded ? faker.lorem.sentences(2) : undefined,
+      status: isGraded ? "graded" : isLate ? "late" : "submitted",
+    };
+  }
+
+  const descriptionTemplates = [
+    `In this ${assignment.type}, you will apply the concepts covered in recent lectures to solve a series of problems. Focus on demonstrating both theoretical understanding and practical application.`,
+    `This ${assignment.type} assesses your ability to analyze, design, and implement solutions for the topics we have covered. Pay attention to edge cases and efficiency.`,
+    `Complete the following ${assignment.type} to demonstrate your mastery of the material. Be sure to show your work and explain your reasoning clearly.`,
+  ];
+
+  const instructionTemplates = [
+    "Submit your work as a single PDF file. Include all source code, analysis, and any diagrams or visualizations. Late submissions will receive a 10% penalty per day.",
+    "All code must compile and run without errors. Include a README with setup instructions. Submit via the course portal before the deadline.",
+    "Answer all questions completely. Partial credit will be awarded for demonstrating correct methodology even if the final answer is incorrect.",
+  ];
+
+  return {
+    ...assignment,
+    description: descriptionTemplates[faker.number.int({ min: 0, max: descriptionTemplates.length - 1 })],
+    instructions: faker.datatype.boolean(0.8) ? instructionTemplates[faker.number.int({ min: 0, max: instructionTemplates.length - 1 })] : undefined,
+    rubric,
+    submission,
+  };
 }

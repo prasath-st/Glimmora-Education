@@ -16,6 +16,16 @@ import type {
   AiBriefing,
   FacultyProfile,
   FacultyNotificationPreferences,
+  CourseModule,
+  CourseMaterial,
+  CreateModuleRequest,
+  FacultyAssignment,
+  CreateAssignmentRequest,
+  StudentSubmission,
+  GradeSubmissionRequest,
+  GradebookEntry,
+  AttendanceSession,
+  CreateAttendanceSessionRequest,
 } from "@/lib/api/types/faculty.types";
 import type { PaginationMeta } from "@/lib/api/types/common.types";
 
@@ -324,6 +334,137 @@ export function useDeleteInterventionNote() {
     onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: ["faculty", "intervention", vars.interventionId] });
       queryClient.invalidateQueries({ queryKey: ["faculty", "interventions"] });
+    },
+  });
+}
+
+// === Course Modules (LMS) ===
+export function useCourseModules(courseId: string) {
+  return useQuery({
+    queryKey: ["faculty", "course", courseId, "modules"],
+    queryFn: () =>
+      api.get<CourseModule[]>(`/api/faculty/me/courses/${courseId}/modules`),
+    select: (res) => res.data,
+    enabled: !!courseId,
+  });
+}
+
+export function useCreateModule() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ courseId, ...data }: CreateModuleRequest) =>
+      api.post<CourseModule>(`/api/faculty/me/courses/${courseId}/modules`, data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["faculty", "course", variables.courseId, "modules"] });
+    },
+  });
+}
+
+export function useDeleteModule() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ courseId, moduleId }: { courseId: string; moduleId: string }) =>
+      api.delete(`/api/faculty/me/courses/${courseId}/modules/${moduleId}`),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["faculty", "course", variables.courseId, "modules"] });
+    },
+  });
+}
+
+export function useUploadMaterial() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ courseId, moduleId, ...data }: { courseId: string; moduleId: string; title: string; type: string; fileName?: string }) =>
+      api.post<CourseMaterial>(`/api/faculty/me/courses/${courseId}/modules/${moduleId}/materials`, data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["faculty", "course", variables.courseId, "modules"] });
+    },
+  });
+}
+
+// === Faculty Assignments (LMS) ===
+export function useFacultyAssignments(courseId: string) {
+  return useQuery({
+    queryKey: ["faculty", "course", courseId, "assignments"],
+    queryFn: () =>
+      api.get<FacultyAssignment[]>(`/api/faculty/me/courses/${courseId}/assignments`),
+    select: (res) => res.data,
+    enabled: !!courseId,
+  });
+}
+
+export function useCreateAssignment() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ courseId, ...data }: CreateAssignmentRequest) =>
+      api.post<FacultyAssignment>(`/api/faculty/me/courses/${courseId}/assignments`, data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["faculty", "course", variables.courseId, "assignments"] });
+    },
+  });
+}
+
+export function useAssignmentSubmissions(courseId: string, assignmentId: string) {
+  return useQuery({
+    queryKey: ["faculty", "course", courseId, "assignment", assignmentId, "submissions"],
+    queryFn: () =>
+      api.get<StudentSubmission[]>(`/api/faculty/me/courses/${courseId}/assignments/${assignmentId}/submissions`),
+    select: (res) => res.data,
+    enabled: !!courseId && !!assignmentId,
+  });
+}
+
+export function useGradeSubmission() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ courseId, submissionId, ...data }: { courseId: string; submissionId: string; score: number; feedback: string }) =>
+      api.patch<StudentSubmission>(`/api/faculty/me/courses/${courseId}/submissions/${submissionId}/grade`, data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["faculty", "course", variables.courseId] });
+    },
+  });
+}
+
+// === Gradebook ===
+export function useCourseGradebook(courseId: string) {
+  return useQuery({
+    queryKey: ["faculty", "course", courseId, "gradebook"],
+    queryFn: () =>
+      api.get<GradebookEntry[]>(`/api/faculty/me/courses/${courseId}/gradebook`),
+    select: (res) => res.data,
+    enabled: !!courseId,
+  });
+}
+
+// === Attendance ===
+export function useCourseAttendance(courseId: string) {
+  return useQuery({
+    queryKey: ["faculty", "course", courseId, "attendance"],
+    queryFn: () =>
+      api.get<AttendanceSession[]>(`/api/faculty/me/courses/${courseId}/attendance`),
+    select: (res) => res.data,
+    enabled: !!courseId,
+  });
+}
+
+export function useCreateAttendanceSession() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ courseId, ...data }: CreateAttendanceSessionRequest) =>
+      api.post<AttendanceSession>(`/api/faculty/me/courses/${courseId}/attendance`, data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["faculty", "course", variables.courseId, "attendance"] });
+    },
+  });
+}
+
+export function useUpdateAttendanceRecords() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ courseId, sessionId, records }: { courseId: string; sessionId: string; records: { studentId: string; status: "present" | "absent" | "late" }[] }) =>
+      api.patch<AttendanceSession>(`/api/faculty/me/courses/${courseId}/attendance/${sessionId}`, { records }),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["faculty", "course", variables.courseId, "attendance"] });
     },
   });
 }

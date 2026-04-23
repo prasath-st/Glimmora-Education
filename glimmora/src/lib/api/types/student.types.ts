@@ -34,7 +34,6 @@ export interface Deadline {
   courseName: string;
   dueDate: string;
   type: "assignment" | "exam" | "project";
-  lmsUrl?: string;
 }
 
 export interface ActivityItem {
@@ -63,8 +62,6 @@ export interface Course extends Identifiable, Timestamps {
   schedule?: string;
   room?: string;
   assignments: Assignment[];
-  lmsUrl?: string;
-  dataSource?: string;
 }
 
 export interface Assignment extends Identifiable {
@@ -77,7 +74,6 @@ export interface Assignment extends Identifiable {
   status: "upcoming" | "submitted" | "graded" | "late" | "missed";
   submittedAt?: string;
   feedback?: string;
-  lmsUrl?: string;
 }
 
 export interface TranscriptSemester {
@@ -300,4 +296,38 @@ export interface NotificationPreferences {
   appealUpdates: boolean;
   credentialIssued: boolean;
   applicationUpdates: boolean;
+}
+
+// === Course Content (LMS - Read Only) ===
+export interface StudentCourseModule {
+  id: string;
+  title: string;
+  description: string;
+  order: number;
+  materials: StudentCourseMaterial[];
+}
+
+export interface StudentCourseMaterial {
+  id: string;
+  title: string;
+  type: "pdf" | "video" | "slides" | "link";
+  url: string;
+  fileSize?: number;
+  duration?: number;
+}
+
+// === Assignment Detail (LMS) ===
+export interface AssignmentDetail extends Assignment {
+  description: string;
+  instructions?: string;
+  rubric: { criterion: string; description: string; maxPoints: number }[];
+  submission?: {
+    id: string;
+    fileName: string;
+    fileUrl: string;
+    submittedAt: string;
+    score?: number;
+    feedback?: string;
+    status: "submitted" | "graded" | "late";
+  };
 }

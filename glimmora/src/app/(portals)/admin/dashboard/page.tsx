@@ -8,9 +8,10 @@ import {
   GraduationCap,
   ShieldCheck,
   ArrowRight,
-  Plug,
+  BookOpen,
+  Calendar,
 } from "lucide-react";
-import { useAdminDashboard, useComplianceDeviations } from "@/lib/hooks/use-admin";
+import { useAdminDashboard, useComplianceDeviations, useSemesters, useAdminCourses } from "@/lib/hooks/use-admin";
 import { PageHeader } from "@/components/shared/misc/page-header";
 import { StatCard } from "@/components/shared/misc/stat-card";
 import { AreaTrend } from "@/components/shared/charts/area-trend";
@@ -34,6 +35,11 @@ const DEPT_COLORS = [
 export default function AdminDashboardPage() {
   const { data, isLoading, isError, refetch } = useAdminDashboard();
   const { data: deviations } = useComplianceDeviations({ status: "unresolved" });
+  const { data: semesters } = useSemesters();
+  const { data: coursesData } = useAdminCourses({ status: "active", pageSize: 1 });
+
+  const activeSemester = semesters?.find((s) => s.status === "active");
+  const activeCourseCount = coursesData?.meta?.total ?? 0;
 
   if (isLoading) {
     return (
@@ -141,7 +147,7 @@ export default function AdminDashboardPage() {
       </div>
 
       <p className="text-xs text-muted-foreground">
-        Data synced from institutional systems. Last updated: {formatRelative(new Date().toISOString())}
+        Last updated: {formatRelative(new Date().toISOString())}
       </p>
 
       {/* Charts Row */}
@@ -160,7 +166,7 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Quick Stats Row */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div className="rounded-xl border border-border bg-card p-6">
           <div className="flex items-center gap-2">
             <Users className="h-4 w-4 text-muted-foreground" />
@@ -174,16 +180,30 @@ export default function AdminDashboardPage() {
         </div>
         <div className="rounded-xl border border-border bg-card p-6">
           <div className="flex items-center gap-2">
-            <Plug className="h-4 w-4 text-muted-foreground" />
+            <BookOpen className="h-4 w-4 text-muted-foreground" />
             <p className="text-sm font-medium text-muted-foreground">
-              Active Integrations
+              Active Courses
             </p>
           </div>
           <p className="mt-2 text-2xl font-semibold tracking-tight">
-            {data.activeIntegrations}{" "}
-            <span className="text-base font-normal text-muted-foreground">
-              / {data.totalIntegrations}
-            </span>
+            {activeCourseCount}
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {activeSemester ? activeSemester.name : "Current semester"}
+          </p>
+        </div>
+        <div className="rounded-xl border border-border bg-card p-6">
+          <div className="flex items-center gap-2">
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+            <p className="text-sm font-medium text-muted-foreground">
+              Current Semester
+            </p>
+          </div>
+          <p className="mt-2 text-2xl font-semibold tracking-tight">
+            {activeSemester?.name ?? "N/A"}
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {activeSemester ? `${activeSemester.courseCount} courses` : "No active semester"}
           </p>
         </div>
       </div>

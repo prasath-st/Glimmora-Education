@@ -11,7 +11,6 @@ import type {
   AdminUser,
   CreateUserRequest,
   RoleDefinition,
-  Integration,
   BudgetOverview,
   AiModel,
   BiasReport,
@@ -21,6 +20,10 @@ import type {
   ReportTemplate,
   GeneratedReport,
   InstitutionSettings,
+  AdminCourse,
+  CreateCourseRequest,
+  Semester,
+  CreateSemesterRequest,
 } from "@/lib/api/types/admin.types";
 import type { PaginationMeta } from "@/lib/api/types/common.types";
 
@@ -137,6 +140,17 @@ export function useCreateUser() {
   });
 }
 
+export function useBulkImportUsers() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { users: { email: string; name: string; role: string; department: string }[] }) =>
+      api.post<{ imported: number; errors: number }>("/api/admin/users/bulk", data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin", "users"] });
+    },
+  });
+}
+
 export function useUpdateUser() {
   const qc = useQueryClient();
   return useMutation({
@@ -166,15 +180,6 @@ export function useTogglePermission() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin", "roles"] });
     },
-  });
-}
-
-// === Integrations ===
-export function useIntegrations() {
-  return useQuery({
-    queryKey: ["admin", "integrations"],
-    queryFn: () => api.get<Integration[]>("/api/admin/integrations"),
-    select: (res) => res.data,
   });
 }
 
@@ -337,6 +342,105 @@ export function useUpdateSettings() {
       api.patch<InstitutionSettings>("/api/admin/settings", data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin", "settings"] });
+    },
+  });
+}
+
+// === Courses ===
+export function useAdminCourses(params?: {
+  search?: string;
+  department?: string;
+  semester?: string;
+  status?: string;
+  page?: number;
+  pageSize?: number;
+}) {
+  const sp = new URLSearchParams();
+  if (params?.search) sp.set("search", params.search);
+  if (params?.department) sp.set("department", params.department);
+  if (params?.semester) sp.set("semester", params.semester);
+  if (params?.status) sp.set("status", params.status);
+  if (params?.page) sp.set("page", String(params.page));
+  if (params?.pageSize) sp.set("pageSize", String(params.pageSize));
+  const qs = sp.toString();
+  return useQuery({
+    queryKey: ["admin", "courses", params],
+    queryFn: () => api.get<AdminCourse[]>(`/api/admin/courses${qs ? `?${qs}` : ""}`),
+    select: (res) => ({ courses: res.data, meta: res.meta as PaginationMeta }),
+  });
+}
+
+export function useAdminCourseDetail(id: string) {
+  return useQuery({
+    queryKey: ["admin", "course", id],
+    queryFn: () => api.get<AdminCourse>(`/api/admin/courses/${id}`),
+    select: (res) => res.data,
+    enabled: !!id,
+  });
+}
+
+export function useCreateCourse() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: CreateCourseRequest) =>
+      api.post<AdminCourse>("/api/admin/courses", data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin", "courses"] });
+      qc.invalidateQueries({ queryKey: ["admin", "semesters"] });
+    },
+  });
+}
+
+export function useUpdateCourse() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...data }: { id: string } & Partial<AdminCourse>) =>
+      api.patch<AdminCourse>(`/api/admin/courses/${id}`, data),
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ["admin", "course", vars.id] });
+      qc.invalidateQueries({ queryKey: ["admin", "courses"] });
+    },
+  });
+}
+
+export function useEnrollStudents() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ courseId, studentIds }: { courseId: string; studentIds: string[] }) =>
+      api.post(`/api/admin/courses/${courseId}/enroll`, { studentIds }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin", "courses"] });
+    },
+  });
+}
+
+// === Semesters ===
+export function useSemesters() {
+  return useQuery({
+    queryKey: ["admin", "semesters"],
+    queryFn: () => api.get<Semester[]>("/api/admin/semesters"),
+    select: (res) => res.data,
+  });
+}
+
+export function useCreateSemester() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: CreateSemesterRequest) =>
+      api.post<Semester>("/api/admin/semesters", data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin", "semesters"] });
+    },
+  });
+}
+
+export function useUpdateSemester() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...data }: { id: string } & Partial<Semester>) =>
+      api.patch<Semester>(`/api/admin/semesters/${id}`, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin", "semesters"] });
     },
   });
 }

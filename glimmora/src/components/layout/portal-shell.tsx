@@ -31,11 +31,11 @@ export function PortalShell({
       <div
         className={cn(
           "transition-all duration-200",
-          sidebarCollapsed ? "lg:pl-[68px]" : "lg:pl-[260px]"
+          sidebarCollapsed ? "lg:pl-[72px]" : "lg:pl-[260px]"
         )}
       >
         <Header />
-        <main className="p-6">{children}</main>
+        <main className="px-6 py-6 lg:px-8">{children}</main>
       </div>
     </div>
   );

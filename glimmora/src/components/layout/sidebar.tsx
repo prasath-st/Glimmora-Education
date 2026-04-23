@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { GraduationCap, ChevronsLeft, ChevronsRight } from "lucide-react";
+import { GraduationCap, PanelLeftClose, PanelLeft } from "lucide-react";
 import { useUiStore } from "@/lib/stores/ui-store";
+import { useAuthStore } from "@/lib/stores/auth-store";
 import { cn } from "@/lib/utils/cn";
 import type { NavSection } from "@/config/navigation";
 
@@ -15,86 +16,137 @@ interface SidebarProps {
 export function Sidebar({ portalName, sections }: SidebarProps) {
   const pathname = usePathname();
   const { sidebarCollapsed, toggleSidebar } = useUiStore();
+  const { user } = useAuthStore();
 
   return (
     <aside
       className={cn(
-        "fixed left-0 top-0 z-30 flex h-screen flex-col border-r border-border bg-card transition-all duration-200",
-        sidebarCollapsed ? "w-[68px]" : "w-[260px]"
+        "fixed left-0 top-0 z-30 flex h-screen flex-col border-r border-border bg-card transition-[width] duration-200",
+        sidebarCollapsed ? "w-[72px]" : "w-[260px]",
       )}
     >
-      {/* Logo */}
-      <div className="flex h-16 items-center gap-3 border-b border-border px-4">
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-portal-accent">
-          <GraduationCap className="h-4.5 w-4.5 text-portal-accent-foreground" />
+      {/* Brand block */}
+      <div
+        className={cn(
+          "flex h-16 items-center gap-2.5 px-4",
+          sidebarCollapsed && "justify-center px-0",
+        )}
+      >
+        <div
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
+          style={{
+            background:
+              "linear-gradient(135deg, #7B5EE8 0%, #4A3ABA 55%, #302586 100%)",
+          }}
+        >
+          <GraduationCap className="h-4 w-4 text-white" strokeWidth={2.4} />
         </div>
         {!sidebarCollapsed && (
-          <div className="flex flex-col overflow-hidden">
-            <span className="truncate text-sm font-semibold">Glimmora</span>
-            <span className="truncate text-xs text-muted-foreground">
-              {portalName}
+          <div className="flex min-w-0 flex-col leading-tight">
+            <span className="truncate text-[14.5px] font-semibold tracking-tight text-foreground">
+              Glimmora
+            </span>
+            <span className="truncate text-[11px] text-muted-foreground">
+              {portalName.replace(" Portal", "")}
             </span>
           </div>
         )}
       </div>
 
+      {/* Divider */}
+      <div className="mx-4 border-t border-border/70" />
+
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto px-3 py-4">
-        <div className="space-y-6">
+        <div className="space-y-5">
           {sections.map((section) => (
             <div key={section.label}>
               {!sidebarCollapsed && (
-                <p className="mb-2 px-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                <p className="mb-1.5 px-2.5 text-[10.5px] font-semibold uppercase tracking-[0.1em] text-muted-foreground/70">
                   {section.label}
                 </p>
               )}
-              <div className="space-y-0.5">
+              <ul className="flex flex-col gap-0.5">
                 {section.items.map((item) => {
                   const isActive =
                     pathname === item.href ||
-                    (pathname.startsWith(item.href) &&
-                      item.href !== pathname.split("/").slice(0, 3).join("/") + "/dashboard" &&
-                      item.href.split("/").length > 3);
-                  const isExactActive = pathname === item.href;
-
+                    (pathname.startsWith(item.href + "/") &&
+                      !item.href.endsWith("/dashboard"));
                   const Icon = item.icon;
 
                   return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      title={sidebarCollapsed ? item.label : undefined}
-                      className={cn(
-                        "flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm font-medium transition-colors",
-                        isExactActive || isActive
-                          ? "bg-portal-accent-light text-portal-accent"
-                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                      )}
-                    >
-                      <Icon className="h-4.5 w-4.5 shrink-0" />
-                      {!sidebarCollapsed && (
-                        <span className="truncate">{item.label}</span>
-                      )}
-                    </Link>
+                    <li key={item.href}>
+                      <Link
+                        href={item.href}
+                        title={sidebarCollapsed ? item.label : undefined}
+                        className={cn(
+                          "group flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] font-medium transition-colors",
+                          sidebarCollapsed && "justify-center px-0",
+                          isActive
+                            ? "bg-primary-50 text-primary-700"
+                            : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+                        )}
+                      >
+                        <Icon
+                          className={cn(
+                            "h-[17px] w-[17px] shrink-0 transition-colors",
+                            isActive
+                              ? "text-primary-600"
+                              : "text-muted-foreground/70 group-hover:text-foreground",
+                          )}
+                          strokeWidth={isActive ? 2.2 : 1.9}
+                        />
+                        {!sidebarCollapsed && (
+                          <span className="truncate">{item.label}</span>
+                        )}
+                      </Link>
+                    </li>
                   );
                 })}
-              </div>
+              </ul>
             </div>
           ))}
         </div>
       </nav>
 
-      {/* Collapse toggle */}
+      {/* Footer: profile + collapse toggle */}
       <div className="border-t border-border p-3">
+        {!sidebarCollapsed && user && (
+          <div className="mb-2 flex items-center gap-2.5 rounded-lg px-2 py-2">
+            <div
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[12px] font-semibold text-white"
+              style={{
+                background: "linear-gradient(135deg, #7B5EE8 0%, #4A3ABA 100%)",
+              }}
+            >
+              {user.name?.charAt(0) || "?"}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[12.5px] font-semibold leading-tight">
+                {user.name}
+              </p>
+              <p className="truncate text-[11px] leading-tight text-muted-foreground">
+                {user.email}
+              </p>
+            </div>
+          </div>
+        )}
+
         <button
           onClick={toggleSidebar}
-          className="flex w-full items-center justify-center gap-2 rounded-lg px-2.5 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          className={cn(
+            "flex items-center gap-2 rounded-lg text-[12px] font-medium text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground",
+            sidebarCollapsed
+              ? "mx-auto h-9 w-9 justify-center"
+              : "w-full px-2.5 py-2",
+          )}
+          title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
           {sidebarCollapsed ? (
-            <ChevronsRight className="h-4 w-4" />
+            <PanelLeft className="h-4 w-4" />
           ) : (
             <>
-              <ChevronsLeft className="h-4 w-4" />
+              <PanelLeftClose className="h-3.5 w-3.5" />
               <span>Collapse</span>
             </>
           )}

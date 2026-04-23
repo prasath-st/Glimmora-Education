@@ -1,10 +1,10 @@
 export type PortalRole =
+  | "super_admin"
   | "student"
   | "faculty"
   | "admin"
   | "research"
-  | "placement"
-  | "ministry";
+  | "placement";
 
 export interface Timestamps {
   createdAt: string;

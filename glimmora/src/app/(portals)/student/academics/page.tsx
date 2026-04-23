@@ -66,9 +66,6 @@ export default function StudentAcademicsPage() {
             <SummaryCell label="Credits Attempted" value={`${summary.creditsAttempted}`} />
             <SummaryCell label="Current Semester GPA" value={formatGpa(summary.currentSemesterGpa)} />
           </div>
-          <p className="text-xs text-muted-foreground">
-            Source: Canvas LMS — Synced from your institution&apos;s records
-          </p>
         </div>
       )}
 

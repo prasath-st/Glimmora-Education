@@ -17,6 +17,8 @@ import type {
   NotificationPreferences,
   Notification,
   DismissReason,
+  StudentCourseModule,
+  AssignmentDetail,
 } from "@/lib/api/types/student.types";
 import type { PaginationMeta } from "@/lib/api/types/common.types";
 import {
@@ -36,6 +38,8 @@ import {
   generateStudentProfile,
   generateNotificationPreferences,
   generateNotifications,
+  generateStudentCourseModules,
+  generateAssignmentDetail,
 } from "@/mocks/data/generators/student.generator";
 
 // ─── Generate data once at module level ───────────────────────────────────────
@@ -58,6 +62,8 @@ let notificationPrefs: NotificationPreferences =
   generateNotificationPreferences();
 let notifications: Notification[] = generateNotifications(8);
 const dismissedAlertIds: Set<string> = new Set();
+const courseModulesCache: Map<string, StudentCourseModule[]> = new Map();
+const assignmentDetailCache: Map<string, AssignmentDetail> = new Map();
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -830,6 +836,80 @@ export const studentHandlers = [
         : a
     );
     return HttpResponse.json({ data: appeals.find((a) => a.id === params.appealId) });
+  }),
+
+  // ── Course Modules (LMS Content) ─────────────────────────────────────────
+  http.get("/api/students/me/courses/:courseId/modules", async ({ params }) => {
+    await randomDelay();
+    const course = courses.find((c) => c.id === params.courseId);
+    if (!course) return notFound("Course");
+
+    // Cache modules per course so repeated fetches return consistent data
+    if (!courseModulesCache.has(course.id)) {
+      courseModulesCache.set(course.id, generateStudentCourseModules(course.id));
+    }
+    return HttpResponse.json({ data: courseModulesCache.get(course.id) });
+  }),
+
+  // ── Assignment Detail (LMS) ────────────────────────────────────────────
+  http.get("/api/students/me/courses/:courseId/assignments/:assignmentId", async ({ params }) => {
+    await randomDelay();
+    const course = courses.find((c) => c.id === params.courseId);
+    if (!course) return notFound("Course");
+
+    const assignment = course.assignments.find((a) => a.id === params.assignmentId);
+    if (!assignment) return notFound("Assignment");
+
+    // Cache detail per assignment so repeated fetches return consistent data
+    const cacheKey = `${params.courseId}_${params.assignmentId}`;
+    if (!assignmentDetailCache.has(cacheKey)) {
+      assignmentDetailCache.set(cacheKey, generateAssignmentDetail(assignment));
+    }
+    return HttpResponse.json({ data: assignmentDetailCache.get(cacheKey) });
+  }),
+
+  // ── Submit Assignment (LMS) ────────────────────────────────────────────
+  http.post("/api/students/me/courses/:courseId/assignments/:assignmentId/submit", async ({ params }) => {
+    await randomDelay();
+    const course = courses.find((c) => c.id === params.courseId);
+    if (!course) return notFound("Course");
+
+    const assignmentIdx = course.assignments.findIndex((a) => a.id === params.assignmentId);
+    if (assignmentIdx === -1) return notFound("Assignment");
+
+    const assignment = course.assignments[assignmentIdx];
+    if (assignment.status === "graded") {
+      return validationError({ status: ["Cannot resubmit a graded assignment"] });
+    }
+
+    const nowIso = new Date().toISOString();
+
+    // Update the assignment status
+    course.assignments[assignmentIdx] = {
+      ...assignment,
+      status: "submitted",
+      submittedAt: nowIso,
+    };
+
+    // Update the cached detail
+    const cacheKey = `${params.courseId}_${params.assignmentId}`;
+    const cachedDetail = assignmentDetailCache.get(cacheKey);
+    if (cachedDetail) {
+      assignmentDetailCache.set(cacheKey, {
+        ...cachedDetail,
+        status: "submitted",
+        submittedAt: nowIso,
+        submission: {
+          id: `sub_${Date.now()}`,
+          fileName: "assignment_submission.pdf",
+          fileUrl: `https://files.glimmora.dev/submissions/${Date.now()}.pdf`,
+          submittedAt: nowIso,
+          status: "submitted",
+        },
+      });
+    }
+
+    return HttpResponse.json({ data: { success: true } });
   }),
 
   // ── Add Self-Assessed Skill ──────────────────────────────────────────────
