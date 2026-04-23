@@ -26,7 +26,7 @@ export const FormField = forwardRef<HTMLInputElement, FormFieldProps>(
           className={cn(
             "flex h-10 w-full rounded-lg border bg-background px-3 text-sm transition-colors",
             "placeholder:text-muted-foreground",
-            "focus:outline-none focus:ring-2 focus:ring-portal-accent focus:ring-offset-1",
+            "focus:outline-none focus:ring-1 focus:ring-primary-400",
             "disabled:cursor-not-allowed disabled:opacity-50",
             error
               ? "border-danger focus:ring-danger"
@@ -78,7 +78,7 @@ export const FormTextarea = forwardRef<HTMLTextAreaElement, FormTextareaProps>(
           className={cn(
             "flex min-h-[80px] w-full rounded-lg border bg-background px-3 py-2 text-sm transition-colors",
             "placeholder:text-muted-foreground",
-            "focus:outline-none focus:ring-2 focus:ring-portal-accent focus:ring-offset-1",
+            "focus:outline-none focus:ring-1 focus:ring-primary-400",
             "disabled:cursor-not-allowed disabled:opacity-50",
             error
               ? "border-danger focus:ring-danger"
@@ -129,7 +129,7 @@ export const FormSelect = forwardRef<HTMLSelectElement, FormSelectProps>(
           id={fieldId}
           className={cn(
             "flex h-10 w-full rounded-lg border bg-background px-3 text-sm transition-colors appearance-none",
-            "focus:outline-none focus:ring-2 focus:ring-portal-accent focus:ring-offset-1",
+            "focus:outline-none focus:ring-1 focus:ring-primary-400",
             "disabled:cursor-not-allowed disabled:opacity-50",
             error
               ? "border-danger focus:ring-danger"

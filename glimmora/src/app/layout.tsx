@@ -39,7 +39,8 @@ export default function RootLayout({
               {children}
               <DevRoleSwitcher />
               <Toaster
-                position="bottom-right"
+                position="top-right"
+                closeButton
                 toastOptions={{
                   className: "bg-card text-card-foreground border-border",
                 }}
