@@ -3,7 +3,6 @@ export type PortalRole =
   | "student"
   | "faculty"
   | "admin"
-  | "research"
   | "placement";
 
 export interface Timestamps {

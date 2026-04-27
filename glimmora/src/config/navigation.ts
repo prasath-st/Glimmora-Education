@@ -188,37 +188,6 @@ export const PORTAL_NAVIGATION: Record<PortalRole, NavSection[]> = {
     },
   ],
 
-  research: [
-    {
-      label: "Overview",
-      items: [
-        { label: "Dashboard", href: "/research/dashboard", icon: LayoutDashboard },
-        { label: "Performance", href: "/research/performance", icon: TrendingUp },
-      ],
-    },
-    {
-      label: "Funding",
-      items: [
-        { label: "Grant Discovery", href: "/research/grants", icon: Search },
-        { label: "My Grants", href: "/research/grants/my-grants", icon: ClipboardList },
-      ],
-    },
-    {
-      label: "Network",
-      items: [
-        { label: "Collaborations", href: "/research/collaborations", icon: Network },
-        { label: "Publications", href: "/research/publications", icon: FileText },
-        { label: "Topic Trends", href: "/research/topics", icon: TrendingUp },
-      ],
-    },
-    {
-      label: "Account",
-      items: [
-        { label: "Settings", href: "/research/settings", icon: Settings },
-      ],
-    },
-  ],
-
   placement: [
     {
       label: "Overview",

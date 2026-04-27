@@ -25,9 +25,7 @@ const ROLES = [
   { value: "student", label: "Student" },
   { value: "faculty", label: "Faculty" },
   { value: "admin", label: "Admin" },
-  { value: "research", label: "Research" },
   { value: "placement", label: "Placement" },
-  { value: "ministry", label: "Ministry" },
 ] as const;
 
 const STATUSES = ["active", "inactive", "suspended"] as const;

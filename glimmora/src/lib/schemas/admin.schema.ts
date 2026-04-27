@@ -10,7 +10,7 @@ export const createUserSchema = z.object({
     .min(1, "Name is required")
     .min(2, "Name must be at least 2 characters"),
   role: z.enum(
-    ["student", "faculty", "admin", "research", "placement", "ministry"],
+    ["student", "faculty", "admin", "placement"],
     { error: "Please select a role" }
   ),
   department: z.string().min(1, "Department is required"),
@@ -21,7 +21,7 @@ export type CreateUserFormData = z.infer<typeof createUserSchema>;
 export const updateUserSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters").optional(),
   role: z
-    .enum(["student", "faculty", "admin", "research", "placement", "ministry"])
+    .enum(["student", "faculty", "admin", "placement"])
     .optional(),
   department: z.string().min(1).optional(),
   status: z.enum(["active", "inactive", "suspended"]).optional(),

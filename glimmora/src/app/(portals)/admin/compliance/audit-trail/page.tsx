@@ -19,9 +19,7 @@ const ROLE_OPTIONS = [
   { value: "student", label: "Student" },
   { value: "faculty", label: "Faculty" },
   { value: "admin", label: "Admin" },
-  { value: "research", label: "Research" },
   { value: "placement", label: "Placement" },
-  { value: "ministry", label: "Ministry" },
 ];
 
 const ACTION_OPTIONS = [

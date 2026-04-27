@@ -137,9 +137,7 @@ const ROLE_DISTRIBUTION: PortalRole[] = [
   ...Array(25).fill("student"),
   ...Array(15).fill("faculty"),
   ...Array(8).fill("admin"),
-  ...Array(5).fill("research"),
   ...Array(4).fill("placement"),
-  ...Array(3).fill("ministry"),
 ] as PortalRole[];
 
 const AI_MODEL_DEFINITIONS = [
@@ -396,7 +394,7 @@ export function generateAuditLog(count: number = 100): AuditLogEntry[] {
     return {
       userId: id("usr"),
       userName: `${firstName} ${lastName}`,
-      userRole: pick(["admin", "faculty", "student", "research", "placement", "ministry"] as PortalRole[]),
+      userRole: pick(["admin", "faculty", "student", "placement"] as PortalRole[]),
     };
   });
 
@@ -409,7 +407,7 @@ export function generateAuditLog(count: number = 100): AuditLogEntry[] {
     const detailMap: Record<string, string> = {
       login: `${outcome === "success" ? "Successful" : "Failed"} login attempt from ${faker.internet.ip()}`,
       data_export: `Exported ${faker.number.int({ min: 50, max: 5000 })} ${resource} records to CSV`,
-      role_change: `Changed role from ${pick(["student", "faculty"] as PortalRole[])} to ${pick(["admin", "research"] as PortalRole[])}`,
+      role_change: `Changed role from ${pick(["student", "faculty"] as PortalRole[])} to ${pick(["admin", "placement"] as PortalRole[])}`,
       user_create: `Created new ${pick(["student", "faculty", "admin"] as PortalRole[])} account`,
       config_update: `Updated ${resource} configuration settings`,
       report_generate: `Generated ${pick(["enrollment", "compliance", "financial", "performance"])} report`,
@@ -467,9 +465,7 @@ export function generateRoles(): RoleDefinition[] {
     { role: "admin", label: "Administrator", description: "Full system access with configuration and user management capabilities.", userCount: 8 },
     { role: "faculty", label: "Faculty", description: "Course management, student advising, and research collaboration tools.", userCount: 15 },
     { role: "student", label: "Student", description: "Access to personal academic records, courses, career services, and credentials.", userCount: 25 },
-    { role: "research", label: "Research Coordinator", description: "Research project management, grant tracking, and publication oversight.", userCount: 5 },
     { role: "placement", label: "Placement Officer", description: "Job posting management, employer relations, and student placement tracking.", userCount: 4 },
-    { role: "ministry", label: "Ministry Official", description: "Read-only access to institutional analytics, compliance reports, and aggregate data.", userCount: 3 },
   ];
 
   const permissionsByRole: Record<PortalRole, Record<string, string[]>> = {
@@ -494,26 +490,12 @@ export function generateRoles(): RoleDefinition[] {
       AI: [], Reports: ["view"],
       Settings: ["view"],
     },
-    research: {
-      Dashboard: ["view"], Students: ["view"],
-      Courses: ["view"], Research: ["view", "create", "edit", "delete", "export"],
-      Compliance: ["view"], Users: [],
-      AI: ["view"], Reports: ["view", "create", "export"],
-      Settings: ["view"],
-    },
     placement: {
       Dashboard: ["view"], Students: ["view", "export"],
       Courses: ["view"], Research: [],
       Compliance: [], Users: [],
       AI: ["view"], Reports: ["view", "create", "export"],
       Settings: ["view"],
-    },
-    ministry: {
-      Dashboard: ["view"], Students: ["view", "export"],
-      Courses: ["view"], Research: ["view"],
-      Compliance: ["view", "export"], Users: [],
-      AI: ["view"], Reports: ["view", "export"],
-      Settings: [],
     },
     super_admin: {
       Dashboard: ["view"], Students: ["view", "create", "edit", "delete", "export"],

@@ -11,7 +11,6 @@ const DEV_ACCOUNTS: Record<PortalRole, { email: string; password: string; name: 
   student: { email: "student@glimmora.dev", password: "glimmora123", name: "Alex Rivera" },
   faculty: { email: "faculty@glimmora.dev", password: "glimmora123", name: "Dr. Sarah Chen" },
   admin: { email: "admin@glimmora.dev", password: "glimmora123", name: "James Mitchell" },
-  research: { email: "research@glimmora.dev", password: "glimmora123", name: "Dr. Priya Patel" },
   placement: { email: "placement@glimmora.dev", password: "glimmora123", name: "Maria Santos" },
   super_admin: { email: "superadmin@glimmora.dev", password: "glimmora123", name: "Platform Admin" },
 };

@@ -27,9 +27,7 @@ const ROLE_OPTIONS = [
   { value: "student", label: "Student" },
   { value: "faculty", label: "Faculty" },
   { value: "admin", label: "Admin" },
-  { value: "research", label: "Research" },
   { value: "placement", label: "Placement" },
-  { value: "ministry", label: "Ministry" },
 ];
 
 const STATUS_OPTIONS = [
@@ -238,7 +236,7 @@ function parseCSV(text: string): ParsedRow[] {
     return [];
   }
 
-  const validRoles = ["student", "faculty", "admin", "research", "placement", "ministry"];
+  const validRoles = ["student", "faculty", "admin", "placement"];
 
   return lines.slice(1).map((line) => {
     const cols = line.split(",").map((c) => c.trim());

@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Glimmora — Academic Structure: Current Problems & Proposed Solution</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: #f8f9fc; color: #1a1a2e; }
+
+  .header { background: linear-gradient(135deg, #4a3aba 0%, #302586 100%); color: white; padding: 48px 40px; text-align: center; }
+  .header h1 { font-size: 32px; font-weight: 800; }
+  .header p { margin-top: 10px; font-size: 16px; opacity: 0.8; max-width: 600px; margin-left: auto; margin-right: auto; }
+
+  .container { max-width: 1200px; margin: 0 auto; padding: 48px 24px; }
+
+  .section-title { font-size: 26px; font-weight: 800; margin-bottom: 8px; }
+  .section-subtitle { font-size: 15px; color: #666; margin-bottom: 32px; line-height: 1.6; }
+  .section-tag { display: inline-block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; padding: 4px 12px; border-radius: 20px; margin-bottom: 16px; }
+  .tag-problem { background: #fce4ec; color: #c62828; }
+  .tag-solution { background: #e8f5e9; color: #2e7d32; }
+  .tag-info { background: #e8eaf6; color: #283593; }
+
+  /* Flow Diagram Styles */
+  .flow-container { background: white; border-radius: 16px; padding: 40px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); margin-bottom: 48px; }
+
+  .hierarchy { display: flex; flex-direction: column; align-items: center; gap: 0; }
+  .h-level { display: flex; justify-content: center; gap: 16px; flex-wrap: wrap; position: relative; }
+  .h-connector { width: 2px; height: 32px; background: #ddd; margin: 0 auto; }
+  .h-connector-branch { display: flex; justify-content: center; align-items: flex-end; gap: 0; height: 32px; position: relative; }
+  .h-connector-branch::before { content: ''; position: absolute; top: 0; left: 50%; width: 2px; height: 16px; background: #ddd; }
+  .h-connector-branch::after { content: ''; position: absolute; top: 16px; left: 10%; right: 10%; height: 2px; background: #ddd; }
+
+  .h-node { padding: 14px 24px; border-radius: 12px; font-size: 14px; font-weight: 600; text-align: center; position: relative; min-width: 160px; }
+  .h-node small { display: block; font-size: 11px; font-weight: 400; margin-top: 4px; opacity: 0.7; }
+  .h-node.root { background: linear-gradient(135deg, #4a3aba, #6366f1); color: white; font-size: 16px; padding: 16px 32px; }
+  .h-node.l1 { background: #ede9fe; color: #4a3aba; border: 2px solid #c4b5fd; }
+  .h-node.l2 { background: #ecfdf5; color: #065f46; border: 2px solid #a7f3d0; }
+  .h-node.l3 { background: #fef3c7; color: #92400e; border: 2px solid #fcd34d; }
+  .h-node.l4 { background: #e0f2fe; color: #0369a1; border: 2px solid #7dd3fc; }
+  .h-node.problem { background: #fef2f2; color: #991b1b; border: 2px solid #fca5a5; }
+  .h-node.missing { background: #f5f5f5; color: #999; border: 2px dashed #ccc; }
+
+  /* Problem Cards */
+  .problems-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-top: 24px; }
+  .problem-card { background: white; border-radius: 12px; padding: 24px; border-left: 4px solid #ef4444; box-shadow: 0 2px 12px rgba(0,0,0,0.05); }
+  .problem-card h3 { font-size: 15px; font-weight: 700; color: #991b1b; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+  .problem-card p { font-size: 13px; color: #555; line-height: 1.6; }
+  .problem-card .example { margin-top: 10px; font-size: 12px; background: #fef2f2; padding: 10px 14px; border-radius: 8px; color: #7f1d1d; font-style: italic; }
+
+  /* Solution Cards */
+  .solution-card { background: white; border-radius: 12px; padding: 24px; border-left: 4px solid #22c55e; box-shadow: 0 2px 12px rgba(0,0,0,0.05); }
+  .solution-card h3 { font-size: 15px; font-weight: 700; color: #166534; margin-bottom: 8px; }
+  .solution-card p { font-size: 13px; color: #555; line-height: 1.6; }
+
+  /* Comparison Table */
+  .compare-table { width: 100%; border-collapse: separate; border-spacing: 0; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,0.06); margin-top: 24px; }
+  .compare-table th { padding: 14px 20px; text-align: left; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
+  .compare-table th.current { background: #fef2f2; color: #991b1b; }
+  .compare-table th.proposed { background: #ecfdf5; color: #166534; }
+  .compare-table th.aspect { background: #f1f5f9; color: #475569; }
+  .compare-table td { padding: 14px 20px; font-size: 13px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+  .compare-table tr:last-child td { border-bottom: none; }
+  .compare-table .bad { color: #dc2626; }
+  .compare-table .good { color: #16a34a; }
+
+  /* Flow Steps */
+  .flow-steps { display: flex; flex-direction: column; gap: 0; }
+  .flow-step-row { display: flex; gap: 20px; align-items: flex-start; }
+  .flow-step-num { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 800; color: white; flex-shrink: 0; }
+  .flow-step-line { width: 2px; height: 24px; background: #e0e0e0; margin: 0 auto; margin-left: 19px; }
+  .flow-step-content { flex: 1; background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.05); }
+  .flow-step-content h3 { font-size: 15px; font-weight: 700; margin-bottom: 6px; }
+  .flow-step-content p { font-size: 13px; color: #555; line-height: 1.5; }
+  .flow-step-content .fields { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .flow-step-content .field { font-size: 11px; padding: 4px 10px; border-radius: 6px; background: #f0edff; color: #4a3aba; font-weight: 500; }
+  .flow-step-content .field.new { background: #ecfdf5; color: #166534; }
+
+  /* Navigation Compare */
+  .nav-compare { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 24px; }
+  .nav-col { background: white; border-radius: 12px; padding: 24px; box-shadow: 0 2px 12px rgba(0,0,0,0.05); }
+  .nav-col h3 { font-size: 14px; font-weight: 700; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+  .nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 4px; }
+  .nav-item .dot { width: 8px; height: 8px; border-radius: 50%; }
+  .nav-item.strike { text-decoration: line-through; opacity: 0.4; }
+  .nav-item.new { background: #ecfdf5; font-weight: 600; }
+  .nav-item.renamed { background: #fef3c7; }
+
+  /* Phase Badge */
+  .phase { display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 10px; margin-left: 8px; }
+  .phase.mvp { background: #dbeafe; color: #1d4ed8; }
+  .phase.p2 { background: #f3f4f6; color: #6b7280; }
+
+  /* Divider */
+  .divider { height: 1px; background: linear-gradient(to right, transparent, #ddd, transparent); margin: 48px 0; }
+
+  @media (max-width: 768px) {
+    .problems-grid { grid-template-columns: 1fr; }
+    .nav-compare { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Academic Structure Proposal</h1>
+  <p>Current problems with the University Admin flow and the proposed solution for MVP</p>
+</div>
+
+<div class="container">
+
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <!-- PART 1: CURRENT PROBLEMS -->
+  <!-- ══════════════════════════════════════════════════════════ -->
+
+  <div class="section-tag tag-problem">Part 1</div>
+  <h2 class="section-title">Current Structure & Problems</h2>
+  <p class="section-subtitle">The existing data model is flat — entities are disconnected. There's no hierarchy linking academic years, semesters, programs, and courses together.</p>
+
+  <!-- Current Hierarchy -->
+  <div class="flow-container">
+    <h3 style="font-size:16px; font-weight:700; margin-bottom:24px; text-align:center; color:#991b1b;">Current Data Model (Flat & Disconnected)</h3>
+    <div class="hierarchy">
+      <div class="h-level">
+        <div class="h-node root">University Admin</div>
+      </div>
+      <div class="h-connector"></div>
+      <div class="h-level">
+        <div class="h-node l1">Semesters<small>Created standalone</small></div>
+        <div class="h-node l1">Courses<small>Linked to 1 semester</small></div>
+        <div class="h-node l1">Users<small>Name, Email, Role, Dept</small></div>
+      </div>
+      <div style="height:16px"></div>
+      <div class="h-level">
+        <div class="h-node missing">No Academic Year</div>
+        <div class="h-node missing">No Program / Degree</div>
+        <div class="h-node missing">No Batch Concept</div>
+        <div class="h-node missing">No Student ID</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Problem Cards -->
+  <div class="problems-grid">
+    <div class="problem-card">
+      <h3>&#x26A0; Semesters Float Without Context</h3>
+      <p>Semesters are created standalone with no parent academic year. The admin doesn't know which year a semester belongs to or how semesters relate to each other.</p>
+      <div class="example">Example: "Spring 2026" exists but — is it Year 1 or Year 3 of a student's program? No way to tell.</div>
+    </div>
+    <div class="problem-card">
+      <h3>&#x26A0; No Program / Degree Concept</h3>
+      <p>There's no way to represent "BSc Computer Science" or "BTech Electronics." Students and courses exist without knowing which degree program they belong to.</p>
+      <div class="example">Example: A student is in "Computer Science department" but — are they doing BSc, MSc, or BTech? No way to distinguish.</div>
+    </div>
+    <div class="problem-card">
+      <h3>&#x26A0; Course Locked to Single Semester</h3>
+      <p>A course is linked to one specific semester. The same course taught next year to a new batch requires creating a duplicate entry — losing history.</p>
+      <div class="example">Example: "Python 101" for 2024 batch and "Python 101" for 2025 batch are two separate unrelated courses.</div>
+    </div>
+    <div class="problem-card">
+      <h3>&#x26A0; Student Onboarding Has No Academic Context</h3>
+      <p>Creating a user only captures Name, Email, Role, Department. No Student ID, no program enrollment, no admission year, no current semester tracking.</p>
+      <div class="example">Example: Admin creates "Rahul Sharma, Student, CS Dept" but — which batch? Which semester? Which program? All unknown.</div>
+    </div>
+    <div class="problem-card">
+      <h3>&#x26A0; No Batch Identity</h3>
+      <p>There's no way to group students by admission year. A 2024 batch student and a 2025 batch student look identical in the system.</p>
+      <div class="example">Example: Both Rahul (2024 admission) and Priya (2025 admission) show as "CS Department Student" with no distinction.</div>
+    </div>
+    <div class="problem-card">
+      <h3>&#x26A0; Faculty Form = Student Form</h3>
+      <p>The create user form shows the same fields regardless of role. Faculty doesn't need Student ID or Academic Year, but they see them. Students don't need Designation, but they see it.</p>
+      <div class="example">Example: Role is selected last, so the form shows all fields upfront — confusing the admin.</div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <!-- PART 2: PROPOSED SOLUTION -->
+  <!-- ══════════════════════════════════════════════════════════ -->
+
+  <div class="section-tag tag-solution">Part 2</div>
+  <h2 class="section-title">Proposed Solution — Hierarchical Academic Structure</h2>
+  <p class="section-subtitle">A connected hierarchy where Academic Years contain Semesters, Programs define Degrees, and Courses are offered per semester with proper student mapping.</p>
+
+  <!-- Proposed Hierarchy -->
+  <div class="flow-container">
+    <h3 style="font-size:16px; font-weight:700; margin-bottom:32px; text-align:center; color:#166534;">Proposed Data Model (Connected Hierarchy)</h3>
+    <div class="hierarchy">
+      <div class="h-level">
+        <div class="h-node root">University Admin</div>
+      </div>
+      <div class="h-connector"></div>
+      <div class="h-level" style="gap:40px">
+        <div class="h-node l1" style="min-width:200px">
+          Programs & Degrees<small>BSc CS, BTech ECE, MSc Physics...</small>
+        </div>
+        <div class="h-node l2" style="min-width:200px">
+          Academic Calendar<small>Academic Years → Semesters</small>
+        </div>
+        <div class="h-node l3" style="min-width:200px">
+          Course Catalog<small>Master courses linked to Programs</small>
+        </div>
+      </div>
+      <div class="h-connector"></div>
+      <div class="h-level" style="gap: 24px">
+        <div class="h-node l1" style="min-width:140px">
+          Program<small>Duration, Total Semesters</small>
+        </div>
+        <div class="h-node l2" style="min-width:140px">
+          Academic Year<small>2024-2025</small>
+        </div>
+        <div class="h-node l2" style="min-width:140px">
+          Semester 1 & 2<small>Auto-created</small>
+        </div>
+        <div class="h-node l3" style="min-width:140px">
+          Course Master<small>Code, Name, Credits</small>
+        </div>
+      </div>
+      <div class="h-connector"></div>
+      <div class="h-level" style="gap: 24px">
+        <div class="h-node l4" style="min-width:220px">
+          Course Offering<small>Course + Academic Year + Semester<br>+ Faculty + Capacity</small>
+        </div>
+        <div class="h-node l4" style="min-width:220px">
+          Student Enrollment<small>Student → Program → Batch Year<br>→ Current Semester → Courses</small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- How Each Entity Works -->
+  <h3 style="font-size:18px; font-weight:700; margin-bottom:20px;">How Each Entity Works</h3>
+
+  <div class="problems-grid">
+    <div class="solution-card">
+      <h3>Programs & Degrees</h3>
+      <p><strong>What:</strong> Master data. Created once per degree offered by the university.</p>
+      <p style="margin-top:8px"><strong>Fields:</strong> Program Name (BSc Computer Science), Department, Duration (3 years), Total Semesters (6), Degree Type (UG/PG/Diploma)</p>
+      <p style="margin-top:8px"><strong>Managed by:</strong> University Admin</p>
+      <p style="margin-top:8px"><strong>Changes rarely.</strong> Only when university adds/removes degree programs.</p>
+    </div>
+    <div class="solution-card">
+      <h3>Academic Years & Semesters</h3>
+      <p><strong>What:</strong> Time structure. Admin creates an Academic Year → system auto-creates 2 semesters under it.</p>
+      <p style="margin-top:8px"><strong>Fields:</strong> Year Name (2024-2025), Start Date, End Date, Status (Upcoming/Active/Completed)</p>
+      <p style="margin-top:8px"><strong>Semesters auto-created:</strong> Sem 1 (Jun-Nov), Sem 2 (Dec-May) — dates editable.</p>
+      <p style="margin-top:8px"><strong>Created annually.</strong> One academic year per real year.</p>
+    </div>
+    <div class="solution-card">
+      <h3>Course Catalog (Master)</h3>
+      <p><strong>What:</strong> Course definitions. Code, name, credits, linked to a Program + semester number.</p>
+      <p style="margin-top:8px"><strong>Fields:</strong> Course Code (CS301), Name (Data Structures), Credits (4), Program (BSc CS), Semester Number (3)</p>
+      <p style="margin-top:8px"><strong>Reusable:</strong> Same course used across academic years. Content updated by faculty.</p>
+    </div>
+    <div class="solution-card">
+      <h3>Course Offering (Per Year)</h3>
+      <p><strong>What:</strong> A specific instance of a course being taught in a specific semester of a specific year.</p>
+      <p style="margin-top:8px"><strong>Fields:</strong> Course (CS301) + Academic Year (2025-2026) + Semester (1) + Faculty (Dr. Sharma) + Max Capacity (120)</p>
+      <p style="margin-top:8px"><strong>Students enrolled here.</strong> Different offering each year = different students, same course.</p>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <!-- PART 3: USER ONBOARDING FLOWS -->
+  <!-- ══════════════════════════════════════════════════════════ -->
+
+  <div class="section-tag tag-info">Part 3</div>
+  <h2 class="section-title">Redesigned User Onboarding Flows</h2>
+  <p class="section-subtitle">Role-first form design: select role at the top, fields change dynamically based on selection.</p>
+
+  <!-- Student Flow -->
+  <div class="flow-container">
+    <h3 style="font-size:16px; font-weight:700; margin-bottom:24px;">Student Onboarding Flow</h3>
+    <div class="flow-steps">
+      <div class="flow-step-row">
+        <div class="flow-step-num" style="background:#4a3aba">1</div>
+        <div class="flow-step-content">
+          <h3>Select Role</h3>
+          <p>Admin selects <strong>"Student"</strong> from the role dropdown (first field). Form fields update dynamically.</p>
+          <div class="fields">
+            <span class="field new">Role: Student</span>
+          </div>
+        </div>
+      </div>
+      <div class="flow-step-line"></div>
+      <div class="flow-step-row">
+        <div class="flow-step-num" style="background:#4a3aba">2</div>
+        <div class="flow-step-content">
+          <h3>Personal Information</h3>
+          <p>Basic identity fields for the student.</p>
+          <div class="fields">
+            <span class="field">First Name</span>
+            <span class="field">Last Name</span>
+            <span class="field">Email</span>
+            <span class="field new">Student ID</span>
+          </div>
+        </div>
+      </div>
+      <div class="flow-step-line"></div>
+      <div class="flow-step-row">
+        <div class="flow-step-num" style="background:#4a3aba">3</div>
+        <div class="flow-step-content">
+          <h3>Academic Information</h3>
+          <p>Links the student to a program, admission year, and current position in their studies.</p>
+          <div class="fields">
+            <span class="field new">Program (BSc CS)</span>
+            <span class="field">Department (auto-filled)</span>
+            <span class="field new">Admission Year (2024-2025)</span>
+            <span class="field new">Current Semester (3)</span>
+          </div>
+        </div>
+      </div>
+      <div class="flow-step-line"></div>
+      <div class="flow-step-row">
+        <div class="flow-step-num" style="background:#22c55e">&#x2713;</div>
+        <div class="flow-step-content">
+          <h3>Student Created</h3>
+          <p>Student is mapped to: BSc CS → 2024-2025 batch → Semester 3. System knows exactly which courses they should see.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Faculty Flow -->
+  <div class="flow-container">
+    <h3 style="font-size:16px; font-weight:700; margin-bottom:24px;">Faculty Onboarding Flow</h3>
+    <div class="flow-steps">
+      <div class="flow-step-row">
+        <div class="flow-step-num" style="background:#4a3aba">1</div>
+        <div class="flow-step-content">
+          <h3>Select Role</h3>
+          <p>Admin selects <strong>"Faculty"</strong> from the role dropdown. Academic fields disappear, professional fields appear.</p>
+          <div class="fields">
+            <span class="field new">Role: Faculty</span>
+          </div>
+        </div>
+      </div>
+      <div class="flow-step-line"></div>
+      <div class="flow-step-row">
+        <div class="flow-step-num" style="background:#4a3aba">2</div>
+        <div class="flow-step-content">
+          <h3>Personal Information</h3>
+          <div class="fields">
+            <span class="field">First Name</span>
+            <span class="field">Last Name</span>
+            <span class="field">Email</span>
+            <span class="field new">Employee ID</span>
+          </div>
+        </div>
+      </div>
+      <div class="flow-step-line"></div>
+      <div class="flow-step-row">
+        <div class="flow-step-num" style="background:#4a3aba">3</div>
+        <div class="flow-step-content">
+          <h3>Professional Information</h3>
+          <div class="fields">
+            <span class="field">Department</span>
+            <span class="field new">Designation (Professor / Assoc Prof / Asst Prof)</span>
+            <span class="field new">Specialization (optional)</span>
+          </div>
+        </div>
+      </div>
+      <div class="flow-step-line"></div>
+      <div class="flow-step-row">
+        <div class="flow-step-num" style="background:#22c55e">&#x2713;</div>
+        <div class="flow-step-content">
+          <h3>Faculty Created</h3>
+          <p>Faculty is mapped to department. Can be assigned to course offerings later.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <!-- PART 4: COURSE OFFERING FLOW -->
+  <!-- ══════════════════════════════════════════════════════════ -->
+
+  <div class="section-tag tag-info">Part 4</div>
+  <h2 class="section-title">Course Offering & Enrollment Flow</h2>
+  <p class="section-subtitle">How courses are created, offered each year, and students are enrolled — without data loss across batches.</p>
+
+  <div class="flow-container">
+    <h3 style="font-size:16px; font-weight:700; margin-bottom:24px;">Complete Course Lifecycle</h3>
+    <div class="flow-steps">
+      <div class="flow-step-row">
+        <div class="flow-step-num" style="background:#4a3aba">1</div>
+        <div class="flow-step-content">
+          <h3>Admin Creates Course (Master Data)</h3>
+          <p>One-time setup. Course is created as a reusable template linked to a program and semester number.</p>
+          <div class="fields">
+            <span class="field">Code: CS301</span>
+            <span class="field">Name: Data Structures</span>
+            <span class="field">Credits: 4</span>
+            <span class="field new">Program: BSc CS</span>
+            <span class="field new">Semester: 3</span>
+          </div>
+        </div>
+      </div>
+      <div class="flow-step-line"></div>
+      <div class="flow-step-row">
+        <div class="flow-step-num" style="background:#d97706">2</div>
+        <div class="flow-step-content">
+          <h3>Admin Creates Course Offering (Per Year)</h3>
+          <p>For a specific academic year and semester, the course is "offered" — faculty assigned, capacity set.</p>
+          <div class="fields">
+            <span class="field">Course: CS301 Data Structures</span>
+            <span class="field new">Academic Year: 2025-2026</span>
+            <span class="field new">Semester: 1</span>
+            <span class="field">Faculty: Dr. Sharma</span>
+            <span class="field">Max Capacity: 120</span>
+          </div>
+        </div>
+      </div>
+      <div class="flow-step-line"></div>
+      <div class="flow-step-row">
+        <div class="flow-step-num" style="background:#0d9668">3</div>
+        <div class="flow-step-content">
+          <h3>Admin Enrolls Students</h3>
+          <p>Students from the matching batch are enrolled into the course offering. File upload with drag & drop.</p>
+          <div class="fields">
+            <span class="field">Search & Select Students</span>
+            <span class="field new">Drag & Drop File Upload (CSV)</span>
+            <span class="field">Capacity Check</span>
+          </div>
+        </div>
+      </div>
+      <div class="flow-step-line"></div>
+      <div class="flow-step-row">
+        <div class="flow-step-num" style="background:#6366f1">4</div>
+        <div class="flow-step-content">
+          <h3>Faculty Fills Course Content</h3>
+          <p>On the Faculty Portal, the assigned faculty uploads syllabus, modules, assignments for this specific offering.</p>
+          <div class="fields">
+            <span class="field">Syllabus Upload</span>
+            <span class="field">Module Creation</span>
+            <span class="field">Assignments</span>
+          </div>
+        </div>
+      </div>
+      <div class="flow-step-line"></div>
+      <div class="flow-step-row">
+        <div class="flow-step-num" style="background:#22c55e">&#x2713;</div>
+        <div class="flow-step-content">
+          <h3>Next Year — Same Course, New Offering</h3>
+          <p>CS301 Data Structures is offered again in 2026-2027 with potentially different faculty, different students. <strong>No data overwrite.</strong> Previous year's offering is preserved.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <!-- PART 5: NAVIGATION COMPARISON -->
+  <!-- ══════════════════════════════════════════════════════════ -->
+
+  <div class="section-tag tag-info">Part 5</div>
+  <h2 class="section-title">Navigation Changes</h2>
+  <p class="section-subtitle">How the sidebar menu structure changes to reflect the new hierarchy.</p>
+
+  <div class="nav-compare">
+    <div class="nav-col" style="border-top: 3px solid #ef4444;">
+      <h3><span style="color:#ef4444">&#x2716;</span> Current Navigation</h3>
+      <div class="nav-item"><div class="dot" style="background:#4a3aba"></div> Dashboard</div>
+      <div class="nav-item"><div class="dot" style="background:#4a3aba"></div> Analytics</div>
+      <div class="nav-item"><div class="dot" style="background:#e05a35"></div> Compliance</div>
+      <div class="nav-item"><div class="dot" style="background:#e05a35"></div> Audit Trail</div>
+      <div class="nav-item"><div class="dot" style="background:#0d9668"></div> Admissions</div>
+      <div class="nav-item"><div class="dot" style="background:#0d9668"></div> Users & Roles</div>
+      <div class="nav-item"><div class="dot" style="background:#0d9668"></div> Course Catalog</div>
+      <div class="nav-item" style="color:#ef4444; font-weight:600"><div class="dot" style="background:#ef4444"></div> Semesters ← standalone, no context</div>
+      <div class="nav-item"><div class="dot" style="background:#0d9668"></div> Budget & Resources</div>
+      <div class="nav-item"><div class="dot" style="background:#d97706"></div> AI Governance</div>
+      <div class="nav-item"><div class="dot" style="background:#d97706"></div> Credentials</div>
+      <div class="nav-item"><div class="dot" style="background:#d97706"></div> Reports</div>
+      <div class="nav-item"><div class="dot" style="background:#64748b"></div> Settings</div>
+    </div>
+    <div class="nav-col" style="border-top: 3px solid #22c55e;">
+      <h3><span style="color:#22c55e">&#x2714;</span> Proposed Navigation</h3>
+      <div class="nav-item"><div class="dot" style="background:#4a3aba"></div> Dashboard</div>
+      <div class="nav-item"><div class="dot" style="background:#4a3aba"></div> Analytics</div>
+      <div class="nav-item"><div class="dot" style="background:#e05a35"></div> Compliance</div>
+      <div class="nav-item"><div class="dot" style="background:#e05a35"></div> Audit Trail</div>
+      <div class="nav-item"><div class="dot" style="background:#0d9668"></div> Admissions</div>
+      <div class="nav-item"><div class="dot" style="background:#0d9668"></div> Users & Roles</div>
+      <div class="nav-item new"><div class="dot" style="background:#22c55e"></div> Programs & Degrees <span class="phase mvp">NEW</span></div>
+      <div class="nav-item renamed"><div class="dot" style="background:#d97706"></div> Academic Calendar <span class="phase mvp">RENAMED</span></div>
+      <div class="nav-item"><div class="dot" style="background:#0d9668"></div> Course Catalog</div>
+      <div class="nav-item"><div class="dot" style="background:#0d9668"></div> Budget & Resources</div>
+      <div class="nav-item"><div class="dot" style="background:#d97706"></div> AI Governance</div>
+      <div class="nav-item"><div class="dot" style="background:#d97706"></div> Credentials</div>
+      <div class="nav-item"><div class="dot" style="background:#d97706"></div> Reports</div>
+      <div class="nav-item"><div class="dot" style="background:#64748b"></div> Settings</div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <!-- PART 6: COMPARISON TABLE -->
+  <!-- ══════════════════════════════════════════════════════════ -->
+
+  <div class="section-tag tag-info">Part 6</div>
+  <h2 class="section-title">Before vs After Comparison</h2>
+
+  <table class="compare-table">
+    <thead>
+      <tr>
+        <th class="aspect" style="width:25%">Aspect</th>
+        <th class="current" style="width:37.5%">Current (Problem)</th>
+        <th class="proposed" style="width:37.5%">Proposed (Solution)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Semester Creation</strong></td>
+        <td class="bad">Created standalone — no academic year context. Admin manually enters name, year, dates.</td>
+        <td class="good">Admin creates Academic Year → 2 semesters auto-created with editable dates.</td>
+      </tr>
+      <tr>
+        <td><strong>Degree / Program</strong></td>
+        <td class="bad">Does not exist. No way to represent "BSc Computer Science."</td>
+        <td class="good">Programs page — master data with name, duration, total semesters, department.</td>
+      </tr>
+      <tr>
+        <td><strong>Course Reuse</strong></td>
+        <td class="bad">Course locked to one semester. Must duplicate for next batch.</td>
+        <td class="good">Course is master data. "Offerings" created per year — reusable without duplication.</td>
+      </tr>
+      <tr>
+        <td><strong>Student Onboarding</strong></td>
+        <td class="bad">Only Name, Email, Role, Department. No student ID, no program, no batch.</td>
+        <td class="good">Role-first form: Student ID, Program, Admission Year, Current Semester — full academic identity.</td>
+      </tr>
+      <tr>
+        <td><strong>Faculty Onboarding</strong></td>
+        <td class="bad">Same form as student. No employee ID, designation, or specialization.</td>
+        <td class="good">Role-specific form: Employee ID, Department, Designation, Specialization.</td>
+      </tr>
+      <tr>
+        <td><strong>Batch Identity</strong></td>
+        <td class="bad">No batch concept. All students look the same regardless of admission year.</td>
+        <td class="good">Admission Year + Program = batch identity. Can filter/group by batch.</td>
+      </tr>
+      <tr>
+        <td><strong>Course ↔ Student Mapping</strong></td>
+        <td class="bad">Students enrolled per course, but no academic context. Can't tell if correct semester.</td>
+        <td class="good">Students enrolled in course offerings — linked to correct academic year + semester + program.</td>
+      </tr>
+      <tr>
+        <td><strong>Data Preservation</strong></td>
+        <td class="bad">New batch overwrites old course data. No history across years.</td>
+        <td class="good">Each year has its own offerings. Previous years fully preserved.</td>
+      </tr>
+      <tr>
+        <td><strong>Student Enrollment CSV</strong></td>
+        <td class="bad">CSV pasted as text in a textarea. No file upload.</td>
+        <td class="good">Drag & drop file uploader with preview and validation.</td>
+      </tr>
+      <tr>
+        <td><strong>User Export</strong></td>
+        <td class="bad">Not available.</td>
+        <td class="good">Export button on users list page — download as CSV/Excel.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="divider"></div>
+
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <!-- PART 7: PHASE PLAN -->
+  <!-- ══════════════════════════════════════════════════════════ -->
+
+  <div class="section-tag tag-info">Part 7</div>
+  <h2 class="section-title">MVP vs Phase 2 Scope</h2>
+  <p class="section-subtitle">What we build now vs what we defer.</p>
+
+  <div class="problems-grid">
+    <div class="solution-card" style="border-color:#1d4ed8;">
+      <h3 style="color:#1d4ed8;">MVP (Build Now)</h3>
+      <ul style="margin-top:12px; padding-left:20px; font-size:13px; line-height:2; color:#444;">
+        <li>Programs & Degrees page (master data)</li>
+        <li>Academic Calendar (Academic Year → auto-create 2 Semesters)</li>
+        <li>Course linked to Program + Semester Number</li>
+        <li>Course Offerings per Academic Year</li>
+        <li>Role-first Create User form (dynamic fields)</li>
+        <li>Student: Student ID, Program, Admission Year, Current Semester</li>
+        <li>Faculty: Employee ID, Department, Designation</li>
+        <li>Remove Ministry & Research roles from dropdowns</li>
+        <li>Export Users button</li>
+        <li>Drag & drop file upload for student enrollment</li>
+      </ul>
+    </div>
+    <div class="problem-card" style="border-color:#9ca3af;">
+      <h3 style="color:#6b7280;">Phase 2 (Defer)</h3>
+      <ul style="margin-top:12px; padding-left:20px; font-size:13px; line-height:2; color:#888;">
+        <li>Regulation versioning (R2020 vs R2024)</li>
+        <li>Syllabus version control on faculty portal</li>
+        <li>Allied / Elective (cross-department) courses</li>
+        <li>Shift 1 / Shift 2 batch management</li>
+        <li>Course prerequisite chains</li>
+        <li>Automatic course rollover across academic years</li>
+        <li>Ministry portal</li>
+        <li>Research portal</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Summary -->
+  <div style="background:linear-gradient(135deg,#4a3aba,#6366f1);border-radius:16px;padding:40px;color:white;text-align:center;margin-top:48px">
+    <h2 style="font-size:24px;font-weight:800;">Summary</h2>
+    <p style="margin-top:12px;font-size:15px;opacity:0.9;max-width:700px;margin-left:auto;margin-right:auto;line-height:1.7;">
+      The current flat structure doesn't reflect how universities actually work. The proposed hierarchy — <strong>Programs → Academic Years → Semesters → Course Offerings → Enrolled Students</strong> — mirrors real university operations and enables proper batch management, course reuse, and academic tracking without data loss.
+    </p>
+    <div style="display:flex;justify-content:center;gap:40px;margin-top:32px">
+      <div>
+        <div style="font-size:36px;font-weight:800;">2</div>
+        <div style="font-size:13px;opacity:0.7;margin-top:4px;">New Pages</div>
+      </div>
+      <div>
+        <div style="font-size:36px;font-weight:800;">3</div>
+        <div style="font-size:13px;opacity:0.7;margin-top:4px;">Redesigned Flows</div>
+      </div>
+      <div>
+        <div style="font-size:36px;font-weight:800;">6</div>
+        <div style="font-size:13px;opacity:0.7;margin-top:4px;">Problems Solved</div>
+      </div>
+      <div>
+        <div style="font-size:36px;font-weight:800;">8</div>
+        <div style="font-size:13px;opacity:0.7;margin-top:4px;">Deferred to Phase 2</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

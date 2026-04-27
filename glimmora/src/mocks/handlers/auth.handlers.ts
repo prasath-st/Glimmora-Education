@@ -36,17 +36,6 @@ const MOCK_USERS = [
     lastLoginAt: null,
   },
   {
-    id: "usr_research_01",
-    email: "research@glimmora.dev",
-    password: "glimmora123",
-    name: "Dr. Priya Patel",
-    role: "research" as const,
-    department: "Biomedical Engineering",
-    avatarUrl: null,
-    tenantId: "tenant_univ_01",
-    lastLoginAt: null,
-  },
-  {
     id: "usr_placement_01",
     email: "placement@glimmora.dev",
     password: "glimmora123",

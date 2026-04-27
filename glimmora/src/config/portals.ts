@@ -2,7 +2,6 @@ import {
   GraduationCap,
   BookOpen,
   Shield,
-  FlaskConical,
   Briefcase,
   Crown,
   type LucideIcon,
@@ -13,7 +12,6 @@ export type PortalRole =
   | "student"
   | "faculty"
   | "admin"
-  | "research"
   | "placement";
 
 export interface PortalConfig {
@@ -54,14 +52,6 @@ export const PORTALS: Record<PortalRole, PortalConfig> = {
     accent: "red",
     description:
       "Institutional health, compliance, user management, and governance",
-  },
-  research: {
-    name: "Research Portal",
-    basePath: "/research",
-    icon: FlaskConical,
-    accent: "purple",
-    description:
-      "Grant discovery, collaboration networks, and research performance",
   },
   placement: {
     name: "Placement Portal",
