@@ -97,6 +97,27 @@ export interface AdminUser extends Identifiable, Timestamps, TenantScoped {
   phone?: string;
 }
 
+// === Programs & Degrees ===
+export type DegreeType = "UG" | "PG" | "Diploma" | "PhD";
+
+export interface Program extends Identifiable, Timestamps {
+  name: string;
+  department: string;
+  duration: number; // years
+  totalSemesters: number;
+  degreeType: DegreeType;
+  status: "active" | "inactive";
+  studentCount: number;
+}
+
+export interface CreateProgramRequest {
+  name: string;
+  department: string;
+  duration: number;
+  totalSemesters: number;
+  degreeType: DegreeType;
+}
+
 export interface CreateUserRequest {
   email: string;
   firstName: string;

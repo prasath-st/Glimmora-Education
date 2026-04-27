@@ -167,8 +167,9 @@ export const PORTAL_NAVIGATION: Record<PortalRole, NavSection[]> = {
       items: [
         { label: "Admissions", href: "/admin/admissions", icon: UserPlus },
         { label: "Users & Roles", href: "/admin/users", icon: UserCog },
+        { label: "Programs & Degrees", href: "/admin/programs", icon: BookOpen },
+        { label: "Academic Calendar", href: "/admin/semesters", icon: Calendar },
         { label: "Course Catalog", href: "/admin/courses", icon: GraduationCap },
-        { label: "Semesters", href: "/admin/semesters", icon: Calendar },
         { label: "Budget & Resources", href: "/admin/budget", icon: Wallet },
       ],
     },

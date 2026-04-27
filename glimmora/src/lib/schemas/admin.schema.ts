@@ -26,6 +26,16 @@ export const createUserSchema = z.object({
 
 export type CreateUserFormData = z.infer<typeof createUserSchema>;
 
+export const createProgramSchema = z.object({
+  name: z.string().min(1, "Program name is required"),
+  department: z.string().min(1, "Department is required"),
+  duration: z.coerce.number().min(1, "Duration must be at least 1 year").max(8),
+  totalSemesters: z.coerce.number().min(1, "Must have at least 1 semester").max(16),
+  degreeType: z.enum(["UG", "PG", "Diploma", "PhD"], { error: "Please select a degree type" }),
+});
+
+export type CreateProgramFormData = z.infer<typeof createProgramSchema>;
+
 export const updateUserSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters").optional(),
   role: z

@@ -21,6 +21,7 @@ import type {
   InstitutionSettings,
   Semester,
   AdminCourse,
+  Program,
 } from "@/lib/api/types/admin.types";
 import type {
   PortalRole,
@@ -961,4 +962,36 @@ export function generateCourses(): AdminCourse[] {
       updatedAt: pastDate(Math.max(1, faker.number.int({ min: 1, max: 30 }))),
     };
   });
+}
+
+// ── Programs & Degrees ──────────────────────────────────────────────────────
+
+const PROGRAM_DATA: { name: string; department: string; duration: number; semesters: number; type: Program["degreeType"] }[] = [
+  { name: "BSc Computer Science", department: "Computer Science", duration: 3, semesters: 6, type: "UG" },
+  { name: "BTech Computer Science & Engineering", department: "Computer Science", duration: 4, semesters: 8, type: "UG" },
+  { name: "BTech Electronics & Communication", department: "Electronics", duration: 4, semesters: 8, type: "UG" },
+  { name: "BSc Mathematics", department: "Mathematics", duration: 3, semesters: 6, type: "UG" },
+  { name: "BSc Physics", department: "Physics", duration: 3, semesters: 6, type: "UG" },
+  { name: "BBA Business Administration", department: "Management", duration: 3, semesters: 6, type: "UG" },
+  { name: "MSc Computer Science", department: "Computer Science", duration: 2, semesters: 4, type: "PG" },
+  { name: "MTech Artificial Intelligence", department: "Computer Science", duration: 2, semesters: 4, type: "PG" },
+  { name: "MBA", department: "Management", duration: 2, semesters: 4, type: "PG" },
+  { name: "MSc Data Science", department: "Computer Science", duration: 2, semesters: 4, type: "PG" },
+  { name: "PhD Computer Science", department: "Computer Science", duration: 4, semesters: 8, type: "PhD" },
+  { name: "Diploma in Web Development", department: "Computer Science", duration: 1, semesters: 2, type: "Diploma" },
+];
+
+export function generatePrograms(): Program[] {
+  return PROGRAM_DATA.map((p, i) => ({
+    id: `prog_${String(i + 1).padStart(2, "0")}`,
+    name: p.name,
+    department: p.department,
+    duration: p.duration,
+    totalSemesters: p.semesters,
+    degreeType: p.type,
+    status: i < 10 ? "active" as const : "inactive" as const,
+    studentCount: faker.number.int({ min: 20, max: 500 }),
+    createdAt: faker.date.between({ from: "2024-01-01", to: "2025-06-01" }).toISOString(),
+    updatedAt: faker.date.recent({ days: 60 }).toISOString(),
+  }));
 }

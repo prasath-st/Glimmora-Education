@@ -21,6 +21,8 @@ import type {
   CreateCourseRequest,
   Semester,
   CreateSemesterRequest,
+  Program,
+  CreateProgramRequest,
 } from "@/lib/api/types/admin.types";
 import type { PaginationMeta, PortalRole } from "@/lib/api/types/common.types";
 import {
@@ -40,6 +42,7 @@ import {
   generateSettings,
   generateSemesters,
   generateCourses,
+  generatePrograms,
 } from "@/mocks/data/generators/admin.generator";
 
 // ─── Generate data once at module level ───────────────────────────────────────
@@ -59,6 +62,7 @@ const reportTemplates: ReportTemplate[] = generateReportTemplates();
 let generatedReports: GeneratedReport[] = generateReports();
 let settings: InstitutionSettings = generateSettings();
 let semesters: Semester[] = generateSemesters();
+let programs: Program[] = generatePrograms();
 let courses: AdminCourse[] = generateCourses();
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -855,5 +859,52 @@ export const adminHandlers = [
     };
 
     return HttpResponse.json({ data: semesters[idx] });
+  }),
+
+  // ── Programs ──────────────────────────────────────────────────────────────
+
+  http.get("/api/admin/programs", async ({ request }) => {
+    await delay(200);
+    const url = new URL(request.url);
+    const search = url.searchParams.get("search")?.toLowerCase();
+    const degreeType = url.searchParams.get("degreeType");
+    const status = url.searchParams.get("status");
+
+    let filtered = [...programs];
+    if (search) filtered = filtered.filter((p) => p.name.toLowerCase().includes(search) || p.department.toLowerCase().includes(search));
+    if (degreeType) filtered = filtered.filter((p) => p.degreeType === degreeType);
+    if (status) filtered = filtered.filter((p) => p.status === status);
+
+    return HttpResponse.json({ data: filtered });
+  }),
+
+  http.post("/api/admin/programs", async ({ request }) => {
+    await delay(300);
+    const body = (await request.json()) as CreateProgramRequest;
+    const now = new Date().toISOString();
+    const newProgram: Program = {
+      id: `prog_${Date.now()}`,
+      name: body.name,
+      department: body.department,
+      duration: body.duration,
+      totalSemesters: body.totalSemesters,
+      degreeType: body.degreeType,
+      status: "active",
+      studentCount: 0,
+      createdAt: now,
+      updatedAt: now,
+    };
+    programs = [newProgram, ...programs];
+    return HttpResponse.json({ data: newProgram }, { status: 201 });
+  }),
+
+  http.patch("/api/admin/programs/:id", async ({ params, request }) => {
+    await delay(200);
+    const id = params.id as string;
+    const body = (await request.json()) as Partial<Program>;
+    const idx = programs.findIndex((p) => p.id === id);
+    if (idx === -1) return HttpResponse.json({ error: { code: "NOT_FOUND", message: "Program not found" } }, { status: 404 });
+    programs[idx] = { ...programs[idx], ...body, id, updatedAt: new Date().toISOString() };
+    return HttpResponse.json({ data: programs[idx] });
   }),
 ];

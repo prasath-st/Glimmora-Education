@@ -24,6 +24,8 @@ import type {
   CreateCourseRequest,
   Semester,
   CreateSemesterRequest,
+  Program,
+  CreateProgramRequest,
 } from "@/lib/api/types/admin.types";
 import type { PaginationMeta } from "@/lib/api/types/common.types";
 
@@ -441,6 +443,44 @@ export function useUpdateSemester() {
       api.patch<Semester>(`/api/admin/semesters/${id}`, data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin", "semesters"] });
+    },
+  });
+}
+
+// === Programs & Degrees ===
+
+export function usePrograms(params?: { search?: string; degreeType?: string; status?: string }) {
+  return useQuery({
+    queryKey: ["admin", "programs", params],
+    queryFn: () => {
+      const sp = new URLSearchParams();
+      if (params?.search) sp.set("search", params.search);
+      if (params?.degreeType) sp.set("degreeType", params.degreeType);
+      if (params?.status) sp.set("status", params.status);
+      const qs = sp.toString();
+      return api.get<Program[]>(`/api/admin/programs${qs ? `?${qs}` : ""}`);
+    },
+  });
+}
+
+export function useCreateProgram() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: CreateProgramRequest) =>
+      api.post<Program>("/api/admin/programs", data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin", "programs"] });
+    },
+  });
+}
+
+export function useUpdateProgram() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...data }: { id: string } & Partial<Program>) =>
+      api.patch<Program>(`/api/admin/programs/${id}`, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin", "programs"] });
     },
   });
 }
