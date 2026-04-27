@@ -99,9 +99,18 @@ export interface AdminUser extends Identifiable, Timestamps, TenantScoped {
 
 export interface CreateUserRequest {
   email: string;
-  name: string;
+  firstName: string;
+  lastName: string;
   role: PortalRole;
   department: string;
+  studentId?: string;
+  program?: string;
+  academicYearStart?: string;
+  academicYearEnd?: string;
+  currentSemester?: string;
+  employeeId?: string;
+  designation?: string;
+  specialization?: string;
 }
 
 export interface RoleDefinition {

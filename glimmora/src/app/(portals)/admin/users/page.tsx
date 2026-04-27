@@ -92,6 +92,24 @@ const userColumns: ColumnDef<AdminUser, unknown>[] = [
   },
 ];
 
+const DESIGNATION_OPTIONS = [
+  { value: "professor", label: "Professor" },
+  { value: "associate_professor", label: "Associate Professor" },
+  { value: "assistant_professor", label: "Assistant Professor" },
+  { value: "lecturer", label: "Lecturer" },
+];
+
+const SEMESTER_OPTIONS = [
+  { value: "1", label: "Semester 1" },
+  { value: "2", label: "Semester 2" },
+  { value: "3", label: "Semester 3" },
+  { value: "4", label: "Semester 4" },
+  { value: "5", label: "Semester 5" },
+  { value: "6", label: "Semester 6" },
+  { value: "7", label: "Semester 7" },
+  { value: "8", label: "Semester 8" },
+];
+
 function CreateUserDialog({
   open,
   onOpenChange,
@@ -100,29 +118,26 @@ function CreateUserDialog({
   onOpenChange: (open: boolean) => void;
 }) {
   const createUser = useCreateUser();
-  const [successMsg, setSuccessMsg] = useState("");
 
   const {
     register,
     handleSubmit,
     reset,
+    watch,
     formState: { errors },
   } = useForm<CreateUserFormData>({
     resolver: zodResolver(createUserSchema),
-    defaultValues: { email: "", name: "", role: "student", department: "" },
+    defaultValues: { role: "student", firstName: "", lastName: "", email: "", department: "" },
   });
+
+  const selectedRole = watch("role");
 
   const onSubmit = useCallback(
     async (data: CreateUserFormData) => {
       try {
-        const email = data.email;
         await createUser.mutateAsync(data);
-        setSuccessMsg(`User created successfully. An activation email has been sent to ${email}.`);
         reset();
-        setTimeout(() => {
-          setSuccessMsg("");
-          onOpenChange(false);
-        }, 1500);
+        onOpenChange(false);
       } catch {
         // error shown via mutation state
       }
@@ -134,35 +149,19 @@ function CreateUserDialog({
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-xl border border-border bg-card p-6 shadow-lg data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95">
+        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-xl border border-border bg-card p-6 shadow-lg max-h-[90vh] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95">
           <div className="flex items-center justify-between">
-            <Dialog.Title className="text-lg font-semibold">
-              Create User
-            </Dialog.Title>
+            <Dialog.Title className="text-lg font-semibold">Create User</Dialog.Title>
             <Dialog.Close className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
               <X className="h-4 w-4" />
             </Dialog.Close>
           </div>
           <Dialog.Description className="mt-1 text-sm text-muted-foreground">
-            Add a new user to the institution.
+            Select a role first — the form fields will adjust accordingly.
           </Dialog.Description>
 
-          <form onSubmit={handleSubmit(onSubmit)} className="mt-4 space-y-4">
-            <FormField
-              label="Email"
-              type="email"
-              placeholder="user@institution.edu"
-              error={errors.email?.message}
-              required
-              {...register("email")}
-            />
-            <FormField
-              label="Name"
-              placeholder="Full name"
-              error={errors.name?.message}
-              required
-              {...register("name")}
-            />
+          <form onSubmit={handleSubmit(onSubmit)} className="mt-5 space-y-5">
+            {/* Role — FIRST */}
             <FormSelect
               label="Role"
               options={ROLE_OPTIONS}
@@ -170,39 +169,75 @@ function CreateUserDialog({
               required
               {...register("role")}
             />
-            <FormField
-              label="Department"
-              placeholder="e.g. Computer Science"
-              error={errors.department?.message}
-              required
-              {...register("department")}
-            />
+
+            <div className="h-px bg-border" />
+
+            {/* Personal Information — common to all roles */}
+            <div>
+              <h3 className="mb-3 text-sm font-semibold">Personal Information</h3>
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <FormField label="First Name" placeholder="First name" error={errors.firstName?.message} required {...register("firstName")} />
+                  <FormField label="Last Name" placeholder="Last name" error={errors.lastName?.message} required {...register("lastName")} />
+                </div>
+                <FormField label="Email" type="email" placeholder="user@institution.edu" error={errors.email?.message} required {...register("email")} />
+              </div>
+            </div>
+
+            <div className="h-px bg-border" />
+
+            {/* Role-specific fields */}
+            {selectedRole === "student" && (
+              <div>
+                <h3 className="mb-3 text-sm font-semibold">Academic Information</h3>
+                <div className="space-y-3">
+                  <FormField label="Student ID" placeholder="e.g. STU-2024-001" error={errors.studentId?.message} required {...register("studentId")} />
+                  <div className="grid grid-cols-2 gap-3">
+                    <FormField label="Department" placeholder="e.g. Computer Science" error={errors.department?.message} required {...register("department")} />
+                    <FormField label="Program" placeholder="e.g. BSc Computer Science" error={errors.program?.message} {...register("program")} />
+                  </div>
+                  <div className="grid grid-cols-3 gap-3">
+                    <FormField label="Academic Year Start" placeholder="e.g. 2024" error={errors.academicYearStart?.message} {...register("academicYearStart")} />
+                    <FormField label="Academic Year End" placeholder="e.g. 2027" error={errors.academicYearEnd?.message} {...register("academicYearEnd")} />
+                    <FormSelect label="Current Semester" options={SEMESTER_OPTIONS} error={errors.currentSemester?.message} {...register("currentSemester")} />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {selectedRole === "faculty" && (
+              <div>
+                <h3 className="mb-3 text-sm font-semibold">Professional Information</h3>
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <FormField label="Employee ID" placeholder="e.g. FAC-2024-001" error={errors.employeeId?.message} required {...register("employeeId")} />
+                    <FormField label="Department" placeholder="e.g. Computer Science" error={errors.department?.message} required {...register("department")} />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <FormSelect label="Designation" options={DESIGNATION_OPTIONS} error={errors.designation?.message} required {...register("designation")} />
+                    <FormField label="Specialization" placeholder="e.g. Machine Learning" error={errors.specialization?.message} {...register("specialization")} />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {(selectedRole === "admin" || selectedRole === "placement") && (
+              <div>
+                <h3 className="mb-3 text-sm font-semibold">Department</h3>
+                <FormField label="Department" placeholder="e.g. Administration" error={errors.department?.message} required {...register("department")} />
+              </div>
+            )}
 
             {createUser.isError && (
-              <p className="text-xs text-danger">
-                Failed to create user. Please check the details and try again.
-              </p>
-            )}
-            {successMsg && (
-              <p className="text-xs text-success">{successMsg}</p>
+              <p className="text-sm text-danger">Failed to create user. Please try again.</p>
             )}
 
             <div className="flex justify-end gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => onOpenChange(false)}
-                className="rounded-lg border border-border px-4 py-2 text-sm font-medium transition-colors hover:bg-muted"
-              >
+              <button type="button" onClick={() => onOpenChange(false)} className="rounded-lg border border-border px-4 py-2 text-sm font-medium transition-colors hover:bg-muted">
                 Cancel
               </button>
-              <button
-                type="submit"
-                disabled={createUser.isPending}
-                className="flex items-center gap-2 rounded-lg bg-portal-accent px-4 py-2 text-sm font-medium text-portal-accent-foreground transition-colors hover:bg-portal-accent-hover disabled:opacity-50"
-              >
-                {createUser.isPending && (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                )}
+              <button type="submit" disabled={createUser.isPending} className="flex items-center gap-2 rounded-lg bg-portal-accent px-4 py-2 text-sm font-medium text-portal-accent-foreground transition-colors hover:bg-portal-accent-hover disabled:opacity-50">
+                {createUser.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
                 Create User
               </button>
             </div>
@@ -497,6 +532,7 @@ export default function AdminUsersPage() {
   const router = useRouter();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
@@ -509,6 +545,30 @@ export default function AdminUsersPage() {
     page,
     pageSize: 20,
   });
+
+  const users = data?.users ?? [];
+
+  const handleExport = useCallback(() => {
+    if (!users.length) return;
+    const headers = ["Name", "Email", "Role", "Department", "Status", "Last Login", "Created"];
+    const rows = users.map((u: AdminUser) => [
+      u.name,
+      u.email,
+      u.role,
+      u.department,
+      u.status,
+      u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleDateString() : "Never",
+      new Date(u.createdAt).toLocaleDateString(),
+    ]);
+    const csv = [headers, ...rows].map((r) => r.map((c) => `"${c}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `users-export-${new Date().toISOString().split("T")[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [users]);
 
   const handleSearch = useCallback((value: string) => {
     setSearch(value);
@@ -531,11 +591,19 @@ export default function AdminUsersPage() {
         actions={
           <div className="flex items-center gap-2">
             <button
+              onClick={handleExport}
+              disabled={!users.length}
+              className="flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-medium transition-colors hover:bg-muted disabled:opacity-50"
+            >
+              <Download className="h-4 w-4" />
+              Export
+            </button>
+            <button
               onClick={() => setImportOpen(true)}
               className="flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-medium transition-colors hover:bg-muted"
             >
               <Upload className="h-4 w-4" />
-              Import Users
+              Import
             </button>
             <button
               onClick={() => setDialogOpen(true)}
@@ -598,7 +666,7 @@ export default function AdminUsersPage() {
         <>
           <DataTable
             columns={userColumns}
-            data={data?.users ?? []}
+            data={users}
             showSearch={false}
             showPagination={false}
             onRowClick={handleRowClick}

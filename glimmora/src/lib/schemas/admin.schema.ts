@@ -1,19 +1,27 @@
 import { z } from "zod";
 
 export const createUserSchema = z.object({
-  email: z
-    .string()
-    .min(1, "Email is required")
-    .email("Please enter a valid email address"),
-  name: z
-    .string()
-    .min(1, "Name is required")
-    .min(2, "Name must be at least 2 characters"),
   role: z.enum(
     ["student", "faculty", "admin", "placement"],
     { error: "Please select a role" }
   ),
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
+  email: z
+    .string()
+    .min(1, "Email is required")
+    .email("Please enter a valid email address"),
   department: z.string().min(1, "Department is required"),
+  // Student-specific
+  studentId: z.string().optional(),
+  program: z.string().optional(),
+  academicYearStart: z.string().optional(),
+  academicYearEnd: z.string().optional(),
+  currentSemester: z.string().optional(),
+  // Faculty-specific
+  employeeId: z.string().optional(),
+  designation: z.string().optional(),
+  specialization: z.string().optional(),
 });
 
 export type CreateUserFormData = z.infer<typeof createUserSchema>;

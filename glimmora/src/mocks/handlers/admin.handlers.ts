@@ -271,7 +271,8 @@ export const adminHandlers = [
     else if (users.some((u) => u.email === body.email))
       errors.email = ["A user with this email already exists"];
 
-    if (!body.name) errors.name = ["Name is required"];
+    if (!body.firstName) errors.firstName = ["First name is required"];
+    if (!body.lastName) errors.lastName = ["Last name is required"];
     if (!body.role) errors.role = ["Role is required"];
     if (!body.department) errors.department = ["Department is required"];
 
@@ -281,7 +282,7 @@ export const adminHandlers = [
     const newUser: AdminUser = {
       id: `usr_${Date.now()}`,
       email: body.email,
-      name: body.name,
+      name: `${body.firstName} ${body.lastName}`,
       role: body.role,
       department: body.department,
       status: "active",
