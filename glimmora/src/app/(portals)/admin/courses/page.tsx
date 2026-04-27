@@ -257,6 +257,8 @@ function EnrollStudentsDialog({
   const [studentSearch, setStudentSearch] = useState("");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [studentIdsText, setStudentIdsText] = useState("");
+  const [csvFile, setCsvFile] = useState<File | null>(null);
+  const [csvPreview, setCsvPreview] = useState<string[]>([]);
   const [successMsg, setSuccessMsg] = useState("");
 
   const { data: studentsData, isLoading: studentsLoading } = useAdminUsers({
@@ -322,6 +324,8 @@ function EnrollStudentsDialog({
           setSelectedIds([]);
           setStudentIdsText("");
           setStudentSearch("");
+          setCsvFile(null);
+          setCsvPreview([]);
           setSuccessMsg("");
           setEnrollMode("search");
           enrollStudents.reset();
@@ -369,7 +373,7 @@ function EnrollStudentsDialog({
                     : "text-muted-foreground hover:text-foreground"
                 }`}
               >
-                CSV / Manual IDs
+                File Upload
               </button>
             </div>
 
@@ -420,21 +424,42 @@ function EnrollStudentsDialog({
                 </p>
               </div>
             ) : (
-              <div>
-                <label className="mb-1.5 block text-sm font-medium">
-                  Student IDs <span className="text-danger">*</span>
-                </label>
-                <textarea
-                  value={studentIdsText}
-                  onChange={(e) => setStudentIdsText(e.target.value)}
-                  placeholder={"Enter student IDs separated by commas or new lines.\n\ne.g.\nSTU-2024-001\nSTU-2024-002\nSTU-2024-003"}
-                  rows={6}
-                  className="flex w-full rounded-lg border border-input bg-background px-3 py-2 text-sm transition-colors placeholder:text-muted-foreground hover:border-muted-foreground focus:outline-none focus:ring-2 focus:ring-portal-accent focus:ring-offset-1 font-mono"
+              <div className="space-y-3">
+                <FileUpload
+                  label="Upload CSV File"
+                  accept=".csv"
+                  maxSize={5}
+                  onFilesChange={(files) => {
+                    const file = files[0];
+                    if (!file) { setCsvFile(null); setCsvPreview([]); setStudentIdsText(""); return; }
+                    setCsvFile(file);
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                      const text = e.target?.result as string;
+                      const ids = text.split(/[\n,]+/).map((s) => s.trim()).filter(Boolean);
+                      setStudentIdsText(ids.join("\n"));
+                      setCsvPreview(ids.slice(0, 8));
+                    };
+                    reader.readAsText(file);
+                  }}
                 />
-                {csvParsedCount > 0 && (
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {csvParsedCount} student ID{csvParsedCount > 1 ? "s" : ""} detected
-                  </p>
+                {csvPreview.length > 0 && (
+                  <div>
+                    <p className="mb-2 text-xs font-medium text-muted-foreground">Preview ({csvParsedCount} IDs found)</p>
+                    <div className="max-h-36 overflow-y-auto rounded-lg border border-border">
+                      {csvPreview.map((id, i) => (
+                        <div key={i} className="flex items-center gap-2 border-b border-border px-3 py-1.5 last:border-0 text-sm font-mono">
+                          <span className="text-xs text-muted-foreground">{i + 1}.</span>
+                          <span>{id}</span>
+                        </div>
+                      ))}
+                      {csvParsedCount > 8 && (
+                        <div className="px-3 py-1.5 text-xs text-muted-foreground">
+                          ...and {csvParsedCount - 8} more
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 )}
               </div>
             )}
