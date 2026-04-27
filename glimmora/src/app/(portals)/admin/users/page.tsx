@@ -2,12 +2,14 @@
 
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { UserCog, Plus, Loader2, X, Upload, Download } from "lucide-react";
+import { UserCog, Plus, Loader2, X, Upload, Download, MoreHorizontal, Eye, Pencil, ShieldBan, ShieldCheck } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "sonner";
 import * as Dialog from "@radix-ui/react-dialog";
+import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { type ColumnDef } from "@tanstack/react-table";
-import { useAdminUsers, useCreateUser, useBulkImportUsers } from "@/lib/hooks/use-admin";
+import { useAdminUsers, useCreateUser, useUpdateUser, useBulkImportUsers } from "@/lib/hooks/use-admin";
 import { FileUpload } from "@/components/shared/forms/file-upload";
 import {
   createUserSchema,
@@ -20,6 +22,7 @@ import { TableSkeleton } from "@/components/shared/feedback/loading-skeleton";
 import { ErrorState } from "@/components/shared/feedback/error-state";
 import { SearchInput } from "@/components/shared/forms/search-input";
 import { FormField, FormSelect } from "@/components/shared/forms/form-field";
+import { ConfirmDialog } from "@/components/shared/feedback/confirm-dialog";
 import { formatDate, formatRelative } from "@/lib/utils/format";
 import type { AdminUser } from "@/lib/api/types/admin.types";
 
@@ -49,48 +52,94 @@ function getStatusVariant(
   return map[status];
 }
 
-const userColumns: ColumnDef<AdminUser, unknown>[] = [
-  { accessorKey: "name", header: "Name" },
-  {
-    accessorKey: "email",
-    header: "Email",
-    cell: ({ getValue }) => (
-      <span className="text-muted-foreground">{getValue() as string}</span>
-    ),
-  },
-  {
-    accessorKey: "role",
-    header: "Role",
-    cell: ({ getValue }) => (
-      <StatusBadge variant="default">{getValue() as string}</StatusBadge>
-    ),
-  },
-  { accessorKey: "department", header: "Department" },
-  {
-    accessorKey: "status",
-    header: "Status",
-    cell: ({ getValue }) => {
-      const status = getValue() as AdminUser["status"];
-      return (
-        <StatusBadge variant={getStatusVariant(status)} dot>
-          {status}
-        </StatusBadge>
-      );
+function RowActions({ user, onView, onEdit, onToggleStatus }: {
+  user: AdminUser; onView: () => void; onEdit: () => void; onToggleStatus: () => void;
+}) {
+  return (
+    <DropdownMenu.Root>
+      <DropdownMenu.Trigger asChild>
+        <button onClick={(e) => e.stopPropagation()} className="rounded-lg p-1.5 text-muted-foreground opacity-0 transition-all hover:bg-muted hover:text-foreground group-hover:opacity-100 data-[state=open]:opacity-100">
+          <MoreHorizontal className="h-4 w-4" />
+        </button>
+      </DropdownMenu.Trigger>
+      <DropdownMenu.Portal>
+        <DropdownMenu.Content align="end" sideOffset={4} onClick={(e) => e.stopPropagation()} className="z-50 w-48 rounded-lg bg-card py-2 shadow-2xl ring-1 ring-border/30">
+          <DropdownMenu.Item onSelect={onView} className="flex cursor-pointer items-center gap-3 px-4 py-2.5 text-sm outline-none transition-colors hover:bg-muted focus:bg-muted">
+            <Eye className="h-4 w-4 text-muted-foreground" /> View Details
+          </DropdownMenu.Item>
+          <DropdownMenu.Item onSelect={onEdit} className="flex cursor-pointer items-center gap-3 px-4 py-2.5 text-sm outline-none transition-colors hover:bg-muted focus:bg-muted">
+            <Pencil className="h-4 w-4 text-muted-foreground" /> Edit
+          </DropdownMenu.Item>
+          <DropdownMenu.Separator className="my-1 h-px bg-border/50" />
+          <DropdownMenu.Item onSelect={onToggleStatus} className={`flex cursor-pointer items-center gap-3 px-4 py-2.5 text-sm outline-none transition-colors hover:bg-muted focus:bg-muted ${user.status === "active" ? "text-danger" : "text-success"}`}>
+            {user.status === "active" ? <><ShieldBan className="h-4 w-4" /> Suspend</> : <><ShieldCheck className="h-4 w-4" /> Activate</>}
+          </DropdownMenu.Item>
+        </DropdownMenu.Content>
+      </DropdownMenu.Portal>
+    </DropdownMenu.Root>
+  );
+}
+
+function createUserColumns(callbacks: {
+  onView: (user: AdminUser) => void;
+  onEdit: (user: AdminUser) => void;
+  onToggleStatus: (user: AdminUser) => void;
+}): ColumnDef<AdminUser, unknown>[] {
+  return [
+    { accessorKey: "name", header: "Name" },
+    {
+      accessorKey: "email",
+      header: "Email",
+      cell: ({ getValue }) => (
+        <span className="text-muted-foreground">{getValue() as string}</span>
+      ),
     },
-  },
-  {
-    accessorKey: "lastLoginAt",
-    header: "Last Login",
-    cell: ({ getValue }) => {
-      const val = getValue() as string | null;
-      return (
-        <span className="text-xs text-muted-foreground">
-          {val ? formatRelative(val) : "Never"}
-        </span>
-      );
+    {
+      accessorKey: "role",
+      header: "Role",
+      cell: ({ getValue }) => (
+        <StatusBadge variant="default">{getValue() as string}</StatusBadge>
+      ),
     },
-  },
-];
+    { accessorKey: "department", header: "Department" },
+    {
+      accessorKey: "status",
+      header: "Status",
+      cell: ({ getValue }) => {
+        const status = getValue() as AdminUser["status"];
+        return (
+          <StatusBadge variant={getStatusVariant(status)} dot>
+            {status}
+          </StatusBadge>
+        );
+      },
+    },
+    {
+      accessorKey: "lastLoginAt",
+      header: "Last Login",
+      cell: ({ getValue }) => {
+        const val = getValue() as string | null;
+        return (
+          <span className="text-xs text-muted-foreground">
+            {val ? formatRelative(val) : "Never"}
+          </span>
+        );
+      },
+    },
+    {
+      id: "actions",
+      header: "",
+      cell: ({ row }) => (
+        <RowActions
+          user={row.original}
+          onView={() => callbacks.onView(row.original)}
+          onEdit={() => callbacks.onEdit(row.original)}
+          onToggleStatus={() => callbacks.onToggleStatus(row.original)}
+        />
+      ),
+    },
+  ];
+}
 
 const DESIGNATION_OPTIONS = [
   { value: "professor", label: "Professor" },
@@ -532,6 +581,8 @@ export default function AdminUsersPage() {
   const router = useRouter();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  const [confirm, setConfirm] = useState<{ open: boolean; user: AdminUser | null }>({ open: false, user: null });
+  const updateUser = useUpdateUser();
 
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
@@ -581,6 +632,27 @@ export default function AdminUsersPage() {
     },
     [router]
   );
+
+  const handleToggleStatus = useCallback((user: AdminUser) => {
+    setConfirm({ open: true, user });
+  }, []);
+
+  const executeToggleStatus = useCallback(async () => {
+    if (!confirm.user) return;
+    const newStatus = confirm.user.status === "active" ? "suspended" : "active";
+    try {
+      await updateUser.mutateAsync({ id: confirm.user.id, status: newStatus });
+      toast.success(newStatus === "suspended" ? `${confirm.user.name} suspended` : `${confirm.user.name} activated`);
+    } catch {
+      toast.error("Failed to update user status");
+    }
+  }, [confirm.user, updateUser]);
+
+  const columns = createUserColumns({
+    onView: handleRowClick,
+    onEdit: (user) => router.push(`/admin/users/${user.id}`),
+    onToggleStatus: handleToggleStatus,
+  });
 
   return (
     <div className="space-y-6">
@@ -665,7 +737,7 @@ export default function AdminUsersPage() {
       ) : (
         <>
           <DataTable
-            columns={userColumns}
+            columns={columns}
             data={users}
             showSearch={false}
             showPagination={false}
@@ -701,6 +773,17 @@ export default function AdminUsersPage() {
 
       <CreateUserDialog open={dialogOpen} onOpenChange={setDialogOpen} />
       <ImportUsersDialog open={importOpen} onOpenChange={setImportOpen} />
+      <ConfirmDialog
+        open={confirm.open}
+        onOpenChange={(o) => setConfirm((p) => ({ ...p, open: o }))}
+        title={confirm.user?.status === "active" ? "Suspend User" : "Activate User"}
+        description={confirm.user?.status === "active"
+          ? `Suspend "${confirm.user?.name}"? They will lose access until reactivated.`
+          : `Activate "${confirm.user?.name}"? They will regain access immediately.`}
+        confirmLabel={confirm.user?.status === "active" ? "Suspend" : "Activate"}
+        variant={confirm.user?.status === "active" ? "danger" : "default"}
+        onConfirm={executeToggleStatus}
+      />
     </div>
   );
 }
