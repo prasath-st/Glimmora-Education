@@ -457,9 +457,9 @@ export const adminHandlers = [
       data: {
         totalModels: aiModels.length,
         activeModels,
-        averageAccuracy: Math.round(avgAccuracy * 1000) / 1000,
-        averageBiasScore: Math.round(avgBias * 1000) / 1000,
-        totalOverrides,
+        avgAccuracy: Math.round(avgAccuracy * 1000) / 1000,
+        avgBias: Math.round(avgBias * 1000) / 1000,
+        recentOverrides: totalOverrides,
         recentBiasReports,
       },
     });
