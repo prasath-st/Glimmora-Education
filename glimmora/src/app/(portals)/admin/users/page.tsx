@@ -2,7 +2,8 @@
 
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { UserCog, Plus, Loader2, X, Upload, Download, MoreHorizontal, Eye, Pencil, ShieldBan, ShieldCheck } from "lucide-react";
+import Link from "next/link";
+import { UserCog, Plus, Loader2, X, Upload, Download, MoreHorizontal, Eye, Pencil, ShieldBan, ShieldCheck, ShieldQuestion } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -739,6 +740,13 @@ export default function AdminUsersPage() {
         description="Manage users, roles, and access across the institution"
         actions={
           <div className="flex items-center gap-2">
+            <Link
+              href="/admin/users/roles"
+              className="flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-medium transition-colors hover:bg-muted"
+            >
+              <ShieldQuestion className="h-4 w-4" />
+              Roles & Permissions
+            </Link>
             <button
               onClick={handleExport}
               disabled={!users.length}
