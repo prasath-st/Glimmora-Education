@@ -55,7 +55,7 @@ const dashboard: AdminDashboard = generateAdminDashboard();
 const analytics: InstitutionalAnalytics = generateAnalytics();
 let compliancePulse: CompliancePulse = generateCompliancePulse();
 let auditLog: AuditLogEntry[] = generateAuditLog(100);
-let users: AdminUser[] = generateUsers(60);
+let users: AdminUser[] = generateUsers(400);
 let roles: RoleDefinition[] = generateRoles();
 const budget: BudgetOverview = generateBudgetOverview();
 const aiModels: AiModel[] = generateAiModels();
@@ -812,9 +812,17 @@ export const adminHandlers = [
 
   http.get("/api/admin/courses/:id", async ({ params }) => {
     await randomDelay();
-    const course = courses.find((c) => c.id === params.id);
-    if (!course) return notFound("Course");
-    return HttpResponse.json({ data: course });
+    const idx = courses.findIndex((c) => c.id === params.id);
+    if (idx === -1) return notFound("Course");
+    // Hydrate enrolledStudentIds on first detail fetch so roster shows seed students
+    if (!courses[idx].enrolledStudentIds && courses[idx].enrolledCount > 0) {
+      const matching = users
+        .filter((u) => u.role === "student" && u.department === courses[idx].department)
+        .slice(0, courses[idx].enrolledCount)
+        .map((u) => u.id);
+      courses[idx] = { ...courses[idx], enrolledStudentIds: matching };
+    }
+    return HttpResponse.json({ data: courses[idx] });
   }),
 
   http.patch("/api/admin/courses/:id", async ({ params, request }) => {
@@ -848,11 +856,22 @@ export const adminHandlers = [
       return validationError({ studentIds: ["At least one student ID is required"] });
     }
 
+    // Hydrate enrolledStudentIds from seed users matching course department on first enroll
+    if (!courses[idx].enrolledStudentIds && courses[idx].enrolledCount > 0) {
+      const matching = users
+        .filter((u) => u.role === "student" && u.department === courses[idx].department)
+        .slice(0, courses[idx].enrolledCount)
+        .map((u) => u.id);
+      courses[idx] = { ...courses[idx], enrolledStudentIds: matching };
+    }
+
     const course = courses[idx];
-    const newCount = course.enrolledCount + body.studentIds.length;
-    if (newCount > course.maxCapacity) {
+    const existing = course.enrolledStudentIds ?? [];
+    const dedupedNew = body.studentIds.filter((id) => !existing.includes(id));
+    const newTotal = existing.length + dedupedNew.length;
+    if (newTotal > course.maxCapacity) {
       return validationError({
-        studentIds: [`Enrollment would exceed capacity (${course.maxCapacity}). Currently enrolled: ${course.enrolledCount}`],
+        studentIds: [`Enrollment would exceed capacity (${course.maxCapacity}). Currently enrolled: ${existing.length}`],
       });
     }
 
@@ -883,8 +902,7 @@ export const adminHandlers = [
     }
 
     const now = new Date().toISOString();
-    const existing = courses[idx].enrolledStudentIds ?? [];
-    const merged = Array.from(new Set([...existing, ...body.studentIds]));
+    const merged = [...existing, ...dedupedNew];
     courses[idx] = {
       ...courses[idx],
       enrolledCount: merged.length,
@@ -896,7 +914,7 @@ export const adminHandlers = [
       data: {
         courseId,
         enrolledCount: merged.length,
-        newStudents: body.studentIds.length,
+        newStudents: dedupedNew.length,
       },
     });
   }),

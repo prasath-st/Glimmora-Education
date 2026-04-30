@@ -74,7 +74,7 @@ export default function AdminAiGovernancePage() {
         />
         <StatCard
           label="Avg Accuracy"
-          value={formatPercentage(overview.avgAccuracy)}
+          value={formatPercentage(overview.avgAccuracy * 100)}
           icon={Bot}
         />
         <StatCard

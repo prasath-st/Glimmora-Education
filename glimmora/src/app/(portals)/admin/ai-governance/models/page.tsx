@@ -94,7 +94,7 @@ function ModelCard({ model }: { model: AiModel }) {
               {model.domain}
             </p>
             <div className="mt-2 flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
-              <span>Accuracy: {formatPercentage(model.accuracy)}</span>
+              <span>Accuracy: {formatPercentage(model.accuracy * 100)}</span>
               <span>Bias: {model.biasScore.toFixed(2)}</span>
               <span className="flex items-center gap-1">
                 <Database className="h-3 w-3" />
