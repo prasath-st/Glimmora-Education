@@ -22,6 +22,7 @@ import type {
   Semester,
   AdminCourse,
   Program,
+  AcademicYear,
 } from "@/lib/api/types/admin.types";
 import type {
   PortalRole,
@@ -994,4 +995,71 @@ export function generatePrograms(): Program[] {
     createdAt: faker.date.between({ from: "2024-01-01", to: "2025-06-01" }).toISOString(),
     updatedAt: faker.date.recent({ days: 60 }).toISOString(),
   }));
+}
+
+// ── Academic Years ──────────────────────────────────────────────────────────
+
+const ACADEMIC_YEAR_DATA: { name: string; startDate: string; endDate: string; status: "upcoming" | "active" | "completed" }[] = [
+  { name: "AY 2024-2025", startDate: "2024-08-01", endDate: "2025-05-31", status: "completed" },
+  { name: "AY 2025-2026", startDate: "2025-08-01", endDate: "2026-05-31", status: "active" },
+  { name: "AY 2026-2027", startDate: "2026-08-01", endDate: "2027-05-31", status: "upcoming" },
+];
+
+function deriveSemesterStatus(startDate: string, endDate: string): "upcoming" | "active" | "completed" {
+  const now = Date.now();
+  const start = new Date(startDate).getTime();
+  const end = new Date(endDate).getTime();
+  if (now < start) return "upcoming";
+  if (now > end) return "completed";
+  return "active";
+}
+
+export function generateAcademicYears(): AcademicYear[] {
+  const now = new Date().toISOString();
+  return ACADEMIC_YEAR_DATA.map((y, i) => {
+    const yearStart = new Date(y.startDate);
+    const yearEnd = new Date(y.endDate);
+    const fallEnd = new Date(yearStart);
+    fallEnd.setMonth(fallEnd.getMonth() + 4); // Aug → Dec
+    const springStart = new Date(fallEnd);
+    springStart.setDate(springStart.getDate() + 7); // 1 week break
+    const yearLabel = y.name.replace("AY ", "").split("-")[0];
+
+    const yearId = `ay_${String(i + 1).padStart(2, "0")}`;
+    const fallSem: Semester = {
+      id: `sem_${yearId}_fall`,
+      name: `Fall ${yearLabel}`,
+      year: yearLabel,
+      startDate: yearStart.toISOString().split("T")[0],
+      endDate: fallEnd.toISOString().split("T")[0],
+      status: deriveSemesterStatus(yearStart.toISOString(), fallEnd.toISOString()),
+      courseCount: faker.number.int({ min: 30, max: 60 }),
+      academicYearId: yearId,
+      createdAt: now,
+      updatedAt: now,
+    };
+    const springSem: Semester = {
+      id: `sem_${yearId}_spring`,
+      name: `Spring ${Number(yearLabel) + 1}`,
+      year: String(Number(yearLabel) + 1),
+      startDate: springStart.toISOString().split("T")[0],
+      endDate: yearEnd.toISOString().split("T")[0],
+      status: deriveSemesterStatus(springStart.toISOString(), yearEnd.toISOString()),
+      courseCount: faker.number.int({ min: 30, max: 60 }),
+      academicYearId: yearId,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    return {
+      id: yearId,
+      name: y.name,
+      startDate: y.startDate,
+      endDate: y.endDate,
+      status: y.status,
+      semesters: [fallSem, springSem],
+      createdAt: now,
+      updatedAt: now,
+    };
+  });
 }

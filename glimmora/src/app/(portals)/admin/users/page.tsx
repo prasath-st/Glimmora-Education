@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import * as Dialog from "@radix-ui/react-dialog";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { type ColumnDef } from "@tanstack/react-table";
-import { useAdminUsers, useCreateUser, useUpdateUser, useBulkImportUsers } from "@/lib/hooks/use-admin";
+import { useAdminUsers, useCreateUser, useUpdateUser, useBulkImportUsers, usePrograms } from "@/lib/hooks/use-admin";
 import { FileUpload } from "@/components/shared/forms/file-upload";
 import {
   createUserSchema,
@@ -36,7 +36,6 @@ const ROLE_OPTIONS = [
 const STATUS_OPTIONS = [
   { value: "", label: "All Status" },
   { value: "active", label: "Active" },
-  { value: "inactive", label: "Inactive" },
   { value: "suspended", label: "Suspended" },
 ];
 
@@ -148,17 +147,6 @@ const DESIGNATION_OPTIONS = [
   { value: "lecturer", label: "Lecturer" },
 ];
 
-const SEMESTER_OPTIONS = [
-  { value: "1", label: "Semester 1" },
-  { value: "2", label: "Semester 2" },
-  { value: "3", label: "Semester 3" },
-  { value: "4", label: "Semester 4" },
-  { value: "5", label: "Semester 5" },
-  { value: "6", label: "Semester 6" },
-  { value: "7", label: "Semester 7" },
-  { value: "8", label: "Semester 8" },
-];
-
 function CreateUserDialog({
   open,
   onOpenChange,
@@ -167,12 +155,33 @@ function CreateUserDialog({
   onOpenChange: (open: boolean) => void;
 }) {
   const createUser = useCreateUser();
+  const { data: programsData } = usePrograms({ status: "active" });
+  const activePrograms = programsData?.data ?? [];
+
+  const programOptions = [
+    { value: "", label: "Select a program..." },
+    ...activePrograms.map((p) => ({ value: p.name, label: `${p.name} (${p.degreeType})` })),
+  ];
+
+  // Distinct departments derived from active programs
+  const departmentOptions = (() => {
+    const seen = new Set<string>();
+    const opts: { value: string; label: string }[] = [{ value: "", label: "Select a department..." }];
+    for (const p of activePrograms) {
+      if (!seen.has(p.department)) {
+        seen.add(p.department);
+        opts.push({ value: p.department, label: p.department });
+      }
+    }
+    return opts;
+  })();
 
   const {
     register,
     handleSubmit,
     reset,
     watch,
+    setValue,
     formState: { errors },
   } = useForm<CreateUserFormData>({
     resolver: zodResolver(createUserSchema),
@@ -180,6 +189,29 @@ function CreateUserDialog({
   });
 
   const selectedRole = watch("role");
+  const selectedProgram = watch("program");
+
+  // Auto-derive Department from Program for students
+  const handleProgramChange = useCallback(
+    (e: React.ChangeEvent<HTMLSelectElement>) => {
+      const programName = e.target.value;
+      setValue("program", programName);
+      const matched = activePrograms.find((p) => p.name === programName);
+      if (matched) {
+        setValue("department", matched.department, { shouldValidate: true });
+      }
+    },
+    [activePrograms, setValue]
+  );
+
+  // Cap semester options to selected program's totalSemesters
+  const semesterCap = selectedRole === "student" && selectedProgram
+    ? activePrograms.find((p) => p.name === selectedProgram)?.totalSemesters ?? 8
+    : 8;
+  const semesterOptions = Array.from({ length: semesterCap }, (_, i) => ({
+    value: String(i + 1),
+    label: `Semester ${i + 1}`,
+  }));
 
   const onSubmit = useCallback(
     async (data: CreateUserFormData) => {
@@ -239,16 +271,32 @@ function CreateUserDialog({
             {selectedRole === "student" && (
               <div>
                 <h3 className="mb-3 text-sm font-semibold">Academic Information</h3>
+                {activePrograms.length === 0 && (
+                  <div className="mb-3 rounded-lg border border-warning/30 bg-warning-light px-3 py-2 text-xs text-warning">
+                    No active programs. <a href="/admin/programs" className="font-semibold underline">Create a program first</a> before adding students.
+                  </div>
+                )}
                 <div className="space-y-3">
                   <FormField label="Student ID" placeholder="e.g. STU-2024-001" error={errors.studentId?.message} required {...register("studentId")} />
-                  <div className="grid grid-cols-2 gap-3">
-                    <FormField label="Department" placeholder="e.g. Computer Science" error={errors.department?.message} required {...register("department")} />
-                    <FormField label="Program" placeholder="e.g. BSc Computer Science" error={errors.program?.message} {...register("program")} />
-                  </div>
+                  <FormSelect
+                    label="Program"
+                    options={programOptions}
+                    error={errors.program?.message}
+                    required
+                    {...register("program", { onChange: handleProgramChange })}
+                  />
+                  <FormField
+                    label="Department"
+                    error={errors.department?.message}
+                    hint="Auto-filled from selected program"
+                    readOnly
+                    required
+                    {...register("department")}
+                  />
                   <div className="grid grid-cols-3 gap-3">
-                    <FormField label="Academic Year Start" placeholder="e.g. 2024" error={errors.academicYearStart?.message} {...register("academicYearStart")} />
-                    <FormField label="Academic Year End" placeholder="e.g. 2027" error={errors.academicYearEnd?.message} {...register("academicYearEnd")} />
-                    <FormSelect label="Current Semester" options={SEMESTER_OPTIONS} error={errors.currentSemester?.message} {...register("currentSemester")} />
+                    <FormField label="Year Start" placeholder="e.g. 2024" error={errors.academicYearStart?.message} {...register("academicYearStart")} />
+                    <FormField label="Year End" placeholder="e.g. 2027" error={errors.academicYearEnd?.message} {...register("academicYearEnd")} />
+                    <FormSelect label="Current Semester" options={semesterOptions} error={errors.currentSemester?.message} {...register("currentSemester")} />
                   </div>
                 </div>
               </div>
@@ -260,7 +308,7 @@ function CreateUserDialog({
                 <div className="space-y-3">
                   <div className="grid grid-cols-2 gap-3">
                     <FormField label="Employee ID" placeholder="e.g. FAC-2024-001" error={errors.employeeId?.message} required {...register("employeeId")} />
-                    <FormField label="Department" placeholder="e.g. Computer Science" error={errors.department?.message} required {...register("department")} />
+                    <FormSelect label="Department" options={departmentOptions} error={errors.department?.message} required {...register("department")} />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <FormSelect label="Designation" options={DESIGNATION_OPTIONS} error={errors.designation?.message} required {...register("designation")} />
@@ -273,7 +321,7 @@ function CreateUserDialog({
             {(selectedRole === "admin" || selectedRole === "placement") && (
               <div>
                 <h3 className="mb-3 text-sm font-semibold">Department</h3>
-                <FormField label="Department" placeholder="e.g. Administration" error={errors.department?.message} required {...register("department")} />
+                <FormSelect label="Department" options={departmentOptions} error={errors.department?.message} required {...register("department")} />
               </div>
             )}
 
@@ -299,9 +347,13 @@ function CreateUserDialog({
 
 interface ParsedRow {
   email: string;
-  name: string;
+  firstName: string;
+  lastName: string;
   role: string;
   department: string;
+  studentId?: string;
+  program?: string;
+  employeeId?: string;
   valid: boolean;
   error?: string;
 }
@@ -312,11 +364,15 @@ function parseCSV(text: string): ParsedRow[] {
 
   const header = lines[0].toLowerCase().split(",").map((h) => h.trim());
   const emailIdx = header.indexOf("email");
-  const nameIdx = header.indexOf("name");
+  const firstNameIdx = header.indexOf("firstname");
+  const lastNameIdx = header.indexOf("lastname");
   const roleIdx = header.indexOf("role");
   const deptIdx = header.indexOf("department");
+  const studentIdIdx = header.indexOf("studentid");
+  const programIdx = header.indexOf("program");
+  const employeeIdIdx = header.indexOf("employeeid");
 
-  if (emailIdx === -1 || nameIdx === -1 || roleIdx === -1 || deptIdx === -1) {
+  if (emailIdx === -1 || firstNameIdx === -1 || lastNameIdx === -1 || roleIdx === -1 || deptIdx === -1) {
     return [];
   }
 
@@ -325,21 +381,32 @@ function parseCSV(text: string): ParsedRow[] {
   return lines.slice(1).map((line) => {
     const cols = line.split(",").map((c) => c.trim());
     const email = cols[emailIdx] || "";
-    const name = cols[nameIdx] || "";
-    const role = cols[roleIdx] || "";
+    const firstName = cols[firstNameIdx] || "";
+    const lastName = cols[lastNameIdx] || "";
+    const role = (cols[roleIdx] || "").toLowerCase();
     const department = cols[deptIdx] || "";
+    const studentId = studentIdIdx >= 0 ? cols[studentIdIdx] || undefined : undefined;
+    const program = programIdx >= 0 ? cols[programIdx] || undefined : undefined;
+    const employeeId = employeeIdIdx >= 0 ? cols[employeeIdIdx] || undefined : undefined;
 
     const errors: string[] = [];
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.push("invalid email");
-    if (!name) errors.push("missing name");
-    if (!validRoles.includes(role.toLowerCase())) errors.push("invalid role");
+    if (!firstName) errors.push("missing firstName");
+    if (!lastName) errors.push("missing lastName");
+    if (!validRoles.includes(role)) errors.push("invalid role");
     if (!department) errors.push("missing department");
+    if (role === "student" && !studentId) errors.push("missing studentId for student");
+    if (role === "faculty" && !employeeId) errors.push("missing employeeId for faculty");
 
     return {
       email,
-      name,
-      role: role.toLowerCase(),
+      firstName,
+      lastName,
+      role,
       department,
+      studentId,
+      program,
+      employeeId,
       valid: errors.length === 0,
       error: errors.length > 0 ? errors.join(", ") : undefined,
     };
@@ -391,9 +458,13 @@ function ImportUsersDialog({
       await bulkImport.mutateAsync({
         users: validRows.map((r) => ({
           email: r.email,
-          name: r.name,
-          role: r.role,
+          firstName: r.firstName,
+          lastName: r.lastName,
+          role: r.role as "student" | "faculty" | "admin" | "placement",
           department: r.department,
+          studentId: r.studentId,
+          program: r.program,
+          employeeId: r.employeeId,
         })),
       });
       setSuccessMsg(
@@ -411,7 +482,9 @@ function ImportUsersDialog({
 
   const handleDownloadTemplate = useCallback(() => {
     const csv =
-      "email,name,role,department\njohn@university.edu,John Smith,student,Computer Science\njane@university.edu,Jane Doe,faculty,Mathematics\n";
+      "email,firstName,lastName,role,department,studentId,program,employeeId\n" +
+      "john@university.edu,John,Smith,student,Computer Science,STU-2026-001,BSc Computer Science,\n" +
+      "jane@university.edu,Jane,Doe,faculty,Computer Science,,,FAC-2026-001\n";
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -446,19 +519,19 @@ function ImportUsersDialog({
             </Dialog.Close>
           </div>
           <Dialog.Description className="mt-1 text-sm text-muted-foreground">
-            Upload a CSV file with columns: email, name, role, department
+            Upload a CSV with: email, firstName, lastName, role, department, studentId, program, employeeId
           </Dialog.Description>
 
           <div className="mt-4 space-y-4">
             {/* Template download */}
             <div className="rounded-lg border border-border bg-muted/50 p-3">
               <p className="text-xs font-medium text-muted-foreground mb-2">
-                Expected CSV format:
+                Expected CSV format (studentId required for student, employeeId required for faculty, program optional):
               </p>
               <pre className="text-xs font-mono text-muted-foreground bg-background rounded p-2 overflow-x-auto">
-{`email,name,role,department
-john@university.edu,John Smith,student,Computer Science
-jane@university.edu,Jane Doe,faculty,Mathematics`}
+{`email,firstName,lastName,role,department,studentId,program,employeeId
+john@university.edu,John,Smith,student,Computer Science,STU-2026-001,BSc Computer Science,
+jane@university.edu,Jane,Doe,faculty,Computer Science,,,FAC-2026-001`}
               </pre>
               <button
                 type="button"
@@ -516,7 +589,7 @@ jane@university.edu,Jane Doe,faculty,Mathematics`}
                             className={`border-b border-border last:border-0 ${!row.valid ? "bg-danger/5" : ""}`}
                           >
                             <td className="px-2 py-1.5 truncate max-w-[120px]">{row.email}</td>
-                            <td className="px-2 py-1.5 truncate max-w-[100px]">{row.name}</td>
+                            <td className="px-2 py-1.5 truncate max-w-[100px]">{row.firstName} {row.lastName}</td>
                             <td className="px-2 py-1.5">{row.role}</td>
                             <td className="px-2 py-1.5 truncate max-w-[100px]">{row.department}</td>
                             <td className="px-2 py-1.5">
@@ -637,12 +710,16 @@ export default function AdminUsersPage() {
     setConfirm({ open: true, user });
   }, []);
 
-  const executeToggleStatus = useCallback(async () => {
+  const executeToggleStatus = useCallback(async (reason?: string) => {
     if (!confirm.user) return;
     const newStatus = confirm.user.status === "active" ? "suspended" : "active";
     try {
       await updateUser.mutateAsync({ id: confirm.user.id, status: newStatus });
-      toast.success(newStatus === "suspended" ? `${confirm.user.name} suspended` : `${confirm.user.name} activated`);
+      if (newStatus === "suspended" && reason) {
+        toast.success(`${confirm.user.name} suspended. Reason logged in Audit Trail.`);
+      } else {
+        toast.success(newStatus === "suspended" ? `${confirm.user.name} suspended` : `${confirm.user.name} activated`);
+      }
     } catch {
       toast.error("Failed to update user status");
     }
@@ -773,17 +850,111 @@ export default function AdminUsersPage() {
 
       <CreateUserDialog open={dialogOpen} onOpenChange={setDialogOpen} />
       <ImportUsersDialog open={importOpen} onOpenChange={setImportOpen} />
-      <ConfirmDialog
-        open={confirm.open}
-        onOpenChange={(o) => setConfirm((p) => ({ ...p, open: o }))}
-        title={confirm.user?.status === "active" ? "Suspend User" : "Activate User"}
-        description={confirm.user?.status === "active"
-          ? `Suspend "${confirm.user?.name}"? They will lose access until reactivated.`
-          : `Activate "${confirm.user?.name}"? They will regain access immediately.`}
-        confirmLabel={confirm.user?.status === "active" ? "Suspend" : "Activate"}
-        variant={confirm.user?.status === "active" ? "danger" : "default"}
-        onConfirm={executeToggleStatus}
-      />
+      {confirm.user?.status !== "active" ? (
+        <ConfirmDialog
+          open={confirm.open}
+          onOpenChange={(o) => setConfirm((p) => ({ ...p, open: o }))}
+          title="Activate User"
+          description={`Activate "${confirm.user?.name}"? They will regain access immediately.`}
+          confirmLabel="Activate"
+          variant="default"
+          onConfirm={executeToggleStatus}
+        />
+      ) : (
+        <SuspendUserDialog
+          open={confirm.open}
+          onOpenChange={(o) => setConfirm((p) => ({ ...p, open: o }))}
+          user={confirm.user}
+          onSuspend={executeToggleStatus}
+        />
+      )}
     </div>
+  );
+}
+
+function SuspendUserDialog({
+  open,
+  onOpenChange,
+  user,
+  onSuspend,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  user: AdminUser | null;
+  onSuspend: (reason: string) => Promise<void>;
+}) {
+  const [reason, setReason] = useState("");
+  const [error, setError] = useState("");
+  const [pending, setPending] = useState(false);
+
+  const handleSuspend = async () => {
+    if (!reason.trim() || reason.trim().length < 10) {
+      setError("Please provide a reason (at least 10 characters)");
+      return;
+    }
+    setPending(true);
+    try {
+      await onSuspend(reason.trim());
+      setReason("");
+      setError("");
+      onOpenChange(false);
+    } finally {
+      setPending(false);
+    }
+  };
+
+  return (
+    <Dialog.Root
+      open={open}
+      onOpenChange={(o) => {
+        if (!o) {
+          setReason("");
+          setError("");
+        }
+        onOpenChange(o);
+      }}
+    >
+      <Dialog.Portal>
+        <Dialog.Overlay className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm" />
+        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-xl border border-border bg-card p-6 shadow-lg">
+          <Dialog.Title className="text-lg font-semibold text-danger">
+            Suspend User
+          </Dialog.Title>
+          <Dialog.Description className="mt-2 text-sm text-muted-foreground">
+            Suspend <span className="font-medium text-foreground">{user?.name}</span>? They will lose access until reactivated. This action will be logged with the reason in the Audit Trail.
+          </Dialog.Description>
+          <div className="mt-4 space-y-2">
+            <label className="text-sm font-medium">Reason for suspension</label>
+            <textarea
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="e.g. Policy violation – pending investigation. Reference ticket #..."
+              rows={4}
+              className="flex w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary-400"
+            />
+            {error && <p className="text-xs text-danger">{error}</p>}
+          </div>
+          <div className="mt-6 flex justify-end gap-3">
+            <button
+              type="button"
+              onClick={() => onOpenChange(false)}
+              disabled={pending}
+              className="rounded-lg border border-border px-4 py-2 text-sm font-medium transition-colors hover:bg-muted disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleSuspend}
+              disabled={pending}
+              className="flex items-center gap-2 rounded-lg bg-danger px-4 py-2 text-sm font-medium text-danger-foreground transition-colors hover:bg-danger/90 disabled:opacity-50"
+            >
+              {pending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+              Suspend User
+            </button>
+          </div>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
   );
 }

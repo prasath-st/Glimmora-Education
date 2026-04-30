@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import * as Dialog from "@radix-ui/react-dialog";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { usePrograms, useCreateProgram, useUpdateProgram } from "@/lib/hooks/use-admin";
-import { createProgramSchema, type CreateProgramFormData } from "@/lib/schemas/admin.schema";
+import { createProgramSchema, type CreateProgramFormData, type CreateProgramFormInput } from "@/lib/schemas/admin.schema";
 import { PageHeader } from "@/components/shared/misc/page-header";
 import { StatusBadge } from "@/components/shared/feedback/status-badge";
 import { TableSkeleton } from "@/components/shared/feedback/loading-skeleton";
@@ -79,7 +79,7 @@ function ProgramDialog({
   const updateProgram = useUpdateProgram();
   const isEditing = !!editingProgram;
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<CreateProgramFormData>({
+  const { register, handleSubmit, reset, formState: { errors } } = useForm<CreateProgramFormInput, unknown, CreateProgramFormData>({
     resolver: zodResolver(createProgramSchema),
     defaultValues: editingProgram
       ? { name: editingProgram.name, department: editingProgram.department, duration: editingProgram.duration, totalSemesters: editingProgram.totalSemesters, degreeType: editingProgram.degreeType }
@@ -264,9 +264,13 @@ export default function ProgramsPage() {
         open={confirm.open}
         onOpenChange={(o) => setConfirm((prev) => ({ ...prev, open: o }))}
         title={confirm.program?.status === "active" ? "Deactivate Program" : "Activate Program"}
-        description={confirm.program?.status === "active"
-          ? `Deactivate "${confirm.program?.name}"? New students cannot enroll in this program.`
-          : `Activate "${confirm.program?.name}"? Students can enroll in this program again.`}
+        description={
+          confirm.program?.status === "active"
+            ? confirm.program.studentCount > 0
+              ? `Deactivate "${confirm.program?.name}"? ${confirm.program.studentCount} student${confirm.program.studentCount === 1 ? " is" : "s are"} currently enrolled. Existing students keep access; new admissions will be blocked.`
+              : `Deactivate "${confirm.program?.name}"? No students are enrolled. New admissions will be blocked.`
+            : `Activate "${confirm.program?.name}"? Students can enroll in this program again.`
+        }
         confirmLabel={confirm.program?.status === "active" ? "Deactivate" : "Activate"}
         variant={confirm.program?.status === "active" ? "danger" : "default"}
         onConfirm={executeToggle}

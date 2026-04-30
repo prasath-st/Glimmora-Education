@@ -295,6 +295,7 @@ export interface Semester extends Identifiable, Timestamps {
   endDate: string;
   status: "upcoming" | "active" | "completed";
   courseCount: number;
+  academicYearId?: string;
 }
 
 export interface CreateSemesterRequest {
@@ -302,6 +303,34 @@ export interface CreateSemesterRequest {
   year: string;
   startDate: string;
   endDate: string;
+  academicYearId?: string;
+}
+
+// === Academic Year ===
+export interface AcademicYear extends Identifiable, Timestamps {
+  name: string;
+  startDate: string;
+  endDate: string;
+  status: "upcoming" | "active" | "completed";
+  semesters: Semester[];
+}
+
+export interface CreateAcademicYearRequest {
+  name: string;
+  startDate: string;
+  endDate: string;
+}
+
+// === Bulk Import ===
+export interface BulkImportUserRequest {
+  email: string;
+  firstName: string;
+  lastName: string;
+  role: "student" | "faculty" | "admin" | "placement";
+  department: string;
+  studentId?: string;
+  program?: string;
+  employeeId?: string;
 }
 
 // === Settings ===

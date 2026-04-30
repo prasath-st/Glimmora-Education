@@ -1,17 +1,21 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import { GraduationCap, Plus, Loader2, X, Upload } from "lucide-react";
+import { useState, useCallback, useMemo } from "react";
+import { GraduationCap, Plus, Loader2, X, Upload, MoreHorizontal, Pencil, Archive, ArchiveRestore, AlertTriangle } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "sonner";
 import * as Dialog from "@radix-ui/react-dialog";
+import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { type ColumnDef } from "@tanstack/react-table";
 import {
   useAdminCourses,
   useAdminUsers,
   useCreateCourse,
+  useUpdateCourse,
   useEnrollStudents,
   useSemesters,
+  usePrograms,
 } from "@/lib/hooks/use-admin";
 import {
   createCourseSchema,
@@ -24,44 +28,17 @@ import { StatusBadge } from "@/components/shared/feedback/status-badge";
 import { TableSkeleton } from "@/components/shared/feedback/loading-skeleton";
 import { ErrorState } from "@/components/shared/feedback/error-state";
 import { SearchInput } from "@/components/shared/forms/search-input";
+import { FileUpload } from "@/components/shared/forms/file-upload";
+import { ConfirmDialog } from "@/components/shared/feedback/confirm-dialog";
 import { FormField, FormSelect, FormTextarea } from "@/components/shared/forms/form-field";
+import { cn } from "@/lib/utils/cn";
 import type { AdminCourse } from "@/lib/api/types/admin.types";
-
-const DEPARTMENTS = [
-  "Computer Science",
-  "Electrical Engineering",
-  "Mechanical Engineering",
-  "Mathematics",
-  "Physics",
-  "Business Administration",
-  "Biotechnology",
-  "Civil Engineering",
-];
-
-const DEPARTMENT_OPTIONS = [
-  { value: "", label: "All Departments" },
-  ...DEPARTMENTS.map((d) => ({ value: d, label: d })),
-];
 
 const STATUS_OPTIONS = [
   { value: "", label: "All Status" },
   { value: "active", label: "Active" },
   { value: "draft", label: "Draft" },
   { value: "archived", label: "Archived" },
-];
-
-const DEPT_SELECT_OPTIONS = DEPARTMENTS.map((d) => ({ value: d, label: d }));
-
-// Fake faculty list for the create form
-const FACULTY_OPTIONS = [
-  { value: "fac_001", label: "Dr. Aarav Sharma" },
-  { value: "fac_002", label: "Dr. Priya Patel" },
-  { value: "fac_003", label: "Dr. Rahul Gupta" },
-  { value: "fac_004", label: "Dr. Sneha Singh" },
-  { value: "fac_005", label: "Dr. Vikram Kumar" },
-  { value: "fac_006", label: "Dr. Ananya Reddy" },
-  { value: "fac_007", label: "Dr. Rohan Nair" },
-  { value: "fac_008", label: "Dr. Kavya Joshi" },
 ];
 
 function getCourseStatusVariant(
@@ -75,17 +52,25 @@ function getCourseStatusVariant(
   return map[status];
 }
 
-function CreateCourseDialog({
+function CourseDialog({
   open,
   onOpenChange,
   semesterOptions,
+  departmentOptions,
+  facultyOptions,
+  editingCourse,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   semesterOptions: { value: string; label: string }[];
+  departmentOptions: { value: string; label: string }[];
+  facultyOptions: { value: string; label: string }[];
+  editingCourse: AdminCourse | null;
 }) {
   const createCourse = useCreateCourse();
+  const updateCourse = useUpdateCourse();
   const [successMsg, setSuccessMsg] = useState("");
+  const isEditing = !!editingCourse;
 
   const {
     register,
@@ -94,36 +79,53 @@ function CreateCourseDialog({
     formState: { errors },
   } = useForm<CreateCourseFormInput, unknown, CreateCourseFormData>({
     resolver: zodResolver(createCourseSchema),
-    defaultValues: {
-      code: "",
-      name: "",
-      description: "",
-      credits: 3,
-      department: "",
-      semesterId: "",
-      facultyId: "",
-      maxCapacity: 120,
-    },
+    defaultValues: editingCourse
+      ? {
+          code: editingCourse.code,
+          name: editingCourse.name,
+          description: editingCourse.description,
+          credits: editingCourse.credits,
+          department: editingCourse.department,
+          semesterId: editingCourse.semesterId,
+          facultyId: editingCourse.facultyId,
+          maxCapacity: editingCourse.maxCapacity,
+        }
+      : {
+          code: "",
+          name: "",
+          description: "",
+          credits: 3,
+          department: "",
+          semesterId: "",
+          facultyId: "",
+          maxCapacity: 120,
+        },
   });
 
   const onSubmit = useCallback(
     async (data: CreateCourseFormData) => {
       try {
-        await createCourse.mutateAsync(data);
-        setSuccessMsg(
-          `Course "${data.code} — ${data.name}" created successfully as draft.`
-        );
+        if (isEditing && editingCourse) {
+          await updateCourse.mutateAsync({ id: editingCourse.id, ...data });
+          setSuccessMsg(`Course "${data.code} — ${data.name}" updated.`);
+        } else {
+          await createCourse.mutateAsync(data);
+          setSuccessMsg(`Course "${data.code} — ${data.name}" created as draft.`);
+        }
         reset();
         setTimeout(() => {
           setSuccessMsg("");
           onOpenChange(false);
-        }, 1500);
+        }, 1200);
       } catch {
         // error shown via mutation state
       }
     },
-    [createCourse, reset, onOpenChange]
+    [isEditing, editingCourse, createCourse, updateCourse, reset, onOpenChange]
   );
+
+  const isPending = createCourse.isPending || updateCourse.isPending;
+  const isError = createCourse.isError || updateCourse.isError;
 
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
@@ -132,17 +134,27 @@ function CreateCourseDialog({
         <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-xl border border-border bg-card p-6 shadow-lg max-h-[90vh] overflow-y-auto data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95">
           <div className="flex items-center justify-between">
             <Dialog.Title className="text-lg font-semibold">
-              Create Course
+              {isEditing ? "Edit Course" : "Create Course"}
             </Dialog.Title>
             <Dialog.Close className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
               <X className="h-4 w-4" />
             </Dialog.Close>
           </div>
           <Dialog.Description className="mt-1 text-sm text-muted-foreground">
-            Add a new course to the catalog.
+            {isEditing ? `Update details for ${editingCourse?.code}` : "Add a new course to the catalog."}
           </Dialog.Description>
 
           <form onSubmit={handleSubmit(onSubmit)} className="mt-4 space-y-4">
+            {departmentOptions.length <= 1 && (
+              <div className="rounded-lg border border-warning/30 bg-warning-light px-3 py-2 text-xs text-warning">
+                No active programs available. <a href="/admin/programs" className="font-semibold underline">Create a program</a> to populate departments.
+              </div>
+            )}
+            {facultyOptions.length === 0 && (
+              <div className="rounded-lg border border-warning/30 bg-warning-light px-3 py-2 text-xs text-warning">
+                No faculty users yet. <a href="/admin/users" className="font-semibold underline">Add a faculty user</a> first.
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 label="Course Code"
@@ -177,7 +189,7 @@ function CreateCourseDialog({
             <div className="grid grid-cols-2 gap-4">
               <FormSelect
                 label="Department"
-                options={DEPT_SELECT_OPTIONS}
+                options={departmentOptions}
                 error={errors.department?.message}
                 required
                 {...register("department")}
@@ -193,7 +205,7 @@ function CreateCourseDialog({
             <div className="grid grid-cols-2 gap-4">
               <FormSelect
                 label="Faculty"
-                options={FACULTY_OPTIONS}
+                options={facultyOptions}
                 error={errors.facultyId?.message}
                 required
                 {...register("facultyId")}
@@ -208,9 +220,9 @@ function CreateCourseDialog({
               />
             </div>
 
-            {createCourse.isError && (
+            {isError && (
               <p className="text-xs text-danger">
-                Failed to create course. Please check the details and try again.
+                Operation failed. Please check the details and try again.
               </p>
             )}
             {successMsg && (
@@ -227,13 +239,13 @@ function CreateCourseDialog({
               </button>
               <button
                 type="submit"
-                disabled={createCourse.isPending}
+                disabled={isPending}
                 className="flex items-center gap-2 rounded-lg bg-portal-accent px-4 py-2 text-sm font-medium text-portal-accent-foreground transition-colors hover:bg-portal-accent-hover disabled:opacity-50"
               >
-                {createCourse.isPending && (
+                {isPending && (
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
                 )}
-                Create Course
+                {isEditing ? "Save Changes" : "Create Course"}
               </button>
             </div>
           </form>
@@ -257,16 +269,23 @@ function EnrollStudentsDialog({
   const [studentSearch, setStudentSearch] = useState("");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [studentIdsText, setStudentIdsText] = useState("");
-  const [csvFile, setCsvFile] = useState<File | null>(null);
+  const [, setCsvFile] = useState<File | null>(null);
   const [csvPreview, setCsvPreview] = useState<string[]>([]);
   const [successMsg, setSuccessMsg] = useState("");
+  const [showAllDepts, setShowAllDepts] = useState(false);
 
+  // Restrict to course's department for safety; admin can opt in to "show all"
   const { data: studentsData, isLoading: studentsLoading } = useAdminUsers({
     role: "student",
     search: studentSearch || undefined,
     pageSize: 50,
   });
-  const students = studentsData?.users ?? [];
+  const allStudents = studentsData?.users ?? [];
+  const students = useMemo(() => {
+    if (!course || showAllDepts) return allStudents;
+    return allStudents.filter((s) => s.department === course.department);
+  }, [allStudents, course, showAllDepts]);
+  const filteredOutCount = allStudents.length - students.length;
 
   const toggleStudent = useCallback((id: string) => {
     setSelectedIds((prev) =>
@@ -386,6 +405,25 @@ function EnrollStudentsDialog({
                   onChange={(e) => setStudentSearch(e.target.value)}
                   className="flex w-full h-9 rounded-lg border border-input bg-background px-3 text-sm transition-colors placeholder:text-muted-foreground hover:border-muted-foreground focus:outline-none focus:ring-2 focus:ring-portal-accent focus:ring-offset-1"
                 />
+                {course && (
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">
+                      Showing students from <span className="font-medium text-foreground">{course.department}</span>
+                      {!showAllDepts && filteredOutCount > 0 && (
+                        <> · {filteredOutCount} hidden from other depts</>
+                      )}
+                    </span>
+                    <label className="flex items-center gap-1.5 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={showAllDepts}
+                        onChange={(e) => setShowAllDepts(e.target.checked)}
+                        className="h-3 w-3 rounded border-border text-portal-accent focus:ring-portal-accent"
+                      />
+                      <span className="text-muted-foreground">Show all departments</span>
+                    </label>
+                  </div>
+                )}
                 <div className="max-h-48 overflow-y-auto rounded-lg border border-border">
                   {studentsLoading ? (
                     <div className="flex items-center justify-center py-6">
@@ -501,12 +539,88 @@ function EnrollStudentsDialog({
   );
 }
 
+function CourseRowActions({
+  course,
+  onEdit,
+  onEnroll,
+  onToggleArchive,
+}: {
+  course: AdminCourse;
+  onEdit: () => void;
+  onEnroll: () => void;
+  onToggleArchive: () => void;
+}) {
+  const isArchived = course.status === "archived";
+  return (
+    <DropdownMenu.Root>
+      <DropdownMenu.Trigger asChild>
+        <button
+          onClick={(e) => e.stopPropagation()}
+          className="rounded-lg p-1.5 text-muted-foreground opacity-0 transition-all hover:bg-muted hover:text-foreground group-hover:opacity-100 data-[state=open]:opacity-100"
+        >
+          <MoreHorizontal className="h-4 w-4" />
+        </button>
+      </DropdownMenu.Trigger>
+      <DropdownMenu.Portal>
+        <DropdownMenu.Content
+          align="end"
+          sideOffset={4}
+          onClick={(e) => e.stopPropagation()}
+          className="z-50 w-44 rounded-lg bg-card py-2 shadow-2xl ring-1 ring-border/30"
+        >
+          {!isArchived && (
+            <>
+              <DropdownMenu.Item
+                onSelect={onEnroll}
+                className="flex cursor-pointer items-center gap-3 px-4 py-2.5 text-sm outline-none transition-colors hover:bg-muted focus:bg-muted"
+              >
+                <Upload className="h-4 w-4 text-muted-foreground" /> Enroll Students
+              </DropdownMenu.Item>
+              <DropdownMenu.Item
+                onSelect={onEdit}
+                className="flex cursor-pointer items-center gap-3 px-4 py-2.5 text-sm outline-none transition-colors hover:bg-muted focus:bg-muted"
+              >
+                <Pencil className="h-4 w-4 text-muted-foreground" /> Edit
+              </DropdownMenu.Item>
+              <DropdownMenu.Separator className="my-1 h-px bg-border/50" />
+            </>
+          )}
+          <DropdownMenu.Item
+            onSelect={onToggleArchive}
+            className={cn(
+              "flex cursor-pointer items-center gap-3 px-4 py-2.5 text-sm outline-none transition-colors hover:bg-muted focus:bg-muted",
+              isArchived ? "text-success" : "text-danger"
+            )}
+          >
+            {isArchived ? (
+              <>
+                <ArchiveRestore className="h-4 w-4" /> Restore
+              </>
+            ) : (
+              <>
+                <Archive className="h-4 w-4" /> Archive
+              </>
+            )}
+          </DropdownMenu.Item>
+        </DropdownMenu.Content>
+      </DropdownMenu.Portal>
+    </DropdownMenu.Root>
+  );
+}
+
 export default function AdminCoursesPage() {
-  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [courseDialog, setCourseDialog] = useState<{ open: boolean; editing: AdminCourse | null }>({
+    open: false,
+    editing: null,
+  });
   const [enrollDialog, setEnrollDialog] = useState<{
     open: boolean;
     course: AdminCourse | null;
   }>({ open: false, course: null });
+  const [archiveConfirm, setArchiveConfirm] = useState<{ open: boolean; course: AdminCourse | null }>({
+    open: false,
+    course: null,
+  });
   const [search, setSearch] = useState("");
   const [deptFilter, setDeptFilter] = useState("");
   const [semesterFilter, setSemesterFilter] = useState("");
@@ -523,6 +637,34 @@ export default function AdminCoursesPage() {
   });
 
   const { data: semesters } = useSemesters();
+  const { data: programsData } = usePrograms({ status: "active" });
+  const { data: facultyData } = useAdminUsers({ role: "faculty", status: "active", pageSize: 100 });
+  const updateCourse = useUpdateCourse();
+
+  // Distinct departments from active programs
+  const distinctDepartments = useMemo(() => {
+    const seen = new Set<string>();
+    for (const p of programsData?.data ?? []) seen.add(p.department);
+    return Array.from(seen);
+  }, [programsData]);
+
+  const departmentFilterOptions = useMemo(() => [
+    { value: "", label: "All Departments" },
+    ...distinctDepartments.map((d) => ({ value: d, label: d })),
+  ], [distinctDepartments]);
+
+  const departmentCreateOptions = useMemo(() => [
+    { value: "", label: "Select a department..." },
+    ...distinctDepartments.map((d) => ({ value: d, label: d })),
+  ], [distinctDepartments]);
+
+  const facultyOptions = useMemo(() => {
+    const list = facultyData?.users ?? [];
+    return [
+      { value: "", label: "Select a faculty member..." },
+      ...list.map((f) => ({ value: f.id, label: f.name })),
+    ];
+  }, [facultyData]);
 
   const semesterFilterOptions = [
     { value: "", label: "All Semesters" },
@@ -538,6 +680,25 @@ export default function AdminCoursesPage() {
     setSearch(value);
     setPage(1);
   }, []);
+
+  const handleEdit = useCallback((course: AdminCourse) => {
+    setCourseDialog({ open: true, editing: course });
+  }, []);
+
+  const handleArchive = useCallback((course: AdminCourse) => {
+    setArchiveConfirm({ open: true, course });
+  }, []);
+
+  const executeArchive = useCallback(async () => {
+    if (!archiveConfirm.course) return;
+    const next = archiveConfirm.course.status === "archived" ? "active" : "archived";
+    try {
+      await updateCourse.mutateAsync({ id: archiveConfirm.course.id, status: next });
+      toast.success(next === "archived" ? `${archiveConfirm.course.code} archived` : `${archiveConfirm.course.code} restored`);
+    } catch {
+      toast.error("Failed to update course status");
+    }
+  }, [archiveConfirm.course, updateCourse]);
 
   const courseColumns: ColumnDef<AdminCourse, unknown>[] = [
     {
@@ -599,22 +760,14 @@ export default function AdminCoursesPage() {
     {
       id: "actions",
       header: "",
-      cell: ({ row }) => {
-        const course = row.original;
-        if (course.status === "archived") return null;
-        return (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setEnrollDialog({ open: true, course });
-            }}
-            className="flex items-center gap-1.5 rounded-lg border border-portal-accent/30 px-3 py-1.5 text-xs font-medium text-portal-accent transition-colors hover:bg-portal-accent-light whitespace-nowrap"
-          >
-            <Upload className="h-3 w-3" />
-            Enroll
-          </button>
-        );
-      },
+      cell: ({ row }) => (
+        <CourseRowActions
+          course={row.original}
+          onEdit={() => handleEdit(row.original)}
+          onEnroll={() => setEnrollDialog({ open: true, course: row.original })}
+          onToggleArchive={() => handleArchive(row.original)}
+        />
+      ),
     },
   ];
 
@@ -626,7 +779,7 @@ export default function AdminCoursesPage() {
         description="Manage courses, assign faculty, and enroll students"
         actions={
           <button
-            onClick={() => setCreateDialogOpen(true)}
+            onClick={() => setCourseDialog({ open: true, editing: null })}
             className="flex items-center gap-2 rounded-lg bg-portal-accent px-4 py-2 text-sm font-medium text-portal-accent-foreground transition-colors hover:bg-portal-accent-hover"
           >
             <Plus className="h-4 w-4" />
@@ -650,7 +803,7 @@ export default function AdminCoursesPage() {
           }}
           className="flex h-10 rounded-lg border border-input bg-background px-3 text-sm transition-colors hover:border-muted-foreground focus:outline-none focus:ring-2 focus:ring-portal-accent focus:ring-offset-1"
         >
-          {DEPARTMENT_OPTIONS.map((opt) => (
+          {departmentFilterOptions.map((opt) => (
             <option key={opt.value} value={opt.value}>
               {opt.label}
             </option>
@@ -734,15 +887,31 @@ export default function AdminCoursesPage() {
         </>
       )}
 
-      <CreateCourseDialog
-        open={createDialogOpen}
-        onOpenChange={setCreateDialogOpen}
+      <CourseDialog
+        open={courseDialog.open}
+        onOpenChange={(open) => setCourseDialog({ open, editing: open ? courseDialog.editing : null })}
         semesterOptions={semesterCreateOptions}
+        departmentOptions={departmentCreateOptions}
+        facultyOptions={facultyOptions}
+        editingCourse={courseDialog.editing}
       />
       <EnrollStudentsDialog
         open={enrollDialog.open}
         onOpenChange={(open) => setEnrollDialog((prev) => ({ ...prev, open }))}
         course={enrollDialog.course}
+      />
+      <ConfirmDialog
+        open={archiveConfirm.open}
+        onOpenChange={(open) => setArchiveConfirm((prev) => ({ ...prev, open }))}
+        title={archiveConfirm.course?.status === "archived" ? "Restore Course" : "Archive Course"}
+        description={
+          archiveConfirm.course?.status === "archived"
+            ? `Restore "${archiveConfirm.course?.code}"? It will become available for enrollment again.`
+            : `Archive "${archiveConfirm.course?.code} — ${archiveConfirm.course?.name}"? Currently enrolled: ${archiveConfirm.course?.enrolledCount ?? 0}. Existing students keep their grades; new enrollments will be blocked.`
+        }
+        confirmLabel={archiveConfirm.course?.status === "archived" ? "Restore" : "Archive"}
+        variant={archiveConfirm.course?.status === "archived" ? "default" : "danger"}
+        onConfirm={executeArchive}
       />
     </div>
   );

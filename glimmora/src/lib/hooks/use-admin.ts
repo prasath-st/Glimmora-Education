@@ -26,6 +26,9 @@ import type {
   CreateSemesterRequest,
   Program,
   CreateProgramRequest,
+  AcademicYear,
+  CreateAcademicYearRequest,
+  BulkImportUserRequest,
 } from "@/lib/api/types/admin.types";
 import type { PaginationMeta } from "@/lib/api/types/common.types";
 
@@ -145,7 +148,7 @@ export function useCreateUser() {
 export function useBulkImportUsers() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: { users: { email: string; name: string; role: string; department: string }[] }) =>
+    mutationFn: (data: { users: BulkImportUserRequest[] }) =>
       api.post<{ imported: number; errors: number }>("/api/admin/users/bulk", data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin", "users"] });
@@ -481,6 +484,51 @@ export function useUpdateProgram() {
       api.patch<Program>(`/api/admin/programs/${id}`, data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin", "programs"] });
+    },
+  });
+}
+
+// === Academic Years ===
+
+export function useAcademicYears() {
+  return useQuery({
+    queryKey: ["admin", "academic-years"],
+    queryFn: () => api.get<AcademicYear[]>("/api/admin/academic-years"),
+    select: (res) => res.data,
+  });
+}
+
+export function useCreateAcademicYear() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: CreateAcademicYearRequest) =>
+      api.post<AcademicYear>("/api/admin/academic-years", data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin", "academic-years"] });
+      qc.invalidateQueries({ queryKey: ["admin", "semesters"] });
+    },
+  });
+}
+
+export function useUpdateAcademicYear() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...data }: { id: string } & Partial<AcademicYear>) =>
+      api.patch<AcademicYear>(`/api/admin/academic-years/${id}`, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin", "academic-years"] });
+    },
+  });
+}
+
+export function useUpdateNestedSemester() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...data }: { id: string } & Partial<Semester>) =>
+      api.patch<Semester>(`/api/admin/semesters/${id}`, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin", "academic-years"] });
+      qc.invalidateQueries({ queryKey: ["admin", "semesters"] });
     },
   });
 }

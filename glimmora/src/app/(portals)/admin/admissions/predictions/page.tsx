@@ -71,6 +71,8 @@ export default function AdmissionsPredictionsPage() {
     setDismissingId(id);
     try {
       await dismissRec.mutateAsync(id);
+      setImplementFeedback("Recommendation dismissed. It will no longer appear in the active list.");
+      setTimeout(() => setImplementFeedback(null), 5000);
     } finally {
       setDismissingId(null);
     }

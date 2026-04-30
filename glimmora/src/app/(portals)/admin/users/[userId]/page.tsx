@@ -12,7 +12,7 @@ import {
   Clock,
   Hash,
 } from "lucide-react";
-import { useAdminUserDetail, useUpdateUser } from "@/lib/hooks/use-admin";
+import { useAdminUserDetail, useUpdateUser, usePrograms } from "@/lib/hooks/use-admin";
 import { PageHeader } from "@/components/shared/misc/page-header";
 import { StatusBadge } from "@/components/shared/feedback/status-badge";
 import { CardSkeleton } from "@/components/shared/feedback/loading-skeleton";
@@ -49,6 +49,13 @@ export default function AdminUserDetailPage({
   const { userId } = use(params);
   const { data: user, isLoading, isError, refetch } = useAdminUserDetail(userId);
   const updateUser = useUpdateUser();
+  const { data: programsData } = usePrograms({ status: "active" });
+
+  const distinctDepartments = (() => {
+    const seen = new Set<string>();
+    for (const p of programsData?.data ?? []) seen.add(p.department);
+    return Array.from(seen);
+  })();
 
   const [roleChanging, setRoleChanging] = useState(false);
   const [deptEditing, setDeptEditing] = useState(false);
@@ -316,13 +323,18 @@ export default function AdminUserDetailPage({
             <h3 className="text-sm font-semibold">Change Department</h3>
             {deptEditing ? (
               <div className="mt-3 flex items-center gap-2">
-                <input
-                  type="text"
+                <select
                   value={deptValue}
                   onChange={(e) => setDeptValue(e.target.value)}
                   className="flex h-10 flex-1 rounded-lg border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-portal-accent focus:ring-offset-1"
-                  placeholder="Enter new department"
-                />
+                >
+                  <option value="">Select department...</option>
+                  {distinctDepartments.map((d) => (
+                    <option key={d} value={d}>
+                      {d}
+                    </option>
+                  ))}
+                </select>
                 <button
                   onClick={handleDeptSave}
                   disabled={!deptValue.trim() || updateUser.isPending}

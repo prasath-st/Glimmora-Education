@@ -14,6 +14,7 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { type ColumnDef } from "@tanstack/react-table";
 import {
   useAdminCredentials,
+  useAdminUsers,
   useIssueCredential,
   useRevokeCredential,
 } from "@/lib/hooks/use-admin";
@@ -81,11 +82,21 @@ function IssueCredentialDialog({
 }) {
   const issueCredential = useIssueCredential();
   const [successMsg, setSuccessMsg] = useState("");
+  const [studentSearch, setStudentSearch] = useState("");
+  const { data: studentsData } = useAdminUsers({
+    role: "student",
+    status: "active",
+    search: studentSearch || undefined,
+    pageSize: 50,
+  });
+  const students = studentsData?.users ?? [];
 
   const {
     register,
     handleSubmit,
     reset,
+    setValue,
+    watch,
     formState: { errors },
   } = useForm<IssueCredentialFormData>({
     resolver: zodResolver(issueCredentialSchema),
@@ -96,6 +107,9 @@ function IssueCredentialDialog({
       description: "",
     },
   });
+
+  const selectedStudentId = watch("studentId");
+  const selectedStudent = students.find((s) => s.id === selectedStudentId);
 
   const onSubmit = useCallback(
     async (data: IssueCredentialFormData) => {
@@ -132,13 +146,46 @@ function IssueCredentialDialog({
           </Dialog.Description>
 
           <form onSubmit={handleSubmit(onSubmit)} className="mt-4 space-y-4">
-            <FormField
-              label="Student ID"
-              placeholder="e.g. STU-001"
-              error={errors.studentId?.message}
-              required
-              {...register("studentId")}
-            />
+            <div className="space-y-2">
+              <label className="text-sm font-medium">
+                Student <span className="ml-0.5 text-danger">*</span>
+              </label>
+              <input
+                type="text"
+                placeholder="Search students by name or email..."
+                value={studentSearch}
+                onChange={(e) => setStudentSearch(e.target.value)}
+                className="flex h-9 w-full rounded-lg border border-input bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary-400"
+              />
+              <div className="max-h-36 overflow-y-auto rounded-lg border border-border">
+                {students.length === 0 ? (
+                  <p className="px-3 py-3 text-center text-xs text-muted-foreground">
+                    {studentSearch ? "No students match." : "Type to search students..."}
+                  </p>
+                ) : (
+                  students.map((s) => (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => setValue("studentId", s.id, { shouldValidate: true })}
+                      className={`flex w-full items-center justify-between px-3 py-2 text-left transition-colors hover:bg-muted ${selectedStudentId === s.id ? "bg-portal-accent-light" : ""}`}
+                    >
+                      <span className="text-sm">{s.name}</span>
+                      <span className="text-xs text-muted-foreground">{s.email}</span>
+                    </button>
+                  ))
+                )}
+              </div>
+              {selectedStudent && (
+                <p className="text-xs text-muted-foreground">
+                  Selected: <span className="font-medium text-foreground">{selectedStudent.name}</span> ({selectedStudent.department})
+                </p>
+              )}
+              {errors.studentId?.message && (
+                <p className="text-xs text-danger">{errors.studentId.message}</p>
+              )}
+              <input type="hidden" {...register("studentId")} />
+            </div>
             <FormField
               label="Title"
               placeholder="e.g. Bachelor of Science"

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Wallet, AlertTriangle, DollarSign, PiggyBank, TrendingDown } from "lucide-react";
 import { useBudgetOverview } from "@/lib/hooks/use-admin";
 import { PageHeader } from "@/components/shared/misc/page-header";
@@ -20,6 +21,7 @@ const ALERT_TYPE_LABELS: Record<string, string> = {
 
 export default function AdminBudgetPage() {
   const { data, isLoading, isError, refetch } = useBudgetOverview();
+  const [acknowledgedAlerts, setAcknowledgedAlerts] = useState<string[]>([]);
 
   if (isLoading) {
     return (
@@ -127,7 +129,7 @@ export default function AdminBudgetPage() {
           </div>
         ) : (
           <div className="divide-y divide-border">
-            {data.alerts.map((alert) => (
+            {data.alerts.filter((a) => !acknowledgedAlerts.includes(a.id)).map((alert) => (
               <div
                 key={alert.id}
                 className="flex items-start gap-3 px-6 py-4"
@@ -150,8 +152,25 @@ export default function AdminBudgetPage() {
                     {formatRelative(alert.date)}
                   </p>
                 </div>
+                <button
+                  onClick={() => setAcknowledgedAlerts((p) => [...p, alert.id])}
+                  className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                >
+                  Acknowledge
+                </button>
               </div>
             ))}
+            {data.alerts.length > 0 && data.alerts.every((a) => acknowledgedAlerts.includes(a.id)) && (
+              <div className="px-6 py-8 text-center text-sm text-muted-foreground">
+                All {data.alerts.length} alert{data.alerts.length !== 1 ? "s" : ""} acknowledged.{" "}
+                <button
+                  onClick={() => setAcknowledgedAlerts([])}
+                  className="font-medium text-portal-accent hover:underline"
+                >
+                  Show all
+                </button>
+              </div>
+            )}
           </div>
         )}
         <div className="border-t border-border px-6 py-3">

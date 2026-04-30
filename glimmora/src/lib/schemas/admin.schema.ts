@@ -34,7 +34,8 @@ export const createProgramSchema = z.object({
   degreeType: z.enum(["UG", "PG", "Diploma", "PhD"], { error: "Please select a degree type" }),
 });
 
-export type CreateProgramFormData = z.infer<typeof createProgramSchema>;
+export type CreateProgramFormData = z.output<typeof createProgramSchema>;
+export type CreateProgramFormInput = z.input<typeof createProgramSchema>;
 
 export const updateUserSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters").optional(),
@@ -117,11 +118,42 @@ export const createCourseSchema = z.object({
 export type CreateCourseFormData = z.output<typeof createCourseSchema>;
 export type CreateCourseFormInput = z.input<typeof createCourseSchema>;
 
-export const createSemesterSchema = z.object({
-  name: z.string().min(1, "Semester name is required"),
-  year: z.string().min(4, "Year is required"),
-  startDate: z.string().min(1, "Start date is required"),
-  endDate: z.string().min(1, "End date is required"),
-});
+export const createSemesterSchema = z
+  .object({
+    name: z.string().min(1, "Semester name is required"),
+    year: z.string().min(4, "Year is required"),
+    startDate: z.string().min(1, "Start date is required"),
+    endDate: z.string().min(1, "End date is required"),
+  })
+  .refine(
+    (d) => !d.startDate || !d.endDate || new Date(d.endDate) > new Date(d.startDate),
+    { message: "End date must be after start date", path: ["endDate"] }
+  );
 
 export type CreateSemesterFormData = z.infer<typeof createSemesterSchema>;
+
+export const createAcademicYearSchema = z
+  .object({
+    name: z.string().min(1, "Academic year name is required"),
+    startDate: z.string().min(1, "Start date is required"),
+    endDate: z.string().min(1, "End date is required"),
+  })
+  .refine(
+    (d) => !d.startDate || !d.endDate || new Date(d.endDate) > new Date(d.startDate),
+    { message: "End date must be after start date", path: ["endDate"] }
+  );
+
+export type CreateAcademicYearFormData = z.infer<typeof createAcademicYearSchema>;
+
+export const bulkImportUserSchema = z.object({
+  email: z.string().min(1, "Email is required").email("Invalid email"),
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
+  role: z.enum(["student", "faculty", "admin", "placement"]),
+  department: z.string().min(1, "Department is required"),
+  studentId: z.string().optional(),
+  program: z.string().optional(),
+  employeeId: z.string().optional(),
+});
+
+export type BulkImportUserFormData = z.infer<typeof bulkImportUserSchema>;

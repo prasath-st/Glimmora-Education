@@ -23,6 +23,9 @@ import type {
   CreateSemesterRequest,
   Program,
   CreateProgramRequest,
+  AcademicYear,
+  CreateAcademicYearRequest,
+  BulkImportUserRequest,
 } from "@/lib/api/types/admin.types";
 import type { PaginationMeta, PortalRole } from "@/lib/api/types/common.types";
 import {
@@ -43,6 +46,7 @@ import {
   generateSemesters,
   generateCourses,
   generatePrograms,
+  generateAcademicYears,
 } from "@/mocks/data/generators/admin.generator";
 
 // ─── Generate data once at module level ───────────────────────────────────────
@@ -64,6 +68,13 @@ let settings: InstitutionSettings = generateSettings();
 let semesters: Semester[] = generateSemesters();
 let programs: Program[] = generatePrograms();
 let courses: AdminCourse[] = generateCourses();
+let academicYears: AcademicYear[] = generateAcademicYears();
+
+// Initially sync top-level semesters from academic years' nested semesters
+semesters = [
+  ...semesters,
+  ...academicYears.flatMap((y) => y.semesters),
+];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -309,9 +320,7 @@ export const adminHandlers = [
 
   http.post("/api/admin/users/bulk", async ({ request }) => {
     await randomDelay();
-    const body = (await request.json()) as {
-      users?: { email: string; name: string; role: string; department: string }[];
-    };
+    const body = (await request.json()) as { users?: BulkImportUserRequest[] };
 
     if (!body.users || body.users.length === 0) {
       return validationError({ users: ["At least one user is required"] });
@@ -321,8 +330,8 @@ export const adminHandlers = [
     const newUsers: AdminUser[] = body.users.map((u) => ({
       id: `usr_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
       email: u.email,
-      name: u.name,
-      role: u.role as AdminUser["role"],
+      name: `${u.firstName} ${u.lastName}`,
+      role: u.role,
       department: u.department,
       status: "active" as const,
       lastLoginAt: null,
@@ -334,7 +343,6 @@ export const adminHandlers = [
 
     users = [...newUsers, ...users];
 
-    // Update role user counts
     for (const u of newUsers) {
       roles = roles.map((r) =>
         r.role === u.role ? { ...r, userCount: r.userCount + 1 } : r
@@ -770,7 +778,7 @@ export const adminHandlers = [
   http.post("/api/admin/courses/:id/enroll", async ({ params, request }) => {
     await randomDelay();
     const courseId = params.id as string;
-    const body = (await request.json()) as { studentIds?: string[] };
+    const body = (await request.json()) as { studentIds?: string[]; force?: boolean };
 
     const idx = courses.findIndex((c) => c.id === courseId);
     if (idx === -1) return notFound("Course");
@@ -784,6 +792,32 @@ export const adminHandlers = [
     if (newCount > course.maxCapacity) {
       return validationError({
         studentIds: [`Enrollment would exceed capacity (${course.maxCapacity}). Currently enrolled: ${course.enrolledCount}`],
+      });
+    }
+
+    // Eligibility check: student must exist + (if force=false) must match course department
+    const ineligible: { id: string; reason: string }[] = [];
+    for (const sid of body.studentIds) {
+      const student = users.find((u) => u.id === sid);
+      if (!student) {
+        ineligible.push({ id: sid, reason: "Student not found" });
+        continue;
+      }
+      if (student.role !== "student") {
+        ineligible.push({ id: sid, reason: `User ${student.name} is not a student` });
+        continue;
+      }
+      if (!body.force && student.department !== course.department) {
+        ineligible.push({
+          id: sid,
+          reason: `${student.name} is from ${student.department}, not ${course.department}`,
+        });
+      }
+    }
+
+    if (ineligible.length > 0) {
+      return validationError({
+        eligibility: ineligible.map((e) => `${e.id}: ${e.reason}`),
       });
     }
 
@@ -806,7 +840,12 @@ export const adminHandlers = [
   // ── Semesters ────────────────────────────────────────────────────────────
   http.get("/api/admin/semesters", async () => {
     await randomDelay();
-    return HttpResponse.json({ data: semesters });
+    // Derive courseCount live
+    const withDerived = semesters.map((s) => ({
+      ...s,
+      courseCount: courses.filter((c) => c.semesterId === s.id).length || s.courseCount,
+    }));
+    return HttpResponse.json({ data: withDerived });
   }),
 
   http.post("/api/admin/semesters", async ({ request }) => {
@@ -850,6 +889,10 @@ export const adminHandlers = [
     const idx = semesters.findIndex((s) => s.id === semId);
     if (idx === -1) return notFound("Semester");
 
+    if (body.startDate && body.endDate && new Date(body.startDate) >= new Date(body.endDate)) {
+      return validationError({ endDate: ["End date must be after start date"] });
+    }
+
     const now = new Date().toISOString();
     semesters[idx] = {
       ...semesters[idx],
@@ -857,6 +900,14 @@ export const adminHandlers = [
       id: semId,
       updatedAt: now,
     };
+
+    // Sync to nested academic year
+    academicYears = academicYears.map((y) => ({
+      ...y,
+      semesters: y.semesters.map((s) =>
+        s.id === semId ? { ...s, ...body, id: semId, updatedAt: now } : s
+      ),
+    }));
 
     return HttpResponse.json({ data: semesters[idx] });
   }),
@@ -870,7 +921,16 @@ export const adminHandlers = [
     const degreeType = url.searchParams.get("degreeType");
     const status = url.searchParams.get("status");
 
-    let filtered = [...programs];
+    // Derive studentCount live from users (any user.department matching the program.department,
+    // or in future user.program === program.name)
+    const withDerivedCount = programs.map((p) => ({
+      ...p,
+      studentCount: users.filter(
+        (u) => u.role === "student" && u.department === p.department
+      ).length || p.studentCount,
+    }));
+
+    let filtered = withDerivedCount;
     if (search) filtered = filtered.filter((p) => p.name.toLowerCase().includes(search) || p.department.toLowerCase().includes(search));
     if (degreeType) filtered = filtered.filter((p) => p.degreeType === degreeType);
     if (status) filtered = filtered.filter((p) => p.status === status);
@@ -906,5 +966,110 @@ export const adminHandlers = [
     if (idx === -1) return HttpResponse.json({ error: { code: "NOT_FOUND", message: "Program not found" } }, { status: 404 });
     programs[idx] = { ...programs[idx], ...body, id, updatedAt: new Date().toISOString() };
     return HttpResponse.json({ data: programs[idx] });
+  }),
+
+  // ── Academic Years ────────────────────────────────────────────────────────
+
+  http.get("/api/admin/academic-years", async () => {
+    await randomDelay();
+    // Hydrate semesters from semesters list (so derived courseCount stays fresh)
+    const hydrated = academicYears.map((y) => ({
+      ...y,
+      semesters: y.semesters.map((s) => {
+        const live = semesters.find((ls) => ls.id === s.id);
+        return live
+          ? {
+              ...live,
+              courseCount: courses.filter((c) => c.semesterId === s.id).length || live.courseCount,
+            }
+          : s;
+      }),
+    }));
+    return HttpResponse.json({ data: hydrated });
+  }),
+
+  http.post("/api/admin/academic-years", async ({ request }) => {
+    await randomDelay();
+    const body = (await request.json()) as CreateAcademicYearRequest;
+    const errors: Record<string, string[]> = {};
+
+    if (!body.name) errors.name = ["Academic year name is required"];
+    if (!body.startDate) errors.startDate = ["Start date is required"];
+    if (!body.endDate) errors.endDate = ["End date is required"];
+    if (body.startDate && body.endDate && new Date(body.startDate) >= new Date(body.endDate)) {
+      errors.endDate = ["End date must be after start date"];
+    }
+    if (academicYears.some((y) => y.name === body.name)) {
+      errors.name = ["An academic year with this name already exists"];
+    }
+
+    if (Object.keys(errors).length > 0) return validationError(errors);
+
+    const now = new Date().toISOString();
+    const yearId = `ay_${Date.now()}`;
+    const yearStart = new Date(body.startDate);
+    const yearEnd = new Date(body.endDate);
+    const fallEnd = new Date(yearStart);
+    fallEnd.setMonth(fallEnd.getMonth() + 4);
+    const springStart = new Date(fallEnd);
+    springStart.setDate(springStart.getDate() + 7);
+    const yearLabel = body.name.replace(/[^0-9]/g, "").slice(0, 4);
+
+    const fallSem: Semester = {
+      id: `sem_${yearId}_fall`,
+      name: `Fall ${yearLabel}`,
+      year: yearLabel,
+      startDate: yearStart.toISOString().split("T")[0],
+      endDate: fallEnd.toISOString().split("T")[0],
+      status: "upcoming",
+      courseCount: 0,
+      academicYearId: yearId,
+      createdAt: now,
+      updatedAt: now,
+    };
+    const springSem: Semester = {
+      id: `sem_${yearId}_spring`,
+      name: `Spring ${Number(yearLabel) + 1}`,
+      year: String(Number(yearLabel) + 1),
+      startDate: springStart.toISOString().split("T")[0],
+      endDate: yearEnd.toISOString().split("T")[0],
+      status: "upcoming",
+      courseCount: 0,
+      academicYearId: yearId,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    const newYear: AcademicYear = {
+      id: yearId,
+      name: body.name,
+      startDate: body.startDate,
+      endDate: body.endDate,
+      status: "upcoming",
+      semesters: [fallSem, springSem],
+      createdAt: now,
+      updatedAt: now,
+    };
+    academicYears = [...academicYears, newYear];
+    semesters = [...semesters, fallSem, springSem];
+
+    return HttpResponse.json({ data: newYear }, { status: 201 });
+  }),
+
+  http.patch("/api/admin/academic-years/:id", async ({ params, request }) => {
+    await randomDelay();
+    const yearId = params.id as string;
+    const body = (await request.json()) as Partial<AcademicYear>;
+    const idx = academicYears.findIndex((y) => y.id === yearId);
+    if (idx === -1) return notFound("Academic Year");
+
+    academicYears[idx] = {
+      ...academicYears[idx],
+      ...body,
+      id: yearId,
+      semesters: academicYears[idx].semesters,
+      updatedAt: new Date().toISOString(),
+    };
+    return HttpResponse.json({ data: academicYears[idx] });
   }),
 ];
