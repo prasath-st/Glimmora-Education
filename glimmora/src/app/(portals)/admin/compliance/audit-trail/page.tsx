@@ -2,16 +2,14 @@
 
 import { useState, useCallback } from "react";
 import Link from "next/link";
-import { ScrollText, ArrowLeft } from "lucide-react";
-import { type ColumnDef } from "@tanstack/react-table";
+import { ScrollText, ArrowLeft, ChevronDown, ChevronRight, Copy, Check } from "lucide-react";
 import { useAuditTrail } from "@/lib/hooks/use-admin";
 import { PageHeader } from "@/components/shared/misc/page-header";
-import { DataTable } from "@/components/shared/data-table";
 import { StatusBadge } from "@/components/shared/feedback/status-badge";
 import { TableSkeleton } from "@/components/shared/feedback/loading-skeleton";
 import { ErrorState } from "@/components/shared/feedback/error-state";
 import { SearchInput } from "@/components/shared/forms/search-input";
-import { formatDateTime } from "@/lib/utils/format";
+import { formatDateTime, formatRelative } from "@/lib/utils/format";
 import type { AuditLogEntry } from "@/lib/api/types/admin.types";
 
 const ROLE_OPTIONS = [
@@ -32,61 +30,113 @@ const ACTION_OPTIONS = [
   { value: "export", label: "Export" },
 ];
 
-const auditColumns: ColumnDef<AuditLogEntry, unknown>[] = [
-  {
-    accessorKey: "timestamp",
-    header: "Timestamp",
-    cell: ({ getValue }) => (
-      <span className="whitespace-nowrap text-xs">
-        {formatDateTime(getValue() as string)}
-      </span>
-    ),
-  },
-  { accessorKey: "userName", header: "User" },
-  {
-    accessorKey: "userRole",
-    header: "Role",
-    cell: ({ getValue }) => (
-      <StatusBadge variant="default">{getValue() as string}</StatusBadge>
-    ),
-  },
-  { accessorKey: "action", header: "Action" },
-  { accessorKey: "resource", header: "Resource" },
-  {
-    accessorKey: "details",
-    header: "Details",
-    cell: ({ getValue }) => {
-      const details = getValue() as string;
-      return (
-        <span
-          className="block max-w-[200px] truncate text-xs text-muted-foreground"
-          title={details}
-        >
-          {details}
+function AuditRow({ entry }: { entry: AuditLogEntry }) {
+  const [expanded, setExpanded] = useState(false);
+  const [copied, setCopied] = useState<string | null>(null);
+
+  const handleCopy = useCallback((field: string, value: string) => {
+    navigator.clipboard.writeText(value);
+    setCopied(field);
+    setTimeout(() => setCopied(null), 1500);
+  }, []);
+
+  return (
+    <div className="border-b border-border last:border-0">
+      <button
+        onClick={() => setExpanded((v) => !v)}
+        className="grid w-full grid-cols-[24px_minmax(140px,_1.2fr)_minmax(120px,_1fr)_80px_minmax(80px,_0.8fr)_minmax(120px,_1fr)_70px] items-center gap-3 px-5 py-3 text-left transition-colors hover:bg-muted/30"
+      >
+        {expanded ? (
+          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+        ) : (
+          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+        )}
+        <span className="whitespace-nowrap text-xs text-muted-foreground">
+          {formatRelative(entry.timestamp)}
         </span>
-      );
-    },
-  },
-  {
-    accessorKey: "ipAddress",
-    header: "IP Address",
-    cell: ({ getValue }) => (
-      <span className="font-mono text-xs">{getValue() as string}</span>
-    ),
-  },
-  {
-    accessorKey: "outcome",
-    header: "Outcome",
-    cell: ({ getValue }) => {
-      const outcome = getValue() as "success" | "failure";
-      return (
-        <StatusBadge variant={outcome === "success" ? "success" : "danger"} dot>
-          {outcome}
-        </StatusBadge>
-      );
-    },
-  },
-];
+        <span className="truncate text-sm font-medium">{entry.userName}</span>
+        <StatusBadge variant="default">{entry.userRole}</StatusBadge>
+        <span className="text-sm capitalize">{entry.action}</span>
+        <span className="truncate text-sm text-muted-foreground">{entry.resource}</span>
+        <div className="flex justify-end">
+          <StatusBadge variant={entry.outcome === "success" ? "success" : "danger"} dot>
+            {entry.outcome}
+          </StatusBadge>
+        </div>
+      </button>
+
+      {expanded && (
+        <div className="grid grid-cols-2 gap-x-6 gap-y-4 border-t border-border bg-muted/20 px-5 py-4 text-sm">
+          <DetailRow label="Full Timestamp" value={formatDateTime(entry.timestamp)} />
+          <DetailRow
+            label="IP Address"
+            value={entry.ipAddress}
+            mono
+            onCopy={() => handleCopy("ip", entry.ipAddress)}
+            copied={copied === "ip"}
+          />
+          <DetailRow
+            label="Resource ID"
+            value={entry.resourceId}
+            mono
+            onCopy={() => handleCopy("rid", entry.resourceId)}
+            copied={copied === "rid"}
+          />
+          <DetailRow
+            label="User ID"
+            value={entry.userId}
+            mono
+            onCopy={() => handleCopy("uid", entry.userId)}
+            copied={copied === "uid"}
+          />
+          <DetailRow label="Action" value={entry.action} />
+          <DetailRow label="Resource" value={entry.resource} />
+          <div className="col-span-2">
+            <p className="text-xs font-medium text-muted-foreground mb-1">Details</p>
+            <p className="rounded-lg border border-border bg-background px-3 py-2 text-sm leading-relaxed">
+              {entry.details}
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DetailRow({
+  label,
+  value,
+  mono,
+  onCopy,
+  copied,
+}: {
+  label: string;
+  value: string;
+  mono?: boolean;
+  onCopy?: () => void;
+  copied?: boolean;
+}) {
+  return (
+    <div className="min-w-0">
+      <p className="text-xs font-medium text-muted-foreground mb-0.5">{label}</p>
+      <div className="flex items-center gap-2 min-w-0">
+        <span className={`truncate ${mono ? "font-mono text-xs" : "text-sm"}`}>{value}</span>
+        {onCopy && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onCopy();
+            }}
+            className="shrink-0 rounded p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            title={copied ? "Copied!" : "Copy to clipboard"}
+          >
+            {copied ? <Check className="h-3 w-3 text-success" /> : <Copy className="h-3 w-3" />}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default function AdminAuditTrailPage() {
   const [search, setSearch] = useState("");
@@ -176,14 +226,27 @@ export default function AdminAuditTrailPage() {
         />
       ) : (
         <>
-          <DataTable
-            columns={auditColumns}
-            data={data?.entries ?? []}
-            showSearch={false}
-            showPagination={false}
-            emptyTitle="No audit entries found"
-            emptyDescription="Try adjusting your search or filters."
-          />
+          {(data?.entries ?? []).length === 0 ? (
+            <div className="rounded-xl border border-dashed border-border px-6 py-16 text-center">
+              <p className="text-sm font-medium">No audit entries found</p>
+              <p className="mt-1 text-xs text-muted-foreground">Try adjusting your search or filters.</p>
+            </div>
+          ) : (
+            <div className="overflow-hidden rounded-xl border border-border bg-card">
+              <div className="grid grid-cols-[24px_minmax(140px,_1.2fr)_minmax(120px,_1fr)_80px_minmax(80px,_0.8fr)_minmax(120px,_1fr)_70px] items-center gap-3 border-b border-border bg-muted/40 px-5 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                <span />
+                <span>When</span>
+                <span>User</span>
+                <span>Role</span>
+                <span>Action</span>
+                <span>Resource</span>
+                <span className="text-right">Outcome</span>
+              </div>
+              {(data?.entries ?? []).map((entry) => (
+                <AuditRow key={entry.id} entry={entry} />
+              ))}
+            </div>
+          )}
           {data?.meta && data.meta.totalPages > 1 && (
             <div className="flex items-center justify-between">
               <p className="text-sm text-muted-foreground">

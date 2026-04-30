@@ -59,7 +59,7 @@ let users: AdminUser[] = generateUsers(60);
 let roles: RoleDefinition[] = generateRoles();
 const budget: BudgetOverview = generateBudgetOverview();
 const aiModels: AiModel[] = generateAiModels();
-const biasReports: BiasReport[] = generateBiasReports();
+let biasReports: BiasReport[] = generateBiasReports();
 let overrideLog: AiOverrideLog[] = generateOverrideLog();
 let credentials: AdminCredential[] = generateCredentials(30);
 const reportTemplates: ReportTemplate[] = generateReportTemplates();
@@ -306,6 +306,14 @@ export const adminHandlers = [
       tenantId: "tenant_glimmora_main",
       createdAt: now,
       updatedAt: now,
+      studentId: body.studentId,
+      program: body.program,
+      academicYearStart: body.academicYearStart,
+      academicYearEnd: body.academicYearEnd,
+      currentSemester: body.currentSemester,
+      employeeId: body.employeeId,
+      designation: body.designation,
+      specialization: body.specialization,
     };
 
     users = [newUser, ...users];
@@ -339,6 +347,9 @@ export const adminHandlers = [
       tenantId: "tenant_glimmora_main",
       createdAt: now,
       updatedAt: now,
+      studentId: u.studentId,
+      program: u.program,
+      employeeId: u.employeeId,
     }));
 
     users = [...newUsers, ...users];
@@ -466,6 +477,41 @@ export const adminHandlers = [
     return HttpResponse.json({ data: model });
   }),
 
+  http.patch("/api/admin/ai-governance/models/:modelId", async ({ params, request }) => {
+    await randomDelay();
+    const id = params.modelId as string;
+    const body = (await request.json()) as Partial<AiModel>;
+    const idx = aiModels.findIndex((m) => m.id === id);
+    if (idx === -1) return notFound("AI Model");
+    aiModels[idx] = { ...aiModels[idx], ...body, id };
+    return HttpResponse.json({ data: aiModels[idx] });
+  }),
+
+  http.post("/api/admin/ai-governance/models/:modelId/retrain", async ({ params }) => {
+    await randomDelay();
+    const id = params.modelId as string;
+    const idx = aiModels.findIndex((m) => m.id === id);
+    if (idx === -1) return notFound("AI Model");
+    aiModels[idx] = {
+      ...aiModels[idx],
+      status: "training",
+      lastTrainedAt: new Date().toISOString(),
+    };
+    // Simulate completion after 4s
+    setTimeout(() => {
+      const j = aiModels.findIndex((m) => m.id === id);
+      if (j !== -1) {
+        aiModels[j] = {
+          ...aiModels[j],
+          status: "active",
+          accuracy: Math.min(0.999, aiModels[j].accuracy + (Math.random() * 0.02 - 0.005)),
+          lastTrainedAt: new Date().toISOString(),
+        };
+      }
+    }, 4000);
+    return HttpResponse.json({ data: aiModels[idx] });
+  }),
+
   http.get("/api/admin/ai-governance/bias-reports", async () => {
     await randomDelay();
     return HttpResponse.json({ data: biasReports });
@@ -476,6 +522,21 @@ export const adminHandlers = [
     const report = biasReports.find((r) => r.id === params.reportId);
     if (!report) return notFound("Bias Report");
     return HttpResponse.json({ data: report });
+  }),
+
+  http.patch("/api/admin/ai-governance/bias-reports/:reportId/review", async ({ params, request }) => {
+    await randomDelay();
+    const id = params.reportId as string;
+    const body = (await request.json()) as { reviewedBy?: string };
+    const idx = biasReports.findIndex((r) => r.id === id);
+    if (idx === -1) return notFound("Bias Report");
+    if (!body.reviewedBy) return validationError({ reviewedBy: ["Reviewer name required"] });
+    biasReports[idx] = {
+      ...biasReports[idx],
+      reviewedBy: body.reviewedBy,
+      updatedAt: new Date().toISOString(),
+    };
+    return HttpResponse.json({ data: biasReports[idx] });
   }),
 
   http.get("/api/admin/ai-governance/overrides", async ({ request }) => {
@@ -822,19 +883,40 @@ export const adminHandlers = [
     }
 
     const now = new Date().toISOString();
+    const existing = courses[idx].enrolledStudentIds ?? [];
+    const merged = Array.from(new Set([...existing, ...body.studentIds]));
     courses[idx] = {
       ...courses[idx],
-      enrolledCount: newCount,
+      enrolledCount: merged.length,
+      enrolledStudentIds: merged,
       updatedAt: now,
     };
 
     return HttpResponse.json({
       data: {
         courseId,
-        enrolledCount: newCount,
+        enrolledCount: merged.length,
         newStudents: body.studentIds.length,
       },
     });
+  }),
+
+  http.delete("/api/admin/courses/:id/enroll/:studentId", async ({ params }) => {
+    await randomDelay();
+    const courseId = params.id as string;
+    const studentId = params.studentId as string;
+    const idx = courses.findIndex((c) => c.id === courseId);
+    if (idx === -1) return notFound("Course");
+    const existing = courses[idx].enrolledStudentIds ?? [];
+    if (!existing.includes(studentId)) return notFound("Enrollment");
+    const updated = existing.filter((id) => id !== studentId);
+    courses[idx] = {
+      ...courses[idx],
+      enrolledStudentIds: updated,
+      enrolledCount: updated.length,
+      updatedAt: new Date().toISOString(),
+    };
+    return HttpResponse.json({ data: { courseId, studentId } });
   }),
 
   // ── Semesters ────────────────────────────────────────────────────────────
@@ -921,14 +1003,19 @@ export const adminHandlers = [
     const degreeType = url.searchParams.get("degreeType");
     const status = url.searchParams.get("status");
 
-    // Derive studentCount live from users (any user.department matching the program.department,
-    // or in future user.program === program.name)
-    const withDerivedCount = programs.map((p) => ({
-      ...p,
-      studentCount: users.filter(
+    // Derive studentCount live: prefer exact program match, fall back to department match
+    const withDerivedCount = programs.map((p) => {
+      const exactProgram = users.filter(
+        (u) => u.role === "student" && u.program === p.name
+      ).length;
+      const byDept = users.filter(
         (u) => u.role === "student" && u.department === p.department
-      ).length || p.studentCount,
-    }));
+      ).length;
+      return {
+        ...p,
+        studentCount: exactProgram > 0 ? exactProgram : byDept || p.studentCount,
+      };
+    });
 
     let filtered = withDerivedCount;
     if (search) filtered = filtered.filter((p) => p.name.toLowerCase().includes(search) || p.department.toLowerCase().includes(search));

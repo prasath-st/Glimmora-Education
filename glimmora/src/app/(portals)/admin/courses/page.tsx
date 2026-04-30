@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useCallback, useMemo } from "react";
-import { GraduationCap, Plus, Loader2, X, Upload, MoreHorizontal, Pencil, Archive, ArchiveRestore, AlertTriangle } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { GraduationCap, Plus, Loader2, X, Upload, MoreHorizontal, Pencil, Archive, ArchiveRestore, Eye } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -541,11 +542,13 @@ function EnrollStudentsDialog({
 
 function CourseRowActions({
   course,
+  onView,
   onEdit,
   onEnroll,
   onToggleArchive,
 }: {
   course: AdminCourse;
+  onView: () => void;
   onEdit: () => void;
   onEnroll: () => void;
   onToggleArchive: () => void;
@@ -568,6 +571,12 @@ function CourseRowActions({
           onClick={(e) => e.stopPropagation()}
           className="z-50 w-44 rounded-lg bg-card py-2 shadow-2xl ring-1 ring-border/30"
         >
+          <DropdownMenu.Item
+            onSelect={onView}
+            className="flex cursor-pointer items-center gap-3 px-4 py-2.5 text-sm outline-none transition-colors hover:bg-muted focus:bg-muted"
+          >
+            <Eye className="h-4 w-4 text-muted-foreground" /> View Details
+          </DropdownMenu.Item>
           {!isArchived && (
             <>
               <DropdownMenu.Item
@@ -582,9 +591,9 @@ function CourseRowActions({
               >
                 <Pencil className="h-4 w-4 text-muted-foreground" /> Edit
               </DropdownMenu.Item>
-              <DropdownMenu.Separator className="my-1 h-px bg-border/50" />
             </>
           )}
+          <DropdownMenu.Separator className="my-1 h-px bg-border/50" />
           <DropdownMenu.Item
             onSelect={onToggleArchive}
             className={cn(
@@ -609,6 +618,7 @@ function CourseRowActions({
 }
 
 export default function AdminCoursesPage() {
+  const router = useRouter();
   const [courseDialog, setCourseDialog] = useState<{ open: boolean; editing: AdminCourse | null }>({
     open: false,
     editing: null,
@@ -763,6 +773,7 @@ export default function AdminCoursesPage() {
       cell: ({ row }) => (
         <CourseRowActions
           course={row.original}
+          onView={() => router.push(`/admin/courses/${row.original.id}`)}
           onEdit={() => handleEdit(row.original)}
           onEnroll={() => setEnrollDialog({ open: true, course: row.original })}
           onToggleArchive={() => handleArchive(row.original)}
@@ -855,6 +866,7 @@ export default function AdminCoursesPage() {
             data={data?.courses ?? []}
             showSearch={false}
             showPagination={false}
+            onRowClick={(course) => router.push(`/admin/courses/${course.id}`)}
             emptyTitle="No courses found"
             emptyDescription="Try adjusting your search or filters, or create a new course."
           />

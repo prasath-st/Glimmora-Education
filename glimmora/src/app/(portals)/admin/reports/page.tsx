@@ -324,10 +324,15 @@ export default function AdminReportsPage() {
 
       {/* Generated Reports Section */}
       <div>
-        <h2 className="mb-4 text-sm font-semibold">Generated Reports</h2>
-        <p className="mb-3 text-xs text-muted-foreground">
-          Reports are generated asynchronously. Refresh the page to check for completed reports.
-        </p>
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-sm font-semibold">Generated Reports</h2>
+          {reportsData?.reports.some((r) => r.status === "generating") && (
+            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              Auto-refreshing while reports generate…
+            </p>
+          )}
+        </div>
         {reportsLoading ? (
           <TableSkeleton rows={5} />
         ) : reportsError ? (

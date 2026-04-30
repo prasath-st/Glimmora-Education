@@ -95,6 +95,16 @@ export interface AdminUser extends Identifiable, Timestamps, TenantScoped {
   lastLoginAt: string | null;
   avatarUrl: string | null;
   phone?: string;
+  // Student-specific
+  studentId?: string;
+  program?: string;
+  academicYearStart?: string;
+  academicYearEnd?: string;
+  currentSemester?: string;
+  // Faculty-specific
+  employeeId?: string;
+  designation?: string;
+  specialization?: string;
 }
 
 // === Programs & Degrees ===
@@ -267,6 +277,7 @@ export interface AdminCourse extends Identifiable, Timestamps {
   facultyId: string;
   facultyName: string;
   enrolledCount: number;
+  enrolledStudentIds?: string[];
   maxCapacity: number;
   status: "draft" | "active" | "archived";
 }

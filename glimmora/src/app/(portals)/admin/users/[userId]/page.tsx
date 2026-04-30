@@ -228,6 +228,59 @@ export default function AdminUserDetailPage({
                 <p className="text-sm font-medium">{user.department}</p>
               </div>
             </div>
+            {user.role === "student" && (
+              <>
+                {user.program && (
+                  <div className="flex items-center gap-3">
+                    <Hash className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-xs text-muted-foreground">Program</p>
+                      <p className="text-sm font-medium">{user.program}</p>
+                    </div>
+                  </div>
+                )}
+                {user.studentId && (
+                  <div className="flex items-center gap-3">
+                    <Hash className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-xs text-muted-foreground">Student ID</p>
+                      <p className="font-mono text-xs">{user.studentId}</p>
+                    </div>
+                  </div>
+                )}
+                {user.currentSemester && (
+                  <div className="flex items-center gap-3">
+                    <Hash className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-xs text-muted-foreground">Current Semester</p>
+                      <p className="text-sm font-medium">Semester {user.currentSemester}</p>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+            {user.role === "faculty" && (
+              <>
+                {user.employeeId && (
+                  <div className="flex items-center gap-3">
+                    <Hash className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-xs text-muted-foreground">Employee ID</p>
+                      <p className="font-mono text-xs">{user.employeeId}</p>
+                    </div>
+                  </div>
+                )}
+                {user.designation && (
+                  <div className="flex items-center gap-3">
+                    <Hash className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-xs text-muted-foreground">Designation</p>
+                      <p className="text-sm font-medium capitalize">{user.designation.replace(/_/g, " ")}</p>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
             <div className="flex items-center gap-3">
               <Calendar className="h-4 w-4 text-muted-foreground" />
               <div>

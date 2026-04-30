@@ -226,11 +226,47 @@ export function useAiModelDetail(modelId: string) {
   });
 }
 
+export function useUpdateAiModel() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...data }: { id: string } & Partial<AiModel>) =>
+      api.patch<AiModel>(`/api/admin/ai-governance/models/${id}`, data),
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ["admin", "ai-governance", "model", vars.id] });
+      qc.invalidateQueries({ queryKey: ["admin", "ai-governance", "models"] });
+      qc.invalidateQueries({ queryKey: ["admin", "ai-governance", "overview"] });
+    },
+  });
+}
+
+export function useTriggerRetrain() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (modelId: string) =>
+      api.post<AiModel>(`/api/admin/ai-governance/models/${modelId}/retrain`, {}),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin", "ai-governance", "models"] });
+      qc.invalidateQueries({ queryKey: ["admin", "ai-governance", "overview"] });
+    },
+  });
+}
+
 export function useBiasReports() {
   return useQuery({
     queryKey: ["admin", "ai-governance", "bias-reports"],
     queryFn: () => api.get<BiasReport[]>("/api/admin/ai-governance/bias-reports"),
     select: (res) => res.data,
+  });
+}
+
+export function useReviewBiasReport() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, reviewedBy }: { id: string; reviewedBy: string }) =>
+      api.patch<BiasReport>(`/api/admin/ai-governance/bias-reports/${id}/review`, { reviewedBy }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin", "ai-governance", "bias-reports"] });
+    },
   });
 }
 
@@ -317,6 +353,11 @@ export function useGeneratedReports(params?: { page?: number; pageSize?: number 
     queryKey: ["admin", "reports", "generated", params],
     queryFn: () => api.get<GeneratedReport[]>(`/api/admin/reports/generated${qs ? `?${qs}` : ""}`),
     select: (res) => ({ reports: res.data, meta: res.meta as PaginationMeta }),
+    refetchInterval: (query) => {
+      const data = query.state.data?.data as GeneratedReport[] | undefined;
+      const anyPending = data?.some((r) => r.status === "generating");
+      return anyPending ? 2000 : false;
+    },
   });
 }
 
@@ -413,8 +454,21 @@ export function useEnrollStudents() {
   return useMutation({
     mutationFn: ({ courseId, studentIds }: { courseId: string; studentIds: string[] }) =>
       api.post(`/api/admin/courses/${courseId}/enroll`, { studentIds }),
-    onSuccess: () => {
+    onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ["admin", "courses"] });
+      qc.invalidateQueries({ queryKey: ["admin", "course", vars.courseId] });
+    },
+  });
+}
+
+export function useUnenrollStudent() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ courseId, studentId }: { courseId: string; studentId: string }) =>
+      api.delete(`/api/admin/courses/${courseId}/enroll/${studentId}`),
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ["admin", "courses"] });
+      qc.invalidateQueries({ queryKey: ["admin", "course", vars.courseId] });
     },
   });
 }
