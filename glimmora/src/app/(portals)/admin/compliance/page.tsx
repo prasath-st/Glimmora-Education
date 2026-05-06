@@ -58,9 +58,9 @@ function ComplianceCategoryCard({
   const [expanded, setExpanded] = useState(false);
 
   const statusIcon = {
-    pass: <CheckCircle2 className="h-4 w-4 flex-shrink-0 text-success" />,
-    fail: <XCircle className="h-4 w-4 flex-shrink-0 text-danger" />,
-    warning: <AlertTriangle className="h-4 w-4 flex-shrink-0 text-warning" />,
+    pass: <CheckCircle2 className="h-4 w-4 shrink-0 text-success" />,
+    fail: <XCircle className="h-4 w-4 shrink-0 text-danger" />,
+    warning: <AlertTriangle className="h-4 w-4 shrink-0 text-warning" />,
   };
 
   return (
@@ -71,9 +71,9 @@ function ComplianceCategoryCard({
       >
         <div className="flex items-center gap-3">
           {expanded ? (
-            <ChevronDown className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+            <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
           ) : (
-            <ChevronRight className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+            <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
           )}
           <div>
             <p className="text-sm font-medium">{category.name}</p>
@@ -253,8 +253,11 @@ export default function AdminCompliancePage() {
             size="lg"
           />
           <p className="mt-2 text-center text-xs text-muted-foreground">
-            Score reflects compliance across GDPR, FERPA, and institutional
-            policies. Updated automatically.
+            Weighted average across{" "}
+            {pulse.frameworkScores.length > 0
+              ? pulse.frameworkScores.map((f) => f.framework).join(", ")
+              : "tracked frameworks"}{" "}
+            and institutional policies. Updated automatically.
           </p>
         </div>
         <div className="lg:col-span-2">

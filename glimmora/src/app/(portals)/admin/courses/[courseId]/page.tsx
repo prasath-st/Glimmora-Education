@@ -5,17 +5,19 @@ import Link from "next/link";
 import {
   GraduationCap,
   ArrowLeft,
-  Loader2,
   Users,
   Calendar,
   User,
   Hash,
-  Pencil,
   Archive,
   ArchiveRestore,
   Upload,
   X,
   Mail,
+  Building2,
+  Layers3,
+  BookText,
+  AlertCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -23,17 +25,13 @@ import {
   useAdminUsers,
   useUpdateCourse,
   useUnenrollStudent,
-  useSemesters,
-  usePrograms,
 } from "@/lib/hooks/use-admin";
-import { PageHeader } from "@/components/shared/misc/page-header";
 import { StatusBadge } from "@/components/shared/feedback/status-badge";
 import { CardSkeleton } from "@/components/shared/feedback/loading-skeleton";
 import { ErrorState } from "@/components/shared/feedback/error-state";
 import { ConfirmDialog } from "@/components/shared/feedback/confirm-dialog";
-import { formatDate } from "@/lib/utils/format";
 import { cn } from "@/lib/utils/cn";
-import type { AdminCourse, AdminUser } from "@/lib/api/types/admin.types";
+import type { AdminUser, CourseType } from "@/lib/api/types/admin.types";
 
 function getStatusVariant(
   status: "draft" | "active" | "archived"
@@ -44,6 +42,16 @@ function getStatusVariant(
     archived: "muted" as const,
   };
   return map[status];
+}
+
+const COURSE_TYPE_LABEL: Record<CourseType, string> = {
+  core: "Core",
+  programme_elective: "Programme Elective",
+  open_elective: "Open Elective",
+};
+
+function getCourseTypeVariant(type: CourseType): "info" | "warning" | "default" {
+  return type === "core" ? "info" : type === "programme_elective" ? "warning" : "default";
 }
 
 export default function AdminCourseDetailPage({
@@ -145,24 +153,36 @@ export default function AdminCourseDetailPage({
 
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <div className="flex items-center gap-3">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
             <span className="font-mono text-sm text-portal-accent">{course.code}</span>
+            {course.regulationSnapshot && (
+              <span className="font-mono text-xs text-muted-foreground">
+                {course.regulationSnapshot}
+              </span>
+            )}
+            {course.courseType && (
+              <StatusBadge variant={getCourseTypeVariant(course.courseType)}>
+                {COURSE_TYPE_LABEL[course.courseType]}
+              </StatusBadge>
+            )}
             <StatusBadge variant={getStatusVariant(course.status)} dot>
               {course.status}
             </StatusBadge>
           </div>
           <h1 className="mt-1 text-2xl font-semibold">{course.name}</h1>
           <p className="mt-1 max-w-2xl text-sm text-muted-foreground">{course.description}</p>
+          {course.catalogId && (
+            <Link
+              href={`/admin/courses/catalog/${course.catalogId}`}
+              className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-portal-accent hover:underline"
+            >
+              <BookText className="h-3 w-3" />
+              View catalog entry
+            </Link>
+          )}
         </div>
         <div className="flex items-center gap-2">
-          <Link
-            href="/admin/courses"
-            className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium transition-colors hover:bg-muted"
-          >
-            <Pencil className="h-3.5 w-3.5" />
-            Edit
-          </Link>
           <button
             onClick={() => setArchiveConfirm(true)}
             className={cn(
@@ -185,15 +205,60 @@ export default function AdminCourseDetailPage({
         </div>
       </div>
 
-      {/* Info grid */}
-      <div className="grid gap-4 lg:grid-cols-3">
-        <InfoCard icon={Hash} label="Credits" value={`${course.credits} credit${course.credits !== 1 ? "s" : ""}`} />
-        <InfoCard icon={GraduationCap} label="Department" value={course.department} />
-        <InfoCard icon={Calendar} label="Semester" value={course.semesterName} />
-        <InfoCard icon={User} label="Faculty" value={course.facultyName} />
+      {/* Draft warning when faculty is unassigned */}
+      {course.status === "draft" && !course.facultyId && (
+        <div className="flex items-center gap-2 rounded-lg border border-warning/30 bg-warning-light px-3 py-2 text-xs text-warning">
+          <AlertCircle className="h-3.5 w-3.5" />
+          <span>
+            This offering is in <strong>Draft</strong> — assign faculty to make it visible
+            in the faculty and student portals.
+          </span>
+        </div>
+      )}
 
-        {/* Capacity card spans 2 */}
-        <div className="rounded-xl border border-border bg-card p-5 lg:col-span-2">
+      {/* Info grid */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <InfoCard
+          icon={Hash}
+          label="Credits"
+          value={`${course.creditsSnapshot ?? course.credits} credit${(course.creditsSnapshot ?? course.credits) !== 1 ? "s" : ""}`}
+        />
+        <InfoCard
+          icon={Layers3}
+          label="Weekly L:T:P"
+          value={
+            course.lectureHours !== undefined
+              ? `${course.lectureHours} : ${course.tutorialHours} : ${course.practicalHours}`
+              : "—"
+          }
+        />
+        <InfoCard icon={GraduationCap} label="Department" value={course.department} />
+        <InfoCard
+          icon={User}
+          label="Faculty"
+          value={course.facultyName || "Unassigned"}
+        />
+
+        <InfoCard
+          icon={Building2}
+          label="Programme"
+          value={course.programmeName ?? "—"}
+          hint={course.studyYear ? `Study Year ${course.studyYear}` : undefined}
+        />
+        <InfoCard
+          icon={Users}
+          label="Section"
+          value={course.sectionName ?? "—"}
+        />
+        <InfoCard
+          icon={Calendar}
+          label="Term"
+          value={course.semesterName}
+          hint={course.academicYearName}
+        />
+
+        {/* Capacity card spans 1 in the 4-col grid; widen on smaller layouts */}
+        <div className="rounded-xl border border-border bg-card p-5 sm:col-span-2 lg:col-span-1">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
               <Users className="h-4 w-4" />
@@ -345,10 +410,12 @@ function InfoCard({
   icon: Icon,
   label,
   value,
+  hint,
 }: {
   icon: typeof Hash;
   label: string;
   value: string;
+  hint?: string;
 }) {
   return (
     <div className="rounded-xl border border-border bg-card p-5">
@@ -357,6 +424,7 @@ function InfoCard({
         {label}
       </div>
       <p className="mt-2 text-sm font-medium">{value}</p>
+      {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
     </div>
   );
 }

@@ -29,6 +29,13 @@ import type {
   AcademicYear,
   CreateAcademicYearRequest,
   BulkImportUserRequest,
+  CourseCatalog,
+  CreateCourseCatalogRequest,
+  CourseOffering,
+  CreateCourseOfferingRequest,
+  AssignFacultyRequest,
+  Section,
+  Department,
 } from "@/lib/api/types/admin.types";
 import type { PaginationMeta } from "@/lib/api/types/common.types";
 
@@ -583,6 +590,153 @@ export function useUpdateNestedSemester() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin", "academic-years"] });
       qc.invalidateQueries({ queryKey: ["admin", "semesters"] });
+    },
+  });
+}
+
+// === Departments (master data) ===
+export function useDepartments() {
+  return useQuery({
+    queryKey: ["admin", "departments"],
+    queryFn: () => api.get<Department[]>("/api/admin/departments"),
+    select: (res) => res.data,
+  });
+}
+
+// === Sections (programme cohort) ===
+export function useSections(params?: { programmeId?: string; studyYear?: number }) {
+  const sp = new URLSearchParams();
+  if (params?.programmeId) sp.set("programmeId", params.programmeId);
+  if (params?.studyYear) sp.set("studyYear", String(params.studyYear));
+  const qs = sp.toString();
+  return useQuery({
+    queryKey: ["admin", "sections", params],
+    queryFn: () => api.get<Section[]>(`/api/admin/sections${qs ? `?${qs}` : ""}`),
+    select: (res) => res.data,
+  });
+}
+
+// === Course Catalog ===
+export function useCourseCatalog(params?: {
+  search?: string;
+  departmentId?: string;
+  courseType?: string;
+  status?: string;
+  page?: number;
+  pageSize?: number;
+}) {
+  const sp = new URLSearchParams();
+  if (params?.search) sp.set("search", params.search);
+  if (params?.departmentId) sp.set("departmentId", params.departmentId);
+  if (params?.courseType) sp.set("courseType", params.courseType);
+  if (params?.status) sp.set("status", params.status);
+  if (params?.page) sp.set("page", String(params.page));
+  if (params?.pageSize) sp.set("pageSize", String(params.pageSize));
+  const qs = sp.toString();
+  return useQuery({
+    queryKey: ["admin", "course-catalog", params],
+    queryFn: () =>
+      api.get<CourseCatalog[]>(`/api/admin/course-catalog${qs ? `?${qs}` : ""}`),
+    select: (res) => ({ catalog: res.data, meta: res.meta as PaginationMeta }),
+  });
+}
+
+export function useCatalogDetail(id: string) {
+  return useQuery({
+    queryKey: ["admin", "course-catalog", "detail", id],
+    queryFn: () => api.get<CourseCatalog>(`/api/admin/course-catalog/${id}`),
+    select: (res) => res.data,
+    enabled: !!id,
+  });
+}
+
+export function useCreateCatalog() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: CreateCourseCatalogRequest) =>
+      api.post<CourseCatalog>("/api/admin/course-catalog", data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin", "course-catalog"] });
+    },
+  });
+}
+
+export function useUpdateCatalog() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...data }: { id: string } & Partial<CourseCatalog>) =>
+      api.patch<CourseCatalog>(`/api/admin/course-catalog/${id}`, data),
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ["admin", "course-catalog"] });
+      qc.invalidateQueries({
+        queryKey: ["admin", "course-catalog", "detail", vars.id],
+      });
+    },
+  });
+}
+
+// === Course Offerings ===
+export function useCourseOfferings(params?: {
+  search?: string;
+  catalogId?: string;
+  academicYearId?: string;
+  semesterId?: string;
+  programmeId?: string;
+  sectionId?: string;
+  department?: string;
+  courseType?: string;
+  status?: string;
+  page?: number;
+  pageSize?: number;
+}) {
+  const sp = new URLSearchParams();
+  if (params?.search) sp.set("search", params.search);
+  if (params?.catalogId) sp.set("catalogId", params.catalogId);
+  if (params?.academicYearId) sp.set("academicYearId", params.academicYearId);
+  if (params?.semesterId) sp.set("semesterId", params.semesterId);
+  if (params?.programmeId) sp.set("programmeId", params.programmeId);
+  if (params?.sectionId) sp.set("sectionId", params.sectionId);
+  if (params?.department) sp.set("department", params.department);
+  if (params?.courseType) sp.set("courseType", params.courseType);
+  if (params?.status) sp.set("status", params.status);
+  if (params?.page) sp.set("page", String(params.page));
+  if (params?.pageSize) sp.set("pageSize", String(params.pageSize));
+  const qs = sp.toString();
+  return useQuery({
+    queryKey: ["admin", "course-offerings", params],
+    queryFn: () =>
+      api.get<CourseOffering[]>(`/api/admin/course-offerings${qs ? `?${qs}` : ""}`),
+    select: (res) => ({ offerings: res.data, meta: res.meta as PaginationMeta }),
+  });
+}
+
+export function useCreateOffering() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: CreateCourseOfferingRequest) =>
+      api.post<CourseOffering>("/api/admin/course-offerings", data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin", "course-offerings"] });
+      qc.invalidateQueries({ queryKey: ["admin", "courses"] });
+      qc.invalidateQueries({ queryKey: ["admin", "course-catalog"] });
+    },
+  });
+}
+
+export function useAssignFaculty() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      offeringId,
+      facultyId,
+    }: { offeringId: string } & AssignFacultyRequest) =>
+      api.post<CourseOffering>(
+        `/api/admin/course-offerings/${offeringId}/assign-faculty`,
+        { facultyId },
+      ),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin", "course-offerings"] });
+      qc.invalidateQueries({ queryKey: ["admin", "courses"] });
     },
   });
 }

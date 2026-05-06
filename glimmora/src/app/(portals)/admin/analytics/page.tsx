@@ -21,6 +21,21 @@ interface DeptRow {
   placementRate: number;
 }
 
+// KPI units come from the seed exactly as: "%", ":1", "students", "points",
+// "papers", "score". Format each appropriately so cards read naturally.
+function formatKpiValue(value: number, unit: string): string {
+  switch (unit) {
+    case "%":
+      return formatPercentage(value);
+    case ":1":
+      return `1:${formatGpa(value)}`;
+    case "points":
+      return formatGpa(value);
+    default:
+      return formatNumber(value);
+  }
+}
+
 const deptColumns: ColumnDef<DeptRow, unknown>[] = [
   { accessorKey: "department", header: "Department" },
   {
@@ -119,25 +134,28 @@ export default function AdminAnalyticsPage() {
             <KpiCard
               key={kpi.name}
               label={kpi.name}
-              value={
-                kpi.unit === "%"
-                  ? formatPercentage(kpi.value)
-                  : kpi.unit === "ratio"
-                    ? `1:${kpi.value}`
-                    : formatNumber(kpi.value)
-              }
+              value={formatKpiValue(kpi.value, kpi.unit)}
               change={{ value: changeValue, label: "vs previous" }}
             />
           );
         })}
       </div>
 
-      {/* Department Comparison Bar Chart */}
+      {/* Enrollment counts by department — own chart so percentages aren't
+          flattened to invisible stubs by the enrollment-scale y-axis. */}
       <BarComparison
-        title="Department Performance Comparison"
+        title="Enrollment by Department"
         data={barData}
         bars={[
           { dataKey: "enrollment", label: "Enrollment", color: "#2563eb" },
+        ]}
+      />
+
+      {/* Performance rates by department — single 0–100 percentage scale. */}
+      <BarComparison
+        title="Performance Rates by Department"
+        data={barData}
+        bars={[
           { dataKey: "retention", label: "Retention %", color: "#059669" },
           { dataKey: "graduation", label: "Graduation %", color: "#7c3aed" },
           { dataKey: "placementRate", label: "Placement %", color: "#d97706" },

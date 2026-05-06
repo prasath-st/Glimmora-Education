@@ -1,7 +1,5 @@
 import { http, HttpResponse, delay } from "msw";
 import type {
-  AdminDashboard,
-  InstitutionalAnalytics,
   CompliancePulse,
   ComplianceDeviation,
   AuditLogEntry,
@@ -26,11 +24,20 @@ import type {
   AcademicYear,
   CreateAcademicYearRequest,
   BulkImportUserRequest,
+  CourseCatalog,
+  CreateCourseCatalogRequest,
+  CourseType,
+  CourseOffering,
+  CreateCourseOfferingRequest,
+  AssignFacultyRequest,
+  Section,
+  Department,
 } from "@/lib/api/types/admin.types";
 import type { PaginationMeta, PortalRole } from "@/lib/api/types/common.types";
 import {
-  generateAdminDashboard,
-  generateAnalytics,
+  buildAdminDashboard,
+  buildAnalytics,
+  computeLiveKpis,
   generateCompliancePulse,
   generateAuditLog,
   generateUsers,
@@ -47,15 +54,16 @@ import {
   generateCourses,
   generatePrograms,
   generateAcademicYears,
+  generateDepartments,
+  generateCatalogs,
+  generateSections,
 } from "@/mocks/data/generators/admin.generator";
 
 // ─── Generate data once at module level ───────────────────────────────────────
 
-const dashboard: AdminDashboard = generateAdminDashboard();
-const analytics: InstitutionalAnalytics = generateAnalytics();
 let compliancePulse: CompliancePulse = generateCompliancePulse();
 let auditLog: AuditLogEntry[] = generateAuditLog(100);
-let users: AdminUser[] = generateUsers(400);
+let users: AdminUser[] = generateUsers(2000);
 let roles: RoleDefinition[] = generateRoles();
 const budget: BudgetOverview = generateBudgetOverview();
 const aiModels: AiModel[] = generateAiModels();
@@ -69,12 +77,57 @@ let semesters: Semester[] = generateSemesters();
 let programs: Program[] = generatePrograms();
 let courses: AdminCourse[] = generateCourses();
 let academicYears: AcademicYear[] = generateAcademicYears();
+let departments: Department[] = generateDepartments();
+let catalogs: CourseCatalog[] = generateCatalogs();
+let sections: Section[] = generateSections(programs);
 
 // Initially sync top-level semesters from academic years' nested semesters
 semesters = [
   ...semesters,
   ...academicYears.flatMap((y) => y.semesters),
 ];
+
+// ─── Course Catalog & Offering helpers ────────────────────────────────────────
+// Joins a raw AdminCourse (offering) with catalog/section/programme data so
+// the offerings list can render rich rows without N+1 lookups on the client.
+function toOfferingView(c: AdminCourse): CourseOffering {
+  const catalog = catalogs.find((cat) => cat.id === c.catalogId);
+  return {
+    id: c.id,
+    catalogId: c.catalogId ?? catalog?.id ?? "",
+    catalogCode: catalog?.code ?? c.code,
+    catalogName: catalog?.name ?? c.name,
+    courseType: c.courseType ?? catalog?.courseType ?? "core",
+    academicYearId: c.academicYearId ?? "",
+    academicYearName: c.academicYearName ?? "",
+    semesterId: c.semesterId,
+    semesterName: c.semesterName,
+    studyYear: c.studyYear ?? 1,
+    programmeId: c.programmeId ?? "",
+    programmeName: c.programmeName ?? "",
+    department: c.department,
+    sectionId: c.sectionId ?? "",
+    sectionName: c.sectionName ?? "",
+    facultyId: c.facultyId || null,
+    facultyName: c.facultyName || null,
+    enrolledCount: c.enrolledCount,
+    maxCapacity: c.maxCapacity,
+    lectureHours: c.lectureHours ?? catalog?.lectureHours ?? 3,
+    tutorialHours: c.tutorialHours ?? catalog?.tutorialHours ?? 0,
+    practicalHours: c.practicalHours ?? catalog?.practicalHours ?? 0,
+    syllabusSnapshot: c.syllabusSnapshot ?? catalog?.syllabus ?? "",
+    regulationSnapshot: c.regulationSnapshot ?? catalog?.regulation ?? "",
+    creditsSnapshot: c.creditsSnapshot ?? c.credits,
+    status: c.status,
+    createdAt: c.createdAt,
+    updatedAt: c.updatedAt,
+  };
+}
+
+// Live count of how many offerings reference each catalog row.
+function catalogOfferingCount(catalogId: string): number {
+  return courses.filter((c) => c.catalogId === catalogId).length;
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -142,15 +195,31 @@ function validationError(details: Record<string, string[]>) {
 
 export const adminHandlers = [
   // ── Dashboard ─────────────────────────────────────────────────────────────
+  // Both Dashboard and Analytics derive from the SAME live counts + the same
+  // stable KPI pool, so the two pages can never disagree on Total Enrollment,
+  // Faculty-Student Ratio, Compliance Score, etc.
   http.get("/api/admin/dashboard", async () => {
     await randomDelay();
-    return HttpResponse.json({ data: dashboard });
+    const live = computeLiveKpis(users, courses);
+    const unresolvedDeviations = compliancePulse.recentDeviations.filter(
+      (d) => !d.resolvedAt,
+    ).length;
+    return HttpResponse.json({
+      data: buildAdminDashboard(live, {
+        score: compliancePulse.overallScore,
+        status: compliancePulse.status,
+        unresolvedDeviations,
+      }),
+    });
   }),
 
   // ── Analytics ─────────────────────────────────────────────────────────────
   http.get("/api/admin/analytics", async () => {
     await randomDelay();
-    return HttpResponse.json({ data: analytics });
+    const live = computeLiveKpis(users, courses);
+    return HttpResponse.json({
+      data: buildAnalytics(live, { score: compliancePulse.overallScore }),
+    });
   }),
 
   // ── Compliance ────────────────────────────────────────────────────────────
@@ -1177,4 +1246,328 @@ export const adminHandlers = [
     };
     return HttpResponse.json({ data: academicYears[idx] });
   }),
+
+  // ── Departments (master data for catalog ownership) ──────────────────────
+  http.get("/api/admin/departments", async () => {
+    await randomDelay();
+    return HttpResponse.json({ data: departments });
+  }),
+
+  // ── Sections (programme cohort) ─────────────────────────────────────────
+  http.get("/api/admin/sections", async ({ request }) => {
+    await randomDelay();
+    const url = new URL(request.url);
+    const programmeId = url.searchParams.get("programmeId");
+    const studyYear = url.searchParams.get("studyYear");
+    let filtered = sections.filter((s) => s.status === "active");
+    if (programmeId) filtered = filtered.filter((s) => s.programmeId === programmeId);
+    if (studyYear) filtered = filtered.filter((s) => s.studyYear === Number(studyYear));
+    return HttpResponse.json({ data: filtered });
+  }),
+
+  // ── Course Catalog (design-time master) ──────────────────────────────────
+  http.get("/api/admin/course-catalog", async ({ request }) => {
+    await randomDelay();
+    const url = new URL(request.url);
+    const search = url.searchParams.get("search");
+    const departmentId = url.searchParams.get("departmentId");
+    const courseType = url.searchParams.get("courseType");
+    const status = url.searchParams.get("status");
+
+    let filtered = [...catalogs];
+    if (departmentId) filtered = filtered.filter((c) => c.owningDepartmentId === departmentId);
+    if (courseType && ["core", "programme_elective", "open_elective"].includes(courseType)) {
+      filtered = filtered.filter((c) => c.courseType === (courseType as CourseType));
+    }
+    if (status && ["active", "archived"].includes(status)) {
+      filtered = filtered.filter((c) => c.status === status);
+    }
+    filtered = searchFilter(filtered, search, [
+      "name",
+      "code",
+      "description",
+    ] as (keyof CourseCatalog)[]);
+
+    // Hydrate live offering counts so the UI reflects current usage.
+    const hydrated = filtered.map((c) => ({ ...c, offeringCount: catalogOfferingCount(c.id) }));
+    const result = paginate(hydrated, url);
+    return HttpResponse.json({ data: result.data, meta: result.meta });
+  }),
+
+  http.post("/api/admin/course-catalog", async ({ request }) => {
+    await randomDelay();
+    const body = (await request.json()) as CreateCourseCatalogRequest;
+    const errors: Record<string, string[]> = {};
+
+    if (!body.code) errors.code = ["Course code is required"];
+    if (!body.name) errors.name = ["Course name is required"];
+    if (!body.description) errors.description = ["Description is required"];
+    if (!body.syllabus || body.syllabus.length < 20) {
+      errors.syllabus = ["Syllabus must be at least 20 characters"];
+    }
+    if (!body.regulation) errors.regulation = ["Regulation is required (e.g. R22)"];
+    if (!body.credits || body.credits < 1) errors.credits = ["Credits must be at least 1"];
+    if (!["core", "programme_elective", "open_elective"].includes(body.courseType)) {
+      errors.courseType = ["Pick a valid course type"];
+    }
+    // Composite key: (code, regulation) must be unique. Same code under a new
+    // regulation is fine — that's how regulation versioning works (Issue 2,
+    // Option B in the brief).
+    if (
+      body.code &&
+      body.regulation &&
+      catalogs.some((c) => c.code === body.code && c.regulation === body.regulation)
+    ) {
+      errors.code = [
+        `Course "${body.code}" already exists under regulation ${body.regulation}. Use a new regulation or pick a different code.`,
+      ];
+    }
+    if (Object.keys(errors).length > 0) return validationError(errors);
+
+    const dept = body.owningDepartmentId
+      ? departments.find((d) => d.id === body.owningDepartmentId)
+      : null;
+    const now = new Date().toISOString();
+    const newCatalog: CourseCatalog = {
+      id: `cat_${body.code.toLowerCase()}_${body.regulation.toLowerCase()}`,
+      code: body.code,
+      name: body.name,
+      description: body.description,
+      syllabus: body.syllabus,
+      regulation: body.regulation,
+      credits: body.credits,
+      courseType: body.courseType,
+      owningDepartmentId: dept?.id ?? null,
+      owningDepartmentName: dept?.name ?? null,
+      lectureHours: body.lectureHours ?? 3,
+      tutorialHours: body.tutorialHours ?? 0,
+      practicalHours: body.practicalHours ?? 0,
+      status: "active",
+      offeringCount: 0,
+      createdAt: now,
+      updatedAt: now,
+    };
+    catalogs = [newCatalog, ...catalogs];
+    return HttpResponse.json({ data: newCatalog }, { status: 201 });
+  }),
+
+  http.get("/api/admin/course-catalog/:id", async ({ params }) => {
+    await randomDelay();
+    const cat = catalogs.find((c) => c.id === params.id);
+    if (!cat) return notFound("Course catalog");
+    return HttpResponse.json({
+      data: { ...cat, offeringCount: catalogOfferingCount(cat.id) },
+    });
+  }),
+
+  http.patch("/api/admin/course-catalog/:id", async ({ params, request }) => {
+    await randomDelay();
+    const id = params.id as string;
+    const body = (await request.json()) as Partial<CourseCatalog>;
+    const idx = catalogs.findIndex((c) => c.id === id);
+    if (idx === -1) return notFound("Course catalog");
+
+    // Edit-propagation rule (Issue 8 in the brief): existing offerings keep
+    // their snapshot — they don't pick up the new syllabus/credits/regulation.
+    // Future offerings created from this catalog will use the updated values.
+    const now = new Date().toISOString();
+    catalogs[idx] = {
+      ...catalogs[idx],
+      ...body,
+      id,
+      updatedAt: now,
+    };
+    return HttpResponse.json({ data: catalogs[idx] });
+  }),
+
+  // ── Course Offerings (run-time instances) ────────────────────────────────
+  http.get("/api/admin/course-offerings", async ({ request }) => {
+    await randomDelay();
+    const url = new URL(request.url);
+    const search = url.searchParams.get("search");
+    const catalogId = url.searchParams.get("catalogId");
+    const academicYearId = url.searchParams.get("academicYearId");
+    const semesterId = url.searchParams.get("semesterId");
+    const programmeId = url.searchParams.get("programmeId");
+    const sectionId = url.searchParams.get("sectionId");
+    const department = url.searchParams.get("department");
+    const courseType = url.searchParams.get("courseType");
+    const status = url.searchParams.get("status");
+
+    let filtered = courses.map(toOfferingView);
+    if (catalogId) filtered = filtered.filter((o) => o.catalogId === catalogId);
+    if (academicYearId) filtered = filtered.filter((o) => o.academicYearId === academicYearId);
+    if (semesterId) filtered = filtered.filter((o) => o.semesterId === semesterId);
+    if (programmeId) filtered = filtered.filter((o) => o.programmeId === programmeId);
+    if (sectionId) filtered = filtered.filter((o) => o.sectionId === sectionId);
+    if (department) filtered = filtered.filter((o) => o.department === department);
+    if (courseType && ["core", "programme_elective", "open_elective"].includes(courseType)) {
+      filtered = filtered.filter((o) => o.courseType === courseType);
+    }
+    if (status && ["draft", "active", "archived"].includes(status)) {
+      filtered = filtered.filter((o) => o.status === status);
+    }
+    filtered = searchFilter(filtered, search, [
+      "catalogCode",
+      "catalogName",
+      "sectionName",
+      "facultyName",
+    ] as (keyof CourseOffering)[]);
+
+    const result = paginate(filtered, url);
+    return HttpResponse.json({ data: result.data, meta: result.meta });
+  }),
+
+  http.post("/api/admin/course-offerings", async ({ request }) => {
+    await randomDelay();
+    const body = (await request.json()) as CreateCourseOfferingRequest;
+    const errors: Record<string, string[]> = {};
+
+    if (!body.catalogId) errors.catalogId = ["Pick a course from the catalog"];
+    if (!body.academicYearId) errors.academicYearId = ["Select an academic year"];
+    if (!body.semesterId) errors.semesterId = ["Select a semester"];
+    if (!body.sectionId) errors.sectionId = ["Select a section"];
+    if (!body.maxCapacity || body.maxCapacity < 1) {
+      errors.maxCapacity = ["Capacity must be at least 1"];
+    }
+
+    const catalog = catalogs.find((c) => c.id === body.catalogId);
+    if (body.catalogId && !catalog) {
+      errors.catalogId = ["Catalog course not found"];
+    }
+    const section = sections.find((s) => s.id === body.sectionId);
+    if (body.sectionId && !section) {
+      errors.sectionId = ["Section not found"];
+    }
+    const ay = academicYears.find((y) => y.id === body.academicYearId);
+    if (body.academicYearId && !ay) {
+      errors.academicYearId = ["Academic year not found"];
+    }
+    const sem = semesters.find((s) => s.id === body.semesterId);
+    if (body.semesterId && !sem) {
+      errors.semesterId = ["Semester not found"];
+    }
+
+    // Duplicate guard: same (catalog, academicYear, semester, section) cannot
+    // be offered twice — a section can't take the same course twice in one term.
+    if (catalog && ay && sem && section) {
+      const dupe = courses.find(
+        (c) =>
+          c.catalogId === catalog.id &&
+          c.academicYearId === ay.id &&
+          c.semesterId === sem.id &&
+          c.sectionId === section.id,
+      );
+      if (dupe) {
+        errors.sectionId = [
+          `${catalog.code} is already offered to ${section.name} in ${sem.name}.`,
+        ];
+      }
+    }
+
+    if (Object.keys(errors).length > 0) return validationError(errors);
+
+    if (!catalog || !ay || !sem || !section) {
+      // Should never reach here after the checks above — narrow for TS.
+      return validationError({ form: ["Could not resolve referenced entities"] });
+    }
+
+    const facultyUser = body.facultyId
+      ? users.find((u) => u.id === body.facultyId && u.role === "faculty")
+      : null;
+
+    const now = new Date().toISOString();
+    // Faculty-less offering = draft. Issue 4 in the brief surfaces this in
+    // the list with a warning chip so it doesn't get forgotten.
+    const offeringStatus: AdminCourse["status"] = facultyUser ? "active" : "draft";
+    const newOffering: AdminCourse = {
+      id: `crs_${Date.now()}`,
+      code: catalog.code,
+      name: catalog.name,
+      description: catalog.description,
+      credits: catalog.credits,
+      department: section.department,
+      semesterId: sem.id,
+      semesterName: sem.name,
+      facultyId: facultyUser?.id ?? "",
+      facultyName: facultyUser?.name ?? "",
+      enrolledCount: 0,
+      maxCapacity: body.maxCapacity,
+      status: offeringStatus,
+      catalogId: catalog.id,
+      academicYearId: ay.id,
+      academicYearName: ay.name,
+      studyYear: body.studyYear,
+      programmeId: section.programmeId,
+      programmeName: section.programmeName,
+      sectionId: section.id,
+      sectionName: section.name,
+      courseType: catalog.courseType,
+      lectureHours: catalog.lectureHours,
+      tutorialHours: catalog.tutorialHours,
+      practicalHours: catalog.practicalHours,
+      // Snapshot frozen at creation — Issue 8 in the brief.
+      syllabusSnapshot: catalog.syllabus,
+      regulationSnapshot: catalog.regulation,
+      creditsSnapshot: catalog.credits,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    courses = [newOffering, ...courses];
+
+    // For core courses, auto-roster the section's existing students. For
+    // electives, leave enrollment empty — students opt-in (Issue 5).
+    if (catalog.courseType === "core") {
+      const rosterStudents = users
+        .filter(
+          (u) =>
+            u.role === "student" &&
+            (u.department === section.department || u.program === section.programmeName),
+        )
+        .slice(0, Math.min(body.maxCapacity, section.studentCount))
+        .map((u) => u.id);
+      const updated = courses.find((c) => c.id === newOffering.id)!;
+      updated.enrolledStudentIds = rosterStudents;
+      updated.enrolledCount = rosterStudents.length;
+    }
+
+    return HttpResponse.json({ data: toOfferingView(newOffering) }, { status: 201 });
+  }),
+
+  http.get("/api/admin/course-offerings/:id", async ({ params }) => {
+    await randomDelay();
+    const c = courses.find((c) => c.id === params.id);
+    if (!c) return notFound("Course offering");
+    return HttpResponse.json({ data: toOfferingView(c) });
+  }),
+
+  http.post(
+    "/api/admin/course-offerings/:id/assign-faculty",
+    async ({ params, request }) => {
+      await randomDelay();
+      const id = params.id as string;
+      const body = (await request.json()) as AssignFacultyRequest;
+      const idx = courses.findIndex((c) => c.id === id);
+      if (idx === -1) return notFound("Course offering");
+
+      const facultyUser = users.find(
+        (u) => u.id === body.facultyId && u.role === "faculty",
+      );
+      if (!facultyUser) {
+        return validationError({ facultyId: ["Faculty not found or not a faculty user"] });
+      }
+
+      const now = new Date().toISOString();
+      courses[idx] = {
+        ...courses[idx],
+        facultyId: facultyUser.id,
+        facultyName: facultyUser.name,
+        // A draft offering becomes active once faculty is assigned.
+        status: courses[idx].status === "draft" ? "active" : courses[idx].status,
+        updatedAt: now,
+      };
+      return HttpResponse.json({ data: toOfferingView(courses[idx]) });
+    },
+  ),
 ];

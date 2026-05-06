@@ -266,6 +266,11 @@ export interface GeneratedReport extends Identifiable, Timestamps {
 }
 
 // === Courses ===
+// AdminCourse is the OFFERING view — what gets taught in a specific term to a
+// specific cohort. Faculty/student portals read this. New fields (catalogId,
+// academicYearId, sectionId, studyYear, courseType, lecture/tutorial/practical
+// hours) are populated for offerings created via the new flow; legacy seed
+// rows fill them with sensible defaults.
 export interface AdminCourse extends Identifiable, Timestamps {
   code: string;
   name: string;
@@ -280,6 +285,25 @@ export interface AdminCourse extends Identifiable, Timestamps {
   enrolledStudentIds?: string[];
   maxCapacity: number;
   status: "draft" | "active" | "archived";
+  // — New offering-shape fields —
+  catalogId?: string;
+  academicYearId?: string;
+  academicYearName?: string;
+  studyYear?: 1 | 2 | 3 | 4 | 5;
+  programmeId?: string;
+  programmeName?: string;
+  sectionId?: string;
+  sectionName?: string;
+  courseType?: CourseType;
+  lectureHours?: number;
+  tutorialHours?: number;
+  practicalHours?: number;
+  // Snapshot of the catalog at offering-creation time. Lets past offerings
+  // keep the syllabus/credits they were taught with even when the catalog
+  // is later edited (Issue 8 in the brief).
+  syllabusSnapshot?: string;
+  regulationSnapshot?: string;
+  creditsSnapshot?: number;
 }
 
 export interface CreateCourseRequest {
@@ -296,6 +320,112 @@ export interface CreateCourseRequest {
 export interface BulkEnrollRequest {
   courseId: string;
   studentIds: string[];
+}
+
+// === Course Catalog (design-time, master) ===
+// One catalog row defines what a course IS. Many offerings reuse it across
+// terms and sections. Owning department is optional — cross-cutting courses
+// (Communication Skills, etc.) leave it null.
+export type CourseType = "core" | "programme_elective" | "open_elective";
+
+export interface CourseCatalog extends Identifiable, Timestamps {
+  code: string;
+  name: string;
+  description: string;
+  syllabus: string;
+  regulation: string;
+  credits: number;
+  courseType: CourseType;
+  owningDepartmentId: string | null;
+  owningDepartmentName: string | null;
+  lectureHours: number;
+  tutorialHours: number;
+  practicalHours: number;
+  status: "active" | "archived";
+  offeringCount: number;
+}
+
+export interface CreateCourseCatalogRequest {
+  code: string;
+  name: string;
+  description: string;
+  syllabus: string;
+  regulation: string;
+  credits: number;
+  courseType: CourseType;
+  owningDepartmentId: string | null;
+  lectureHours: number;
+  tutorialHours: number;
+  practicalHours: number;
+}
+
+// === Sections (programme cohort) ===
+// Section is a cohort within a (programme, study year). Section "CSE-A Year 2"
+// is the unit you assign offerings to. Programme + studyYear + sectionName is
+// the natural identity.
+export interface Section extends Identifiable, Timestamps {
+  name: string;
+  programmeId: string;
+  programmeName: string;
+  department: string;
+  studyYear: 1 | 2 | 3 | 4 | 5;
+  studentCount: number;
+  status: "active" | "archived";
+}
+
+// === Departments (master data) ===
+export interface Department extends Identifiable, Timestamps {
+  name: string;
+  code: string;
+  hodName?: string;
+  status: "active" | "archived";
+}
+
+// === Course Offering (run-time, instance) ===
+// Enriched view returned by /api/admin/course-offerings. Field-compatible
+// superset of AdminCourse plus joined catalog/section/programme data so the
+// list table can render without N+1 lookups.
+export interface CourseOffering extends Identifiable, Timestamps {
+  catalogId: string;
+  catalogCode: string;
+  catalogName: string;
+  courseType: CourseType;
+  academicYearId: string;
+  academicYearName: string;
+  semesterId: string;
+  semesterName: string;
+  studyYear: 1 | 2 | 3 | 4 | 5;
+  programmeId: string;
+  programmeName: string;
+  department: string;
+  sectionId: string;
+  sectionName: string;
+  facultyId: string | null;
+  facultyName: string | null;
+  enrolledCount: number;
+  maxCapacity: number;
+  lectureHours: number;
+  tutorialHours: number;
+  practicalHours: number;
+  // Snapshot of catalog at creation time — frozen for transcript fidelity.
+  syllabusSnapshot: string;
+  regulationSnapshot: string;
+  creditsSnapshot: number;
+  status: "draft" | "active" | "archived";
+}
+
+export interface CreateCourseOfferingRequest {
+  catalogId: string;
+  academicYearId: string;
+  semesterId: string;
+  studyYear: 1 | 2 | 3 | 4 | 5;
+  sectionId: string;
+  facultyId: string | null;
+  maxCapacity: number;
+}
+
+export interface AssignFacultyRequest {
+  facultyId: string;
 }
 
 // === Semesters ===

@@ -23,6 +23,10 @@ import type {
   AdminCourse,
   Program,
   AcademicYear,
+  CourseCatalog,
+  CourseType,
+  Section,
+  Department,
 } from "@/lib/api/types/admin.types";
 import type {
   PortalRole,
@@ -135,11 +139,15 @@ const LAST_NAMES = [
   "Rao", "Pillai", "Desai", "Shah", "Mehta",
 ];
 
+// Real university role mix: students dominate at ~94%, faculty ~5%, with a
+// handful of admin and placement officers per cohort. With generateUsers(2000)
+// this produces ~1,880 students / ~100 faculty / ~10 admin / ~10 placement and
+// a believable faculty-student ratio of ~1:18.
 const ROLE_DISTRIBUTION: PortalRole[] = [
-  ...Array(25).fill("student"),
-  ...Array(15).fill("faculty"),
-  ...Array(8).fill("admin"),
-  ...Array(4).fill("placement"),
+  ...Array(188).fill("student"),
+  ...Array(10).fill("faculty"),
+  ...Array(1).fill("admin"),
+  ...Array(1).fill("placement"),
 ] as PortalRole[];
 
 const AI_MODEL_DEFINITIONS = [
@@ -187,120 +195,274 @@ const AI_MODEL_DEFINITIONS = [
   },
 ];
 
-// ─── Generators ───────────────────────────────────────────────────────────────
+// ─── Institutional KPIs (shared between Dashboard + Analytics) ────────────────
+// Single source of truth so the two pages can never disagree. Anything that's
+// computable from live data (totalEnrollment, facultyCount, ratios, per-dept
+// student counts, active courses) is derived at request time. Anything with
+// no underlying data (rates, GPA, research output, multi-year trends) is
+// generated once via the seeded faker so values stay stable across requests.
 
-export function generateAdminDashboard(): AdminDashboard {
-  const byDepartment = DEPARTMENTS.map((name) => ({
+interface StableKpiPool {
+  retentionRate: number;
+  retentionRateLastYear: number;
+  graduationRate: number;
+  graduationRateLastYear: number;
+  avgGpa: number;
+  avgGpaLastYear: number;
+  placementRate: number;
+  placementRateLastYear: number;
+  researchOutput: number;
+  researchOutputLastYear: number;
+  complianceScoreLastYear: number;
+  monthlyEnrollmentDeltas: number[]; // 12 deltas applied around the live total
+  yearlyEnrollmentDeltas: number[]; // 5 historical deltas
+  yearlyRetention: number[];
+  yearlyGraduation: number[];
+  departmentRates: {
+    department: string;
+    retention: number;
+    graduation: number;
+    avgGpa: number;
+    placementRate: number;
+  }[];
+}
+
+// Generated ONCE at module load — deterministic via the faker.seed(44) at top.
+const STABLE_KPI_POOL: StableKpiPool = {
+  retentionRate: roundTo(faker.number.float({ min: 85, max: 89 }), 1),
+  retentionRateLastYear: roundTo(faker.number.float({ min: 83, max: 87 }), 1),
+  graduationRate: roundTo(faker.number.float({ min: 80, max: 84 }), 1),
+  graduationRateLastYear: roundTo(faker.number.float({ min: 78, max: 83 }), 1),
+  avgGpa: roundTo(faker.number.float({ min: 3.30, max: 3.55 }), 2),
+  avgGpaLastYear: roundTo(faker.number.float({ min: 3.25, max: 3.50 }), 2),
+  placementRate: roundTo(faker.number.float({ min: 75, max: 82 }), 1),
+  placementRateLastYear: roundTo(faker.number.float({ min: 76, max: 83 }), 1),
+  researchOutput: faker.number.int({ min: 320, max: 360 }),
+  researchOutputLastYear: faker.number.int({ min: 300, max: 340 }),
+  complianceScoreLastYear: faker.number.int({ min: 82, max: 87 }),
+  monthlyEnrollmentDeltas: MONTHS.map(() =>
+    faker.number.int({ min: -400, max: 400 }),
+  ),
+  yearlyEnrollmentDeltas: Array.from({ length: 5 }, () =>
+    faker.number.int({ min: -800, max: 800 }),
+  ),
+  yearlyRetention: Array.from({ length: 5 }, () =>
+    roundTo(faker.number.float({ min: 82, max: 89 }), 1),
+  ),
+  yearlyGraduation: Array.from({ length: 5 }, () =>
+    roundTo(faker.number.float({ min: 76, max: 84 }), 1),
+  ),
+  departmentRates: DEPARTMENTS.map((department) => ({
+    department,
+    retention: roundTo(faker.number.float({ min: 78, max: 95 }), 1),
+    graduation: roundTo(faker.number.float({ min: 72, max: 92 }), 1),
+    avgGpa: roundTo(faker.number.float({ min: 3.0, max: 3.8 }), 2),
+    placementRate: roundTo(faker.number.float({ min: 65, max: 95 }), 1),
+  })),
+};
+
+interface LiveKpis {
+  totalEnrollment: number;
+  totalEnrollmentLastYear: number;
+  facultyCount: number;
+  facultyStudentRatio: number;
+  activeCourseCount: number;
+  studentsByDepartment: { name: string; count: number }[];
+  enrollmentByDepartment: { department: string; enrollment: number }[];
+}
+
+/** Compute live counts from the seed users[]/courses[] arrays. */
+export function computeLiveKpis(users: AdminUser[], courses: AdminCourse[]): LiveKpis {
+  const students = users.filter((u) => u.role === "student");
+  const faculty = users.filter((u) => u.role === "faculty");
+  const totalEnrollment = students.length;
+  const facultyCount = Math.max(1, faculty.length);
+  const facultyStudentRatio = roundTo(totalEnrollment / facultyCount, 1);
+  const activeCourseCount = courses.filter((c) => c.status === "active").length;
+
+  const studentsByDepartment = DEPARTMENTS.map((name) => ({
     name,
-    count: faker.number.int({ min: 800, max: 2200 }),
+    count: students.filter((s) => s.department === name).length,
   }));
-  const total = byDepartment.reduce((sum, d) => sum + d.count, 0);
 
-  const enrollmentTrend = MONTHS.map((month) => ({
+  // Last year's total derives from this year minus a stable growth factor
+  // (~3.8% retention growth) so the trend % stays plausible and reconciled.
+  const totalEnrollmentLastYear = Math.round(totalEnrollment / 1.038);
+
+  return {
+    totalEnrollment,
+    totalEnrollmentLastYear,
+    facultyCount,
+    facultyStudentRatio,
+    activeCourseCount,
+    studentsByDepartment,
+    enrollmentByDepartment: studentsByDepartment.map((d) => ({
+      department: d.name,
+      enrollment: d.count,
+    })),
+  };
+}
+
+/** Build the Dashboard response from the unified KPI pool + live counts. */
+export function buildAdminDashboard(
+  live: LiveKpis,
+  compliance: { score: number; status: ComplianceStatus; unresolvedDeviations: number },
+): AdminDashboard {
+  const enrollmentTrendPct = roundTo(
+    ((live.totalEnrollment - live.totalEnrollmentLastYear) /
+      Math.max(1, live.totalEnrollmentLastYear)) *
+      100,
+    1,
+  );
+
+  // Build a 12-month series anchored on live total ± stable deltas so the
+  // chart line doesn't drift further from the headline number than ±400.
+  const enrollmentTrend = MONTHS.map((month, i) => ({
     month,
-    count: faker.number.int({ min: 11200, max: 12800 }),
+    count: live.totalEnrollment + STABLE_KPI_POOL.monthlyEnrollmentDeltas[i],
   }));
 
   return {
     enrollment: {
-      total,
-      trend: roundTo(faker.number.float({ min: 1.2, max: 4.8 }), 1),
-      byDepartment,
+      total: live.totalEnrollment,
+      trend: enrollmentTrendPct,
+      byDepartment: live.studentsByDepartment,
     },
     retention: {
-      rate: roundTo(faker.number.float({ min: 85, max: 89 }), 1),
-      trend: roundTo(faker.number.float({ min: 0.5, max: 2.5 }), 1),
+      rate: STABLE_KPI_POOL.retentionRate,
+      trend: roundTo(
+        STABLE_KPI_POOL.retentionRate - STABLE_KPI_POOL.retentionRateLastYear,
+        1,
+      ),
     },
     graduation: {
-      rate: roundTo(faker.number.float({ min: 80, max: 84 }), 1),
-      trend: roundTo(faker.number.float({ min: 0.3, max: 1.8 }), 1),
+      rate: STABLE_KPI_POOL.graduationRate,
+      trend: roundTo(
+        STABLE_KPI_POOL.graduationRate - STABLE_KPI_POOL.graduationRateLastYear,
+        1,
+      ),
     },
     compliance: {
-      score: faker.number.int({ min: 86, max: 91 }),
-      status: "compliant" as ComplianceStatus,
-      deviations: faker.number.int({ min: 2, max: 6 }),
+      score: compliance.score,
+      status: compliance.status,
+      deviations: compliance.unresolvedDeviations,
     },
-    facultyStudentRatio: roundTo(faker.number.float({ min: 15, max: 22 }), 1),
+    facultyStudentRatio: live.facultyStudentRatio,
     enrollmentTrend,
   };
 }
 
-export function generateAnalytics(): InstitutionalAnalytics {
+/** Build the Analytics response from the same unified KPI pool. */
+export function buildAnalytics(
+  live: LiveKpis,
+  compliance: { score: number },
+): InstitutionalAnalytics {
+  // Trend tag: derived from current vs last-year comparison so it stays
+  // consistent with the change shown on the card.
+  const direction = (cur: number, prev: number): "up" | "down" | "stable" => {
+    if (cur > prev) return "up";
+    if (cur < prev) return "down";
+    return "stable";
+  };
+
   const kpis = [
     {
       name: "Total Enrollment",
-      value: 12347,
-      previousValue: 11892,
+      value: live.totalEnrollment,
+      previousValue: live.totalEnrollmentLastYear,
       unit: "students",
-      trend: "up" as const,
+      trend: direction(live.totalEnrollment, live.totalEnrollmentLastYear),
     },
     {
       name: "Retention Rate",
-      value: 87.2,
-      previousValue: 85.8,
+      value: STABLE_KPI_POOL.retentionRate,
+      previousValue: STABLE_KPI_POOL.retentionRateLastYear,
       unit: "%",
-      trend: "up" as const,
+      trend: direction(
+        STABLE_KPI_POOL.retentionRate,
+        STABLE_KPI_POOL.retentionRateLastYear,
+      ),
     },
     {
       name: "Graduation Rate",
-      value: 82.1,
-      previousValue: 81.5,
+      value: STABLE_KPI_POOL.graduationRate,
+      previousValue: STABLE_KPI_POOL.graduationRateLastYear,
       unit: "%",
-      trend: "up" as const,
+      trend: direction(
+        STABLE_KPI_POOL.graduationRate,
+        STABLE_KPI_POOL.graduationRateLastYear,
+      ),
     },
     {
       name: "Average GPA",
-      value: 3.42,
-      previousValue: 3.38,
+      value: STABLE_KPI_POOL.avgGpa,
+      previousValue: STABLE_KPI_POOL.avgGpaLastYear,
       unit: "points",
-      trend: "up" as const,
+      trend: direction(STABLE_KPI_POOL.avgGpa, STABLE_KPI_POOL.avgGpaLastYear),
     },
     {
       name: "Placement Rate",
-      value: 78.6,
-      previousValue: 79.1,
+      value: STABLE_KPI_POOL.placementRate,
+      previousValue: STABLE_KPI_POOL.placementRateLastYear,
       unit: "%",
-      trend: "down" as const,
+      trend: direction(
+        STABLE_KPI_POOL.placementRate,
+        STABLE_KPI_POOL.placementRateLastYear,
+      ),
     },
     {
       name: "Faculty-Student Ratio",
-      value: 18.3,
-      previousValue: 18.7,
+      value: live.facultyStudentRatio,
+      previousValue: live.facultyStudentRatio + 0.4, // last year — slightly higher students/faculty
       unit: ":1",
       trend: "up" as const,
     },
     {
       name: "Research Output",
-      value: 342,
-      previousValue: 328,
+      value: STABLE_KPI_POOL.researchOutput,
+      previousValue: STABLE_KPI_POOL.researchOutputLastYear,
       unit: "papers",
-      trend: "up" as const,
+      trend: direction(
+        STABLE_KPI_POOL.researchOutput,
+        STABLE_KPI_POOL.researchOutputLastYear,
+      ),
     },
     {
       name: "Compliance Score",
-      value: 88,
-      previousValue: 85,
+      value: compliance.score,
+      previousValue: STABLE_KPI_POOL.complianceScoreLastYear,
       unit: "score",
-      trend: "up" as const,
+      trend: direction(compliance.score, STABLE_KPI_POOL.complianceScoreLastYear),
     },
   ];
 
-  const departmentComparison = DEPARTMENTS.map((department) => ({
-    department,
-    enrollment: faker.number.int({ min: 800, max: 2200 }),
-    retention: roundTo(faker.number.float({ min: 78, max: 95 }), 1),
-    graduation: roundTo(faker.number.float({ min: 72, max: 92 }), 1),
-    avgGpa: roundTo(faker.number.float({ min: 3.0, max: 3.8 }), 2),
-    placementRate: roundTo(faker.number.float({ min: 65, max: 95 }), 1),
-  }));
+  // Per-department comparison: live student count + stable per-dept rates.
+  const departmentComparison = STABLE_KPI_POOL.departmentRates.map((rates) => {
+    const enrollment =
+      live.enrollmentByDepartment.find((d) => d.department === rates.department)
+        ?.enrollment ?? 0;
+    return {
+      department: rates.department,
+      enrollment,
+      retention: rates.retention,
+      graduation: rates.graduation,
+      avgGpa: rates.avgGpa,
+      placementRate: rates.placementRate,
+    };
+  });
 
+  // Yearly trends: anchor each year on live total ± stable yearly delta so the
+  // last point matches the headline Total Enrollment.
   const yearlyTrends = Array.from({ length: 5 }, (_, i) => {
     const year = (2022 + i).toString();
+    const isCurrent = i === 4;
     return {
       year,
-      enrollment: faker.number.int({ min: 10500, max: 12500 }),
-      retention: roundTo(faker.number.float({ min: 82, max: 89 }), 1),
-      graduation: roundTo(faker.number.float({ min: 76, max: 84 }), 1),
+      enrollment: isCurrent
+        ? live.totalEnrollment
+        : live.totalEnrollment + STABLE_KPI_POOL.yearlyEnrollmentDeltas[i],
+      retention: STABLE_KPI_POOL.yearlyRetention[i],
+      graduation: STABLE_KPI_POOL.yearlyGraduation[i],
     };
   });
 
@@ -902,34 +1064,138 @@ export function generateSemesters(): Semester[] {
   ];
 }
 
+// Single source of truth for the seed course list — used by both
+// generateCatalogs() and generateCourses() so codes always line up.
+type CourseSeed = {
+  code: string;
+  name: string;
+  dept: string;
+  credits: number;
+  type: CourseType;
+  /** L:T:P weekly hours */
+  ltp: [number, number, number];
+};
+
+const COURSE_SEEDS: CourseSeed[] = [
+  { code: "CS301", name: "Data Structures & Algorithms", dept: "Computer Science", credits: 4, type: "core", ltp: [3, 0, 2] },
+  { code: "CS405", name: "Machine Learning", dept: "Computer Science", credits: 4, type: "core", ltp: [3, 1, 2] },
+  { code: "CS302", name: "Operating Systems", dept: "Computer Science", credits: 3, type: "core", ltp: [3, 0, 0] },
+  { code: "CS410", name: "Computer Networks", dept: "Computer Science", credits: 3, type: "core", ltp: [3, 0, 0] },
+  { code: "CS420", name: "Cloud Computing", dept: "Computer Science", credits: 3, type: "programme_elective", ltp: [3, 0, 0] },
+  { code: "EE201", name: "Circuit Analysis", dept: "Electrical Engineering", credits: 4, type: "core", ltp: [3, 0, 2] },
+  { code: "EE305", name: "Digital Signal Processing", dept: "Electrical Engineering", credits: 3, type: "core", ltp: [3, 0, 0] },
+  { code: "EE410", name: "VLSI Design", dept: "Electrical Engineering", credits: 4, type: "programme_elective", ltp: [3, 0, 2] },
+  { code: "ME201", name: "Thermodynamics", dept: "Mechanical Engineering", credits: 4, type: "core", ltp: [3, 1, 0] },
+  { code: "ME302", name: "Fluid Mechanics", dept: "Mechanical Engineering", credits: 3, type: "core", ltp: [3, 0, 0] },
+  { code: "ME405", name: "Robotics Engineering", dept: "Mechanical Engineering", credits: 3, type: "programme_elective", ltp: [3, 0, 0] },
+  { code: "MA201", name: "Linear Algebra", dept: "Mathematics", credits: 3, type: "core", ltp: [3, 1, 0] },
+  { code: "MA301", name: "Probability & Statistics", dept: "Mathematics", credits: 3, type: "core", ltp: [3, 1, 0] },
+  { code: "PH201", name: "Quantum Mechanics", dept: "Physics", credits: 4, type: "core", ltp: [3, 1, 0] },
+  { code: "PH305", name: "Solid State Physics", dept: "Physics", credits: 3, type: "programme_elective", ltp: [3, 0, 0] },
+  { code: "BA301", name: "Financial Management", dept: "Business Administration", credits: 3, type: "core", ltp: [3, 0, 0] },
+  { code: "BA405", name: "Strategic Marketing", dept: "Business Administration", credits: 3, type: "core", ltp: [3, 0, 0] },
+  { code: "BA410", name: "Operations Research", dept: "Business Administration", credits: 3, type: "programme_elective", ltp: [3, 0, 0] },
+  { code: "BT201", name: "Molecular Biology", dept: "Biotechnology", credits: 4, type: "core", ltp: [3, 0, 2] },
+  { code: "BT305", name: "Genetic Engineering", dept: "Biotechnology", credits: 4, type: "core", ltp: [3, 0, 2] },
+  { code: "CE201", name: "Structural Analysis", dept: "Civil Engineering", credits: 4, type: "core", ltp: [3, 1, 0] },
+  { code: "CE302", name: "Geotechnical Engineering", dept: "Civil Engineering", credits: 3, type: "core", ltp: [3, 0, 0] },
+  { code: "CS450", name: "Deep Learning", dept: "Computer Science", credits: 4, type: "programme_elective", ltp: [3, 0, 2] },
+  { code: "EE420", name: "Power Systems", dept: "Electrical Engineering", credits: 3, type: "core", ltp: [3, 0, 0] },
+  { code: "BA420", name: "Entrepreneurship & Innovation", dept: "Business Administration", credits: 3, type: "open_elective", ltp: [3, 0, 0] },
+  // Open-elective examples — owned by Humanities-style cross-cutting "department"
+  { code: "HUM101", name: "Communication Skills", dept: "Humanities", credits: 2, type: "open_elective", ltp: [2, 0, 0] },
+  { code: "HUM202", name: "Professional Ethics", dept: "Humanities", credits: 2, type: "open_elective", ltp: [2, 0, 0] },
+];
+
+function deptIdFromName(name: string): string {
+  return `dept_${name.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "")}`;
+}
+
+function catalogIdFromCode(code: string): string {
+  return `cat_${code.toLowerCase()}`;
+}
+
+export function generateDepartments(): Department[] {
+  const now = new Date().toISOString();
+  // Include cross-cutting "Humanities" host for open electives
+  const allDepts = [...DEPARTMENTS, "Humanities"];
+  return allDepts.map((name) => ({
+    id: deptIdFromName(name),
+    name,
+    code: name
+      .split(" ")
+      .map((w) => w[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 4),
+    hodName: `Dr. ${pick(FIRST_NAMES)} ${pick(LAST_NAMES)}`,
+    status: "active" as const,
+    createdAt: now,
+    updatedAt: now,
+  }));
+}
+
+export function generateCatalogs(): CourseCatalog[] {
+  const now = new Date().toISOString();
+  return COURSE_SEEDS.map((seed) => {
+    const [l, t, p] = seed.ltp;
+    return {
+      id: catalogIdFromCode(seed.code),
+      code: seed.code,
+      name: seed.name,
+      description: `Comprehensive study of ${seed.name.toLowerCase()} covering fundamental and advanced topics in ${seed.dept}.`,
+      syllabus:
+        `Module 1: Foundations and core concepts of ${seed.name.toLowerCase()}.\n` +
+        `Module 2: Theoretical frameworks and analytical methods.\n` +
+        `Module 3: Practical applications, case studies, and lab work.\n` +
+        `Module 4: Contemporary research directions and industry practice.\n` +
+        `Module 5: Integrative project work and presentation.`,
+      regulation: "R22",
+      credits: seed.credits,
+      courseType: seed.type,
+      owningDepartmentId: deptIdFromName(seed.dept),
+      owningDepartmentName: seed.dept,
+      lectureHours: l,
+      tutorialHours: t,
+      practicalHours: p,
+      status: "active" as const,
+      offeringCount: 0, // hydrated live by handler from offerings count
+      createdAt: now,
+      updatedAt: now,
+    };
+  });
+}
+
+export function generateSections(programs: Program[]): Section[] {
+  const now = new Date().toISOString();
+  const sections: Section[] = [];
+  for (const programme of programs.filter((p) => p.status === "active")) {
+    // Generate 2 sections (A, B) per study year for the programme
+    const yearsToCover = Math.min(programme.duration, 4);
+    for (let year = 1; year <= yearsToCover; year++) {
+      for (const letter of ["A", "B"]) {
+        const sectionName = `${programme.name.split(" ")[0]}-${year}-${letter}`;
+        sections.push({
+          id: `sec_${programme.id}_y${year}_${letter.toLowerCase()}`,
+          name: sectionName,
+          programmeId: programme.id,
+          programmeName: programme.name,
+          department: programme.department,
+          studyYear: year as 1 | 2 | 3 | 4 | 5,
+          studentCount: faker.number.int({ min: 30, max: 60 }),
+          status: "active" as const,
+          createdAt: now,
+          updatedAt: now,
+        });
+      }
+    }
+  }
+  return sections;
+}
+
 export function generateCourses(): AdminCourse[] {
-  const courseDefs: { code: string; name: string; dept: string; credits: number }[] = [
-    { code: "CS301", name: "Data Structures & Algorithms", dept: "Computer Science", credits: 4 },
-    { code: "CS405", name: "Machine Learning", dept: "Computer Science", credits: 4 },
-    { code: "CS302", name: "Operating Systems", dept: "Computer Science", credits: 3 },
-    { code: "CS410", name: "Computer Networks", dept: "Computer Science", credits: 3 },
-    { code: "CS420", name: "Cloud Computing", dept: "Computer Science", credits: 3 },
-    { code: "EE201", name: "Circuit Analysis", dept: "Electrical Engineering", credits: 4 },
-    { code: "EE305", name: "Digital Signal Processing", dept: "Electrical Engineering", credits: 3 },
-    { code: "EE410", name: "VLSI Design", dept: "Electrical Engineering", credits: 4 },
-    { code: "ME201", name: "Thermodynamics", dept: "Mechanical Engineering", credits: 4 },
-    { code: "ME302", name: "Fluid Mechanics", dept: "Mechanical Engineering", credits: 3 },
-    { code: "ME405", name: "Robotics Engineering", dept: "Mechanical Engineering", credits: 3 },
-    { code: "MA201", name: "Linear Algebra", dept: "Mathematics", credits: 3 },
-    { code: "MA301", name: "Probability & Statistics", dept: "Mathematics", credits: 3 },
-    { code: "PH201", name: "Quantum Mechanics", dept: "Physics", credits: 4 },
-    { code: "PH305", name: "Solid State Physics", dept: "Physics", credits: 3 },
-    { code: "BA301", name: "Financial Management", dept: "Business Administration", credits: 3 },
-    { code: "BA405", name: "Strategic Marketing", dept: "Business Administration", credits: 3 },
-    { code: "BA410", name: "Operations Research", dept: "Business Administration", credits: 3 },
-    { code: "BT201", name: "Molecular Biology", dept: "Biotechnology", credits: 4 },
-    { code: "BT305", name: "Genetic Engineering", dept: "Biotechnology", credits: 4 },
-    { code: "CE201", name: "Structural Analysis", dept: "Civil Engineering", credits: 4 },
-    { code: "CE302", name: "Geotechnical Engineering", dept: "Civil Engineering", credits: 3 },
-    { code: "CS450", name: "Deep Learning", dept: "Computer Science", credits: 4 },
-    { code: "EE420", name: "Power Systems", dept: "Electrical Engineering", credits: 3 },
-    { code: "BA420", name: "Entrepreneurship & Innovation", dept: "Business Administration", credits: 3 },
-  ];
+  const courseDefs: { code: string; name: string; dept: string; credits: number }[] =
+    COURSE_SEEDS.map((s) => ({ code: s.code, name: s.name, dept: s.dept, credits: s.credits }));
 
   const facultyNames = [
     "Dr. Aarav Sharma", "Dr. Priya Patel", "Dr. Rahul Gupta", "Dr. Sneha Singh",
@@ -938,12 +1204,33 @@ export function generateCourses(): AdminCourse[] {
     "Dr. Siddharth Banerjee", "Dr. Nisha Das", "Dr. Karan Mukherjee",
   ];
 
+  // Map dept name → a representative active programme so we can backfill
+  // programmeId/sectionId on legacy seed offerings. Engineering depts pick
+  // the BTech programme; others fall back to whatever programme matches.
+  const programmeByDept: Record<string, { progId: string; progName: string; section: string; studyYear: 1 | 2 | 3 | 4 }> = {
+    "Computer Science": { progId: "prog_02", progName: "BTech Computer Science & Engineering", section: "BTech-2-A", studyYear: 2 },
+    "Electrical Engineering": { progId: "prog_03", progName: "BTech Electronics & Communication", section: "BTech-2-A", studyYear: 2 },
+    "Mechanical Engineering": { progId: "prog_02", progName: "BTech Computer Science & Engineering", section: "BTech-2-A", studyYear: 2 },
+    "Mathematics": { progId: "prog_04", progName: "BSc Mathematics", section: "BSc-1-A", studyYear: 1 },
+    "Physics": { progId: "prog_05", progName: "BSc Physics", section: "BSc-1-A", studyYear: 1 },
+    "Business Administration": { progId: "prog_06", progName: "BBA Business Administration", section: "BBA-2-A", studyYear: 2 },
+    "Biotechnology": { progId: "prog_02", progName: "BTech Computer Science & Engineering", section: "BTech-2-A", studyYear: 2 },
+    "Civil Engineering": { progId: "prog_02", progName: "BTech Computer Science & Engineering", section: "BTech-2-A", studyYear: 2 },
+    "Humanities": { progId: "prog_02", progName: "BTech Computer Science & Engineering", section: "BTech-1-A", studyYear: 1 },
+  };
+
   return courseDefs.map((def, i) => {
     const statusRoll = faker.number.float({ min: 0, max: 1 });
     const status: "draft" | "active" | "archived" = statusRoll < 0.82 ? "active" : statusRoll < 0.92 ? "draft" : "archived";
     const maxCapacity = faker.number.int({ min: 120, max: 200 });
     const enrolledCount = status === "active" ? faker.number.int({ min: 30, max: Math.min(120, maxCapacity) }) : status === "draft" ? 0 : faker.number.int({ min: 80, max: maxCapacity });
     const faculty = facultyNames[i % facultyNames.length];
+    const seed = COURSE_SEEDS[i];
+    const [l, t, p] = seed.ltp;
+    const prog = programmeByDept[def.dept] ?? programmeByDept["Computer Science"];
+    // Section IDs follow the pattern produced by generateSections().
+    // study-year letter "a" — match how generateSections() builds the id.
+    const sectionId = `sec_${prog.progId}_y${prog.studyYear}_a`;
 
     return {
       id: `crs_${String(i + 1).padStart(3, "0")}`,
@@ -959,6 +1246,27 @@ export function generateCourses(): AdminCourse[] {
       enrolledCount,
       maxCapacity,
       status,
+      // — Offering-shape fields backfilled —
+      catalogId: catalogIdFromCode(def.code),
+      academicYearId: "ay_02",
+      academicYearName: "AY 2025-2026",
+      studyYear: prog.studyYear,
+      programmeId: prog.progId,
+      programmeName: prog.progName,
+      sectionId,
+      sectionName: prog.section,
+      courseType: seed.type,
+      lectureHours: l,
+      tutorialHours: t,
+      practicalHours: p,
+      syllabusSnapshot:
+        `Module 1: Foundations and core concepts of ${def.name.toLowerCase()}.\n` +
+        `Module 2: Theoretical frameworks and analytical methods.\n` +
+        `Module 3: Practical applications, case studies, and lab work.\n` +
+        `Module 4: Contemporary research directions and industry practice.\n` +
+        `Module 5: Integrative project work and presentation.`,
+      regulationSnapshot: "R22",
+      creditsSnapshot: def.credits,
       createdAt: "2025-11-15T00:00:00Z",
       updatedAt: pastDate(Math.max(1, faker.number.int({ min: 1, max: 30 }))),
     };

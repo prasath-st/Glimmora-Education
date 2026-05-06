@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import {
   LayoutDashboard,
@@ -33,7 +32,7 @@ const DEPT_COLORS = [
 ];
 
 export default function AdminDashboardPage() {
-  const { data, isLoading, isError, refetch } = useAdminDashboard();
+  const { data, dataUpdatedAt, isLoading, isError, refetch } = useAdminDashboard();
   const { data: deviations } = useComplianceDeviations({ status: "unresolved" });
   const { data: semesters } = useSemesters();
   const { data: coursesData } = useAdminCourses({ status: "active", pageSize: 1 });
@@ -147,7 +146,10 @@ export default function AdminDashboardPage() {
       </div>
 
       <p className="text-xs text-muted-foreground">
-        Last updated: {formatRelative(new Date().toISOString())}
+        Last updated:{" "}
+        {dataUpdatedAt
+          ? formatRelative(new Date(dataUpdatedAt).toISOString())
+          : "—"}
       </p>
 
       {/* Charts Row */}

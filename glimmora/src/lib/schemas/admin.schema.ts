@@ -118,6 +118,53 @@ export const createCourseSchema = z.object({
 export type CreateCourseFormData = z.output<typeof createCourseSchema>;
 export type CreateCourseFormInput = z.input<typeof createCourseSchema>;
 
+// === Course Catalog (design-time master row) ===
+export const createCatalogSchema = z.object({
+  code: z
+    .string()
+    .min(1, "Course code is required")
+    .max(12, "Course code too long")
+    .regex(/^[A-Z0-9-]+$/, { error: "Use uppercase letters, digits, and hyphens only" }),
+  name: z.string().min(1, "Course name is required"),
+  description: z.string().min(1, "Description is required"),
+  syllabus: z
+    .string()
+    .min(20, "Syllabus must be at least 20 characters — list the topics covered"),
+  regulation: z
+    .string()
+    .min(1, "Regulation is required (e.g. R22, R20)")
+    .max(8, "Keep regulation short (e.g. R22)"),
+  credits: z.coerce.number().min(1, "Credits must be at least 1").max(12),
+  courseType: z.enum(["core", "programme_elective", "open_elective"], {
+    error: "Pick a course type",
+  }),
+  owningDepartmentId: z.string().nullable(),
+  lectureHours: z.coerce.number().min(0, "Cannot be negative").max(10),
+  tutorialHours: z.coerce.number().min(0, "Cannot be negative").max(10),
+  practicalHours: z.coerce.number().min(0, "Cannot be negative").max(10),
+});
+
+export type CreateCatalogFormData = z.output<typeof createCatalogSchema>;
+export type CreateCatalogFormInput = z.input<typeof createCatalogSchema>;
+
+// === Course Offering (run-time instance) ===
+export const createOfferingSchema = z.object({
+  catalogId: z.string().min(1, "Pick a course from the catalog"),
+  academicYearId: z.string().min(1, "Select an academic year"),
+  semesterId: z.string().min(1, "Select a semester"),
+  studyYear: z.coerce
+    .number()
+    .min(1, "Study year is 1–5")
+    .max(5, "Study year is 1–5") as unknown as z.ZodType<1 | 2 | 3 | 4 | 5>,
+  sectionId: z.string().min(1, "Select a section"),
+  // Optional: leaving faculty empty marks the offering as draft.
+  facultyId: z.string().nullable().optional(),
+  maxCapacity: z.coerce.number().min(1, "Capacity must be at least 1").max(500),
+});
+
+export type CreateOfferingFormData = z.output<typeof createOfferingSchema>;
+export type CreateOfferingFormInput = z.input<typeof createOfferingSchema>;
+
 export const createSemesterSchema = z
   .object({
     name: z.string().min(1, "Semester name is required"),

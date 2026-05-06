@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Glimmora — Course Catalog & Section Course Flow</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: #f7f8fc; color: #1a1a2e; line-height: 1.5; }
+
+  /* Hero */
+  .hero { background: linear-gradient(135deg, #4a3aba 0%, #2d1d8f 100%); color: white; padding: 64px 40px; text-align: center; position: relative; overflow: hidden; }
+  .hero::before { content: ''; position: absolute; inset: 0; background-image: radial-gradient(circle at 20% 30%, rgba(255,255,255,0.08) 0%, transparent 40%), radial-gradient(circle at 80% 70%, rgba(255,255,255,0.06) 0%, transparent 40%); }
+  .hero-inner { position: relative; max-width: 900px; margin: 0 auto; }
+  .hero .eyebrow { font-size: 12px; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase; opacity: 0.75; margin-bottom: 16px; }
+  .hero h1 { font-size: 42px; font-weight: 800; letter-spacing: -0.5px; line-height: 1.1; margin-bottom: 18px; }
+  .hero p { font-size: 17px; opacity: 0.85; max-width: 680px; margin: 0 auto; line-height: 1.6; }
+  .hero-meta { margin-top: 28px; display: flex; justify-content: center; gap: 24px; flex-wrap: wrap; font-size: 13px; opacity: 0.8; }
+  .hero-meta span { display: inline-flex; align-items: center; gap: 6px; }
+  .hero-meta .dot { width: 6px; height: 6px; border-radius: 50%; background: white; opacity: 0.6; }
+
+  /* Layout */
+  .container { max-width: 1080px; margin: 0 auto; padding: 56px 24px 96px; }
+
+  /* TOC */
+  .toc { background: white; border-radius: 16px; padding: 28px 32px; box-shadow: 0 4px 20px rgba(20, 20, 80, 0.06); margin-bottom: 56px; }
+  .toc h3 { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: #6b7280; margin-bottom: 18px; }
+  .toc-list { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px 32px; }
+  .toc-list a { color: #1a1a2e; text-decoration: none; font-size: 14px; padding: 8px 0; display: flex; gap: 10px; align-items: baseline; border-bottom: 1px dashed transparent; transition: border-color 0.15s; }
+  .toc-list a:hover { border-bottom-color: #4a3aba; }
+  .toc-list .num { font-size: 11px; font-weight: 700; color: #4a3aba; min-width: 24px; }
+
+  /* Sections */
+  section { margin-bottom: 64px; }
+  .section-tag { display: inline-block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.4px; padding: 5px 12px; border-radius: 20px; margin-bottom: 14px; }
+  .tag-context { background: #e8eaf6; color: #283593; }
+  .tag-issue { background: #fef2f2; color: #991b1b; }
+  .tag-solution { background: #ecfdf5; color: #166534; }
+  .tag-decision { background: #fef3c7; color: #92400e; }
+  .tag-good { background: #dbeafe; color: #1e40af; }
+
+  h2 { font-size: 28px; font-weight: 800; letter-spacing: -0.3px; margin-bottom: 8px; color: #0f172a; }
+  .lede { font-size: 15px; color: #475569; margin-bottom: 28px; max-width: 760px; line-height: 1.65; }
+
+  h3 { font-size: 18px; font-weight: 700; margin-bottom: 12px; color: #1e293b; }
+  h4 { font-size: 14px; font-weight: 700; margin-bottom: 8px; color: #334155; text-transform: uppercase; letter-spacing: 0.6px; }
+
+  p { font-size: 14.5px; color: #334155; line-height: 1.7; margin-bottom: 14px; }
+  p strong { color: #0f172a; font-weight: 700; }
+
+  /* Cards */
+  .card { background: white; border-radius: 14px; padding: 28px; box-shadow: 0 2px 12px rgba(20, 20, 80, 0.05); margin-bottom: 20px; }
+  .card.bordered { border: 1px solid #e5e7eb; box-shadow: none; }
+
+  .card-stack { display: flex; flex-direction: column; gap: 16px; }
+
+  /* Diagram container */
+  .diagram { background: white; border-radius: 14px; padding: 32px; box-shadow: 0 2px 12px rgba(20, 20, 80, 0.05); margin: 20px 0 28px; overflow-x: auto; }
+  .diagram-caption { font-size: 12px; color: #6b7280; text-align: center; margin-top: 14px; font-style: italic; }
+
+  /* Two-column compare */
+  .compare-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 20px 0; }
+  .compare-col { background: white; border-radius: 14px; padding: 24px; box-shadow: 0 2px 12px rgba(20, 20, 80, 0.05); }
+  .compare-col.bad { border-top: 4px solid #ef4444; }
+  .compare-col.good { border-top: 4px solid #22c55e; }
+  .compare-col.option { border-top: 4px solid #4a3aba; }
+  .compare-col h4 { font-size: 13px; }
+  .compare-col .label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 6px; }
+  .compare-col.bad .label { color: #dc2626; }
+  .compare-col.good .label { color: #16a34a; }
+  .compare-col.option .label { color: #4a3aba; }
+
+  /* Field pills */
+  .field-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+  .field-pill { font-size: 11.5px; padding: 4px 10px; border-radius: 6px; background: #ede9fe; color: #4a3aba; font-weight: 500; font-family: 'SF Mono', Menlo, monospace; }
+  .field-pill.required { background: #4a3aba; color: white; }
+  .field-pill.optional { background: #f1f5f9; color: #475569; }
+  .field-pill.missing { background: #fee2e2; color: #991b1b; text-decoration: line-through; }
+  .field-pill.new { background: #d1fae5; color: #065f46; }
+
+  /* Data row example */
+  .data-row { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px 18px; font-family: 'SF Mono', Menlo, monospace; font-size: 12.5px; color: #1e293b; margin: 10px 0; line-height: 1.7; }
+  .data-row .key { color: #6b7280; }
+  .data-row .val { color: #4a3aba; font-weight: 600; }
+  .data-row .comment { color: #94a3b8; font-style: italic; }
+
+  /* Issue block */
+  .issue { background: white; border-radius: 14px; padding: 28px; box-shadow: 0 2px 12px rgba(20, 20, 80, 0.05); margin-bottom: 20px; border-left: 4px solid #ef4444; }
+  .issue.severity-high { border-left-color: #ef4444; }
+  .issue.severity-med { border-left-color: #f59e0b; }
+  .issue.severity-low { border-left-color: #6366f1; }
+  .issue-header { display: flex; align-items: baseline; gap: 14px; margin-bottom: 14px; flex-wrap: wrap; }
+  .issue-num { font-size: 13px; font-weight: 800; color: #4a3aba; min-width: 56px; }
+  .issue-title { font-size: 19px; font-weight: 700; color: #0f172a; flex: 1; }
+  .severity-badge { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; padding: 3px 9px; border-radius: 4px; }
+  .severity-badge.high { background: #fee2e2; color: #991b1b; }
+  .severity-badge.med { background: #fef3c7; color: #92400e; }
+  .severity-badge.low { background: #ede9fe; color: #4338ca; }
+
+  /* Permissions table */
+  table.perm { width: 100%; border-collapse: separate; border-spacing: 0; margin: 16px 0; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 12px rgba(20, 20, 80, 0.05); }
+  table.perm th { background: #4a3aba; color: white; padding: 14px 18px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; text-align: left; }
+  table.perm td { padding: 14px 18px; font-size: 13.5px; border-bottom: 1px solid #f1f5f9; vertical-align: top; color: #334155; }
+  table.perm tr:last-child td { border-bottom: none; }
+  table.perm tr:nth-child(even) td { background: #fafbfc; }
+  table.perm td.role { font-weight: 700; color: #0f172a; }
+  .perm-yes { color: #16a34a; font-weight: 600; }
+  .perm-no { color: #dc2626; font-weight: 600; }
+  .perm-scoped { color: #d97706; font-weight: 600; }
+
+  /* Callout */
+  .callout { background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%); border: 1px solid #c4b5fd; border-radius: 12px; padding: 20px 24px; margin: 18px 0; }
+  .callout h4 { color: #4a3aba; font-size: 12px; }
+  .callout p { font-size: 14px; color: #4338ca; margin-bottom: 0; }
+
+  .warn { background: #fffbeb; border: 1px solid #fde68a; border-radius: 12px; padding: 20px 24px; margin: 18px 0; }
+  .warn h4 { color: #92400e; font-size: 12px; }
+  .warn p { font-size: 14px; color: #78350f; margin-bottom: 0; }
+
+  /* Step list */
+  .steps { counter-reset: step; list-style: none; margin: 18px 0; }
+  .steps li { counter-increment: step; position: relative; padding: 16px 16px 16px 64px; background: white; border-radius: 12px; margin-bottom: 10px; box-shadow: 0 2px 8px rgba(20, 20, 80, 0.04); }
+  .steps li::before { content: counter(step); position: absolute; left: 16px; top: 14px; width: 32px; height: 32px; background: #4a3aba; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800; }
+  .steps li strong { color: #0f172a; display: block; margin-bottom: 4px; font-size: 14px; }
+  .steps li span { color: #475569; font-size: 13.5px; line-height: 1.6; }
+
+  /* Meeting quote */
+  .quote { background: #f8fafc; border-left: 3px solid #94a3b8; padding: 12px 18px; margin: 12px 0; font-size: 13px; color: #475569; font-style: italic; line-height: 1.6; border-radius: 0 8px 8px 0; }
+  .quote .who { display: block; font-style: normal; font-weight: 600; color: #1e293b; font-size: 11px; margin-top: 6px; text-transform: uppercase; letter-spacing: 0.6px; }
+
+  /* Inline code */
+  code { font-family: 'SF Mono', Menlo, monospace; font-size: 12.5px; background: #f1f5f9; color: #4a3aba; padding: 2px 6px; border-radius: 4px; }
+
+  ul.bullets { margin: 8px 0 16px 20px; }
+  ul.bullets li { font-size: 14px; color: #334155; line-height: 1.75; margin-bottom: 4px; }
+
+  .divider { height: 1px; background: linear-gradient(to right, transparent, #cbd5e1, transparent); margin: 56px 0; }
+
+  /* Mermaid overrides */
+  .mermaid { display: flex; justify-content: center; }
+
+  @media (max-width: 768px) {
+    .compare-2 { grid-template-columns: 1fr; }
+    .toc-list { grid-template-columns: 1fr; }
+    .hero h1 { font-size: 32px; }
+    h2 { font-size: 24px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="hero-inner">
+    <div class="eyebrow">Glimmora · University Admin Portal</div>
+    <h1>Course Catalog &amp; Section Course Flow</h1>
+    <p>Designing the course management model — separating the design-time catalog from the run-time offering, and locking down the gaps before we build.</p>
+    <div class="hero-meta">
+      <span><span class="dot"></span>Source: May 4 brainstorm transcript</span>
+      <span><span class="dot"></span>Target: University Admin scope</span>
+      <span><span class="dot"></span>Status: Pre-implementation review</span>
+    </div>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- TOC -->
+  <nav class="toc">
+    <h3>What's in this document</h3>
+    <div class="toc-list">
+      <a href="#context"><span class="num">01</span><span>Context — what we discussed, what's left</span></a>
+      <a href="#proposal"><span class="num">02</span><span>The proposal as it stands today</span></a>
+      <a href="#two-tier"><span class="num">03</span><span>The two-tier model: Catalog vs Offering</span></a>
+      <a href="#issue-1"><span class="num">04</span><span>Issue 1 — Department on catalog</span></a>
+      <a href="#issue-2"><span class="num">05</span><span>Issue 2 — Regulation versioning</span></a>
+      <a href="#issue-3"><span class="num">06</span><span>Issue 3 — Offering dimensions</span></a>
+      <a href="#issue-4"><span class="num">07</span><span>Issue 4 — Three operations in one click</span></a>
+      <a href="#issue-5"><span class="num">08</span><span>Issue 5 — Core vs Elective</span></a>
+      <a href="#issue-6"><span class="num">09</span><span>Issue 6 — L:T:P components</span></a>
+      <a href="#issue-7"><span class="num">10</span><span>Issue 7 — Course id vs code</span></a>
+      <a href="#issue-8"><span class="num">11</span><span>Issue 8 — Edit propagation</span></a>
+      <a href="#issue-9"><span class="num">12</span><span>Issue 9 — Roles &amp; permissions</span></a>
+      <a href="#next-steps"><span class="num">13</span><span>Recommended next steps</span></a>
+    </div>
+  </nav>
+
+  <!-- Section 1: Context -->
+  <section id="context">
+    <span class="section-tag tag-context">Context</span>
+    <h2>What was discussed in the brainstorm</h2>
+    <p class="lede">The May 4 meeting was 95% super-admin (onboarding universities). The university-admin scope was touched in only six lines of the transcript — but those six lines define the entire university-admin portal. We need to fill in the rest.</p>
+
+    <div class="card">
+      <h3>What the transcript actually says about university admin</h3>
+      <div class="quote">
+        "No master data. There's a hard form like hard-coded department list, faculty ID, semester option, programmes is the master, feeds users, courses, user data credentials."
+        <span class="who">Kavi · 1:01</span>
+      </div>
+      <div class="quote">
+        "Semesters were a flat list with no hierarchy, then academic calendar with hierarchical a way to semesters."
+        <span class="who">Kavi · 1:40</span>
+      </div>
+      <div class="quote">
+        "University admin should be able to create academic years, schools and everything. He should be able to map, right? Basically, the courses."
+        <span class="who">Tamilarasi · 3:08</span>
+      </div>
+      <div class="quote">
+        "Programme and degrees, everything should be get by [the university admin]."
+        <span class="who">Kavi · 3:16</span>
+      </div>
+      <div class="quote">
+        "Role dropdown show only four active personas — like faculty, admin, like that."
+        <span class="who">Kavi · 0:42</span>
+      </div>
+
+      <p style="margin-top: 18px;">That's the full meeting record on university-admin. Everything else — the catalog/offering split, sections, electives, faculty assignment — was discussed outside this recording or hasn't been formalized yet.</p>
+    </div>
+
+    <div class="callout">
+      <h4>Why this matters</h4>
+      <p>Course management is the single biggest module the university admin will touch every day. If we don't lock the model down before building, we'll be rewriting it after real customers depend on it.</p>
+    </div>
+  </section>
+
+  <!-- Section 2: Proposal -->
+  <section id="proposal">
+    <span class="section-tag tag-decision">Proposal under review</span>
+    <h2>What you proposed</h2>
+    <p class="lede">Two flows live side-by-side under the "Courses" module. The first defines the course; the second schedules it.</p>
+
+    <div class="compare-2">
+      <div class="compare-col option">
+        <div class="label">Flow A — Course Catalog</div>
+        <h3 style="margin-top: 6px;">Create a course</h3>
+        <p>No need to add department, year, etc. at this stage. Just the design-time identity of the course.</p>
+        <div class="field-pills">
+          <span class="field-pill required">course name</span>
+          <span class="field-pill required">course id</span>
+          <span class="field-pill required">syllabus</span>
+          <span class="field-pill required">regulation</span>
+        </div>
+      </div>
+      <div class="compare-col option">
+        <div class="label">Flow B — Section Course</div>
+        <h3 style="margin-top: 6px;">Add course to section</h3>
+        <p>Pick the catalog course and assign it to a specific cohort. One click and it's live.</p>
+        <div class="field-pills">
+          <span class="field-pill required">academic year code</span>
+          <span class="field-pill required">year</span>
+          <span class="field-pill required">sem</span>
+          <span class="field-pill required">branch</span>
+          <span class="field-pill required">section</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout">
+      <h4>Verdict</h4>
+      <p>The two-tier idea is conceptually correct — this is exactly how Banner, PeopleSoft, and Workday Student model courses. The bones are right. The edges have nine specific gaps that will surface as bugs the moment a real university uses the system. The rest of this document walks through each one.</p>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- Section 3: Two-tier model -->
+  <section id="two-tier">
+    <span class="section-tag tag-good">Foundation</span>
+    <h2>The two-tier model — visualised</h2>
+    <p class="lede">"Catalog" is what the course <em>is</em>. "Offering" is when, where, and to whom it's <em>taught</em>. One catalog row produces many offering rows over time.</p>
+
+    <div class="diagram">
+      <div class="mermaid">
+erDiagram
+    COURSE_CATALOG ||--o{ COURSE_OFFERING : "produces"
+    COURSE_OFFERING ||--o{ ENROLLMENT : "has"
+    COURSE_OFFERING ||--o{ FACULTY_ASSIGNMENT : "taught by"
+    SECTION ||--o{ COURSE_OFFERING : "scheduled for"
+    ACADEMIC_YEAR ||--o{ COURSE_OFFERING : "occurs in"
+
+    COURSE_CATALOG {
+        uuid id PK
+        string course_code
+        string name
+        text syllabus
+        string regulation
+        int credits
+    }
+    COURSE_OFFERING {
+        uuid id PK
+        uuid catalog_id FK
+        uuid academic_year_id FK
+        int study_year
+        int semester
+        uuid section_id FK
+    }
+    SECTION {
+        uuid id PK
+        string name
+        uuid programme_id
+    }
+    ENROLLMENT {
+        uuid id PK
+        uuid student_id FK
+        uuid offering_id FK
+    }
+    FACULTY_ASSIGNMENT {
+        uuid id PK
+        uuid faculty_id FK
+        uuid offering_id FK
+    }
+      </div>
+      <div class="diagram-caption">Entity relationships — one catalog row, many offering rows over time</div>
+    </div>
+
+    <h3>Concrete example</h3>
+    <p>A single catalog row "CS101 — Intro to Programming" feeds multiple offerings across years and sections:</p>
+
+    <h4 style="margin-top: 18px;">Catalog row (defined once)</h4>
+    <div class="data-row">
+<span class="key">id:</span> <span class="val">cat_a91...</span><br>
+<span class="key">course_code:</span> <span class="val">"CS101"</span><br>
+<span class="key">name:</span> <span class="val">"Introduction to Programming"</span><br>
+<span class="key">syllabus:</span> <span class="val">"Variables, loops, functions, ..."</span><br>
+<span class="key">regulation:</span> <span class="val">"R22"</span><br>
+<span class="key">credits:</span> <span class="val">4</span>
+    </div>
+
+    <h4 style="margin-top: 18px;">Offering rows (created each time the course is taught)</h4>
+    <div class="data-row">
+<span class="key">id:</span> <span class="val">off_b1c...</span> <span class="comment">// 2025-26 batch, CSE-A</span><br>
+<span class="key">catalog_id:</span> <span class="val">cat_a91...</span><br>
+<span class="key">academic_year:</span> <span class="val">"2025-26"</span> <span class="key">study_year:</span> <span class="val">1</span> <span class="key">semester:</span> <span class="val">1</span><br>
+<span class="key">section_id:</span> <span class="val">sec_cse_a</span>
+    </div>
+    <div class="data-row">
+<span class="key">id:</span> <span class="val">off_b2d...</span> <span class="comment">// same course, different section, same year</span><br>
+<span class="key">catalog_id:</span> <span class="val">cat_a91...</span><br>
+<span class="key">academic_year:</span> <span class="val">"2025-26"</span> <span class="key">study_year:</span> <span class="val">1</span> <span class="key">semester:</span> <span class="val">1</span><br>
+<span class="key">section_id:</span> <span class="val">sec_cse_b</span>
+    </div>
+    <div class="data-row">
+<span class="key">id:</span> <span class="val">off_c4e...</span> <span class="comment">// next year's batch</span><br>
+<span class="key">catalog_id:</span> <span class="val">cat_a91...</span><br>
+<span class="key">academic_year:</span> <span class="val">"2026-27"</span> <span class="key">study_year:</span> <span class="val">1</span> <span class="key">semester:</span> <span class="val">1</span><br>
+<span class="key">section_id:</span> <span class="val">sec_cse_a</span>
+    </div>
+
+    <p style="margin-top: 16px;">Three offerings, one catalog row. The catalog row is the source of truth for syllabus and credits; the offerings know which cohort and term they belong to.</p>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- Issue 1: Department -->
+  <section id="issue-1">
+    <span class="section-tag tag-issue">Issue 1</span>
+    <h2>Department on the catalog row</h2>
+    <p class="lede">The proposal says "no need to add the dept" on catalog. In an Indian university context, this is risky.</p>
+
+    <div class="issue severity-med">
+      <div class="issue-header">
+        <span class="issue-num">01</span>
+        <span class="issue-title">Every course has an owning department, even when taught cross-department</span>
+        <span class="severity-badge med">Medium</span>
+      </div>
+      <p>"Engineering Mathematics" is owned by the Maths department but taught to CSE, ECE, and MECH students. "Communication Skills" is owned by Humanities but taught to everyone. The owning department determines:</p>
+      <ul class="bullets">
+        <li>Who is accountable for syllabus updates</li>
+        <li>Whose HOD can edit/approve catalog changes (department-scoped permissions)</li>
+        <li>Department-level reports — "all courses owned by CSE", "credits offered per dept"</li>
+        <li>Faculty assignment defaults — usually pick faculty from the owning dept first</li>
+      </ul>
+
+      <div class="compare-2" style="margin-top: 20px;">
+        <div class="compare-col bad">
+          <div class="label">Wrong way</div>
+          <h4>Drop department entirely</h4>
+          <p>Every catalog row floats free. No accountability, no scoped permissions, no dept reports.</p>
+        </div>
+        <div class="compare-col good">
+          <div class="label">Right way</div>
+          <h4>Optional but recommended</h4>
+          <p>Add <code>owning_department_id</code> as <strong>nullable</strong>. Most courses fill it; cross-cutting platform courses (e.g., "Yoga") can leave it blank.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Issue 2: Regulation -->
+  <section id="issue-2">
+    <span class="section-tag tag-issue">Issue 2</span>
+    <h2>Regulation versioning</h2>
+    <p class="lede">"Regulation" in Indian universities means the curriculum version approved by the academic council — R20, R21, R22, etc. When the regulation changes, syllabus and often credits change. Putting regulation directly on the catalog row creates duplicate rows.</p>
+
+    <div class="issue severity-high">
+      <div class="issue-header">
+        <span class="issue-num">02</span>
+        <span class="issue-title">"Regulation" as a flat field on catalog forces row duplication</span>
+        <span class="severity-badge high">High</span>
+      </div>
+
+      <div class="warn">
+        <h4>The duplication problem</h4>
+        <p>If <code>CS101</code> exists under R20, R21 and R22, you end up with three nearly-identical catalog rows. Editing the course name on one doesn't update the others. Reports show three "different" courses that are conceptually the same.</p>
+      </div>
+
+      <h3 style="margin-top: 24px;">Two ways to handle this</h3>
+
+      <div class="diagram">
+        <div class="mermaid">
+flowchart LR
+    subgraph A["Option A · Versioned catalog"]
+        A1[Course<br/>identity only] --> A2[CourseVersion<br/>R20]
+        A1 --> A3[CourseVersion<br/>R21]
+        A1 --> A4[CourseVersion<br/>R22]
+        A2 --> A5[Offering<br/>2020-21]
+        A3 --> A6[Offering<br/>2021-22]
+        A4 --> A7[Offering<br/>2022-23 onward]
+    end
+
+    subgraph B["Option B · Composite key"]
+        B1[CS101 / R20] --> B4[Offering 2020-21]
+        B2[CS101 / R21] --> B5[Offering 2021-22]
+        B3[CS101 / R22] --> B6[Offering 2022 onward]
+    end
+
+    style A1 fill:#ede9fe,stroke:#4a3aba,color:#1e293b
+    style B1 fill:#fef3c7,stroke:#92400e,color:#1e293b
+    style B2 fill:#fef3c7,stroke:#92400e,color:#1e293b
+    style B3 fill:#fef3c7,stroke:#92400e,color:#1e293b
+        </div>
+        <div class="diagram-caption">Two strategies for handling regulation changes</div>
+      </div>
+
+      <div class="compare-2">
+        <div class="compare-col option">
+          <div class="label">Option A — Versioned catalog</div>
+          <h4>Recommended for scale</h4>
+          <p>Course is the identity (code + name). CourseVersion holds (regulation, syllabus, credits, effective_from, effective_to). Offering points to a specific version.</p>
+          <p style="margin-top: 8px;"><strong>Pro:</strong> No duplicate rows. Renaming "CS101" updates everywhere.</p>
+          <p><strong>Con:</strong> One extra table, slightly more complex queries.</p>
+        </div>
+        <div class="compare-col option">
+          <div class="label">Option B — Composite key</div>
+          <h4>Recommended for MVP</h4>
+          <p><code>(course_code, regulation_id)</code> is the natural key. Accept duplicate rows because each regulation truly is a different course structure.</p>
+          <p style="margin-top: 8px;"><strong>Pro:</strong> Simpler. One table. Easier to ship.</p>
+          <p><strong>Con:</strong> Editing common fields (name) means editing N rows.</p>
+        </div>
+      </div>
+
+      <div class="callout">
+        <h4>Recommendation</h4>
+        <p>Start with Option B for MVP. Migrate to Option A in phase 2 once you have 2–3 customers and real regulation churn data. Don't over-engineer on day one.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Issue 3: Offering dimensions -->
+  <section id="issue-3">
+    <span class="section-tag tag-issue">Issue 3</span>
+    <h2>Offering dimensions — naming collisions</h2>
+    <p class="lede">The proposal lists "academic year code, year, sem, branch, section." Two of those overlap and "branch" doesn't generalize.</p>
+
+    <div class="issue severity-med">
+      <div class="issue-header">
+        <span class="issue-num">03</span>
+        <span class="issue-title">Two "year" fields, one ambiguous "branch" field</span>
+        <span class="severity-badge med">Medium</span>
+      </div>
+
+      <table class="perm">
+        <thead>
+          <tr><th>Proposed name</th><th>What it really means</th><th>Better name</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="role">academic year code</td><td>The yearly cycle (e.g., 2025–26)</td><td><code>academic_year_id</code></td></tr>
+          <tr><td class="role">year</td><td>Which year of the programme (1st, 2nd, 3rd, 4th)</td><td><code>study_year</code> or <code>programme_year</code></td></tr>
+          <tr><td class="role">sem</td><td>Term within the year (Sem 1 / Sem 2)</td><td><code>semester</code> ✓</td></tr>
+          <tr><td class="role">branch</td><td>Specialization within a programme (CSE, ECE)</td><td><code>specialization_id</code> + parent <code>programme_id</code></td></tr>
+          <tr><td class="role">section</td><td>The cohort within a specialization (CSE-A)</td><td><code>section_id</code> ✓</td></tr>
+        </tbody>
+      </table>
+
+      <div class="warn">
+        <h4>"Branch" only makes sense in engineering</h4>
+        <p>If the platform onboards a B.Com or MBA university later, "branch" means nothing. Use the more generic <code>programme + specialization</code> hierarchy. B.Tech is the programme; CSE is the specialization. B.Com is the programme; specialization may be empty.</p>
+      </div>
+
+      <p>The clean hierarchy looks like this:</p>
+
+      <div class="diagram">
+        <div class="mermaid">
+flowchart TD
+    U[University] --> S[School]
+    S --> P[Programme<br/>e.g. B.Tech]
+    P --> SP[Specialization<br/>e.g. CSE]
+    SP --> SEC[Section<br/>e.g. CSE-A]
+    AY[Academic Year<br/>2025-26] --> SEC
+    SY[Study Year 1] --> SEC
+    SEM[Semester 1] --> SEC
+    SEC --> OFF[Course Offering]
+    CAT[Course Catalog<br/>CS101] --> OFF
+
+    style U fill:#4a3aba,color:white
+    style CAT fill:#fef3c7,stroke:#92400e
+    style OFF fill:#d1fae5,stroke:#065f46
+        </div>
+        <div class="diagram-caption">Clean dimension hierarchy — programme/specialization replaces "branch"</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Issue 4: Three operations -->
+  <section id="issue-4">
+    <span class="section-tag tag-issue">Issue 4</span>
+    <h2>"Click add course → assigns directly" hides three operations</h2>
+    <p class="lede">When a section-course is "assigned," three distinct things happen. The current proposal does step 1 and silently does step 3, but step 2 is missing — and step 2 is what makes the offering operational.</p>
+
+    <div class="issue severity-high">
+      <div class="issue-header">
+        <span class="issue-num">04</span>
+        <span class="issue-title">Faculty assignment is missing — offerings will be created in a non-operational state</span>
+        <span class="severity-badge high">High</span>
+      </div>
+
+      <div class="diagram">
+        <div class="mermaid">
+sequenceDiagram
+    autonumber
+    actor UA as University Admin
+    participant UI as Add Course Drawer
+    participant DB as Database
+    participant FP as Faculty Portal
+    participant SP as Student Portal
+
+    UA->>UI: Pick catalog course + section + year + sem
+    UA->>UI: Click "Add Course" button
+    UI->>DB: 1. CREATE course_offering row
+    UI->>DB: 3. AUTO-ENROLL all students from section
+    Note over UI,DB: Step 2 missing — no faculty assigned!
+    UI-->>UA: "Course added" toast
+
+    rect rgba(254, 226, 226, 0.5)
+        FP->>DB: Faculty checks "my courses"
+        DB-->>FP: Empty — nobody is assigned
+        SP->>DB: Student checks "my courses"
+        DB-->>SP: Course visible but "Faculty: TBD"
+    end
+        </div>
+        <div class="diagram-caption">Current flow leaves the offering in a non-operational state</div>
+      </div>
+
+      <h3 style="margin-top: 24px;">The three operations spelled out</h3>
+      <ol class="steps">
+        <li><strong>Create the offering</strong><span>"CS101 will be taught in 2025–26 Sem 1 to CSE-A." Pure scheduling row.</span></li>
+        <li><strong>Assign faculty to teach it</strong><span>Without a faculty user linked, the offering is dead — no one shows up to teach, faculty portal renders nothing, student portal shows "TBD."</span></li>
+        <li><strong>Enroll students</strong><span>For core courses: all students in the section are auto-rostered. For electives: students self-select (see Issue 5).</span></li>
+      </ol>
+
+      <div class="callout">
+        <h4>Recommended UX</h4>
+        <p>Same drawer. Three sections: <strong>Course &amp; Section</strong>, <strong>Faculty</strong>, <strong>Enrollment Mode</strong>. Faculty can be optional at create-time (mark offering as <code>draft</code>) but the UI must surface "0 faculty assigned" as a warning chip on the offerings list so it doesn't get forgotten.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Issue 5: Core vs Elective -->
+  <section id="issue-5">
+    <span class="section-tag tag-issue">Issue 5</span>
+    <h2>Core vs Elective — the section-based assign model breaks for electives</h2>
+    <p class="lede">"Pick branch + section → all students get the course" is correct for core courses. For electives, two students in the same section pick different courses. The model needs to handle both.</p>
+
+    <div class="issue severity-high">
+      <div class="issue-header">
+        <span class="issue-num">05</span>
+        <span class="issue-title">Electives need per-student enrollment, not per-section auto-assign</span>
+        <span class="severity-badge high">High</span>
+      </div>
+
+      <div class="diagram">
+        <div class="mermaid">
+flowchart TD
+    Start[University admin adds a course offering] --> Q{course_type<br/>on catalog?}
+    Q -->|Core| Core[Auto-enroll<br/>entire section]
+    Q -->|Programme Elective| PE[Create offering<br/>visible to specialization]
+    Q -->|Open Elective| OE[Create offering<br/>visible to all students<br/>across programmes]
+
+    PE --> Pick[Student picks<br/>during elective window]
+    OE --> Pick
+    Pick --> Cap{Within<br/>capacity?}
+    Cap -->|Yes| Enroll[Enrolled]
+    Cap -->|No| Wait[Waitlist or<br/>second-preference]
+
+    Core --> Done[Roster fixed]
+    Enroll --> Done
+
+    style Q fill:#fef3c7,stroke:#92400e
+    style Cap fill:#fef3c7,stroke:#92400e
+    style Done fill:#d1fae5,stroke:#065f46
+    style Wait fill:#fee2e2,stroke:#991b1b
+        </div>
+        <div class="diagram-caption">Different enrollment paths based on course type</div>
+      </div>
+
+      <h3 style="margin-top: 24px;">What needs to change</h3>
+      <ul class="bullets">
+        <li><strong>Add <code>course_type</code> on catalog</strong> — values: <code>Core</code>, <code>Programme Elective</code>, <code>Open Elective</code></li>
+        <li><strong>Add <code>capacity</code> on offering</strong> — for electives, max students who can enroll (electives often have lab/seat limits)</li>
+        <li><strong>Add an "Elective Selection" flow</strong> in the student portal — students see eligible electives within their elective slot and submit choices ranked by preference</li>
+        <li><strong>Add an "Elective Allocation" view</strong> for university admin — see who picked what, allocate by rules (preference / GPA / lottery)</li>
+      </ul>
+
+      <div class="warn">
+        <h4>If you skip this</h4>
+        <p>Either students see electives they didn't choose, or they don't see the ones they did. Both are immediate trust-killing bugs the moment a real semester starts.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Issue 6: L:T:P components -->
+  <section id="issue-6">
+    <span class="section-tag tag-issue">Issue 6</span>
+    <h2>Course components (L:T:P) are missing entirely</h2>
+    <p class="lede">Indian engineering courses are commonly described in L:T:P notation — Lecture : Tutorial : Practical hours per week. A course like "3:0:2" means 3 hours of lecture and 2 hours of lab each week. These are taught separately and often by different faculty.</p>
+
+    <div class="issue severity-high">
+      <div class="issue-header">
+        <span class="issue-num">06</span>
+        <span class="issue-title">No way to model lectures, tutorials, and labs as separate teaching components</span>
+        <span class="severity-badge high">High</span>
+      </div>
+
+      <h3>Why it matters operationally</h3>
+      <ul class="bullets">
+        <li>Lab sections are often smaller than lecture sections — a 60-student lecture splits into three 20-student lab batches</li>
+        <li>Different faculty often teach lecture vs lab — the senior prof handles theory, an assistant prof handles labs</li>
+        <li>Attendance and grading rules differ — labs have continuous assessment, theory has end-sem exams</li>
+        <li>Timetable engines need this — you can't schedule a "course" without knowing it has 3+2 hours split into different rooms</li>
+      </ul>
+
+      <h3 style="margin-top: 18px;">Where L:T:P lives in the model</h3>
+
+      <div class="diagram">
+        <div class="mermaid">
+flowchart LR
+    Cat[CourseCatalog<br/>credits: 4<br/>L hours: 3<br/>T hours: 0<br/>P hours: 2] --> Off[CourseOffering<br/>2025-26, Sem 1, CSE-A]
+    Off --> Lec[Lecture component<br/>Faculty: Dr X<br/>3 hrs/week<br/>Room: LH-201]
+    Off --> Lab[Lab component<br/>Faculty: Dr Y<br/>2 hrs/week<br/>Lab: CL-3<br/>Batch: A1]
+    Off --> Lab2[Lab component<br/>Faculty: Dr Z<br/>2 hrs/week<br/>Lab: CL-3<br/>Batch: A2]
+
+    style Cat fill:#fef3c7,stroke:#92400e
+    style Off fill:#d1fae5,stroke:#065f46
+    style Lec fill:#dbeafe,stroke:#1e40af
+    style Lab fill:#dbeafe,stroke:#1e40af
+    style Lab2 fill:#dbeafe,stroke:#1e40af
+        </div>
+        <div class="diagram-caption">L:T:P stored on catalog; components instantiated per offering</div>
+      </div>
+
+      <p style="margin-top: 16px;">
+        <strong>Catalog</strong> defines the L:T:P breakdown and total credits.
+        <strong>Offering</strong> has child <code>OfferingComponent</code> rows — one for lecture, one or more for lab batches, optionally tutorial. Each component has its own faculty assignment, schedule slot, and room.
+      </p>
+
+      <p>For MVP, you can collapse this to a single component per offering and add the breakdown later — but make sure the <code>course_offering</code> table has child <code>offering_component</code> from day one, even if MVP only ever creates one row per offering. Otherwise this becomes a schema migration on a table with student data.</p>
+    </div>
+  </section>
+
+  <!-- Issue 7: course id vs code -->
+  <section id="issue-7">
+    <span class="section-tag tag-issue">Issue 7</span>
+    <h2>Course "id" vs course "code" — keep them separate</h2>
+
+    <div class="issue severity-low">
+      <div class="issue-header">
+        <span class="issue-num">07</span>
+        <span class="issue-title">Conflating display code with primary key</span>
+        <span class="severity-badge low">Low</span>
+      </div>
+
+      <p>The proposal lists "course id" as a field the user enters. That's actually two fields:</p>
+
+      <div class="compare-2">
+        <div class="compare-col option">
+          <div class="label">Field 1</div>
+          <h4><code>course_code</code></h4>
+          <p>Human-readable. Entered by the university admin. Examples: <code>CS101</code>, <code>MATH202</code>, <code>HUM304</code>.</p>
+          <p style="margin-top: 8px;">Unique within a regulation (not globally — see Issue 2).</p>
+        </div>
+        <div class="compare-col option">
+          <div class="label">Field 2</div>
+          <h4><code>id</code> (UUID)</h4>
+          <p>System-generated primary key. Never shown to users. Used in URLs, foreign keys, API calls.</p>
+          <p style="margin-top: 8px;">Always unique. Never editable.</p>
+        </div>
+      </div>
+
+      <p style="margin-top: 16px;">In the UI, show <code>course_code</code>. Key on <code>id</code>. If you let the admin edit the code later (renaming "CS101" to "CSE101"), the UUID stays stable and nothing breaks.</p>
+    </div>
+  </section>
+
+  <!-- Issue 8: Edit propagation -->
+  <section id="issue-8">
+    <span class="section-tag tag-issue">Issue 8</span>
+    <h2>What happens when university admin edits a syllabus</h2>
+    <p class="lede">If the admin opens "CS101" catalog row and edits the syllabus, what happens to past, current, and future offerings?</p>
+
+    <div class="issue severity-high">
+      <div class="issue-header">
+        <span class="issue-num">08</span>
+        <span class="issue-title">Free edits silently rewrite history</span>
+        <span class="severity-badge high">High</span>
+      </div>
+
+      <div class="diagram">
+        <div class="mermaid">
+flowchart TD
+    Edit[Admin edits syllabus<br/>on catalog row] --> Q{Offerings exist?}
+    Q -->|No offerings yet| Free[Save freely]
+    Q -->|Past offerings only| Snap[Past offerings keep<br/>their snapshot.<br/>New edits create<br/>new version.]
+    Q -->|Active offerings| Decide{Edit type?}
+
+    Decide -->|Typo / cosmetic| Soft[Allow edit<br/>but log change]
+    Decide -->|Material content change| Block[Block edit.<br/>Force new version<br/>and warn admin]
+
+    Free --> End[Done]
+    Snap --> End
+    Soft --> End
+    Block --> End
+
+    style Q fill:#fef3c7,stroke:#92400e
+    style Decide fill:#fef3c7,stroke:#92400e
+    style Block fill:#fee2e2,stroke:#991b1b
+    style Snap fill:#d1fae5,stroke:#065f46
+        </div>
+        <div class="diagram-caption">Edit propagation rules — past offerings must keep their snapshot</div>
+      </div>
+
+      <div class="warn">
+        <h4>Why this matters legally</h4>
+        <p>A student's transcript says they completed "CS101" with syllabus X. Years later, an employer or an audit asks what was in syllabus X. If you've silently overwritten the catalog with syllabus Y, you can't answer. This is a compliance and audit-trail issue, not just a UX one.</p>
+      </div>
+
+      <h3 style="margin-top: 24px;">Two acceptable rules</h3>
+      <div class="compare-2">
+        <div class="compare-col option">
+          <div class="label">Strict (Option A)</div>
+          <h4>Versioned catalog</h4>
+          <p>Every edit creates a new version. Past offerings reference the old version forever. New offerings reference the new version.</p>
+        </div>
+        <div class="compare-col option">
+          <div class="label">Pragmatic (Option B)</div>
+          <h4>Snapshot on offering create</h4>
+          <p>When an offering is created, copy the syllabus into the offering row. Future catalog edits don't affect existing offerings. Simpler, slightly more storage.</p>
+        </div>
+      </div>
+
+      <p style="margin-top: 16px;">For MVP, <strong>Option B</strong> is good enough. Just make sure the snapshot fields (<code>syllabus_snapshot</code>, <code>credits_snapshot</code>) exist on the offering table from day one.</p>
+    </div>
+  </section>
+
+  <!-- Issue 9: Roles -->
+  <section id="issue-9">
+    <span class="section-tag tag-issue">Issue 9</span>
+    <h2>Roles &amp; permissions on courses</h2>
+    <p class="lede">The transcript says "four active personas." With four, the university admin becomes a bottleneck — every CS dept, every Maths dept, every Civil dept catalog edit goes through one person. Worth re-opening whether HOD is a fifth persona or a permission flag.</p>
+
+    <div class="issue severity-med">
+      <div class="issue-header">
+        <span class="issue-num">09</span>
+        <span class="issue-title">Permission scope on Catalog vs Offering needs to be explicit</span>
+        <span class="severity-badge med">Medium</span>
+      </div>
+
+      <table class="perm">
+        <thead>
+          <tr>
+            <th>Persona</th>
+            <th>Course Catalog</th>
+            <th>Section Course (Offering)</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="role">Super Admin</td>
+            <td><span class="perm-no">No access</span></td>
+            <td><span class="perm-no">No access</span></td>
+            <td>Stays out of academic data; only manages universities themselves</td>
+          </tr>
+          <tr>
+            <td class="role">University Admin</td>
+            <td><span class="perm-yes">Full CRUD</span></td>
+            <td><span class="perm-yes">Full CRUD</span></td>
+            <td>Owns all academic master data within their university</td>
+          </tr>
+          <tr>
+            <td class="role">HOD <em>(if added as 5th)</em></td>
+            <td><span class="perm-scoped">CRUD within own dept</span></td>
+            <td><span class="perm-scoped">CRUD within own dept</span></td>
+            <td>Removes the bottleneck; enables dept-scoped governance</td>
+          </tr>
+          <tr>
+            <td class="role">Faculty</td>
+            <td><span class="perm-no">Read-only</span></td>
+            <td><span class="perm-scoped">Edit own assigned offerings only</span></td>
+            <td>Can manage course content, materials, attendance, grades within their offering</td>
+          </tr>
+          <tr>
+            <td class="role">Student</td>
+            <td><span class="perm-no">No access</span></td>
+            <td><span class="perm-scoped">Read enrolled offerings only</span></td>
+            <td>Sees the syllabus snapshot, schedule, faculty, materials</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="callout">
+        <h4>Decision needed before build</h4>
+        <p>Lock in 4 vs 5 personas. If we keep 4, university admin manages every dept's catalog manually — fine for a 200-course university, painful for a 2000-course one. If we add HOD as a 5th, we need a <code>department_id</code> on the user record and dept-scoped middleware on every catalog/offering API. The model in this doc supports both — but the UI needs to know which one we're shipping.</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- Next steps -->
+  <section id="next-steps">
+    <span class="section-tag tag-solution">Action plan</span>
+    <h2>Recommended next steps</h2>
+    <p class="lede">Before Shaik writes any code on the course module, lock down these seven decisions. None of them block individually — but each one will cause a refactor if discovered after build.</p>
+
+    <ol class="steps">
+      <li>
+        <strong>Sketch and approve the ER diagram</strong>
+        <span>Course → CourseOffering → Enrollment, plus FacultyAssignment and OfferingComponent. 30 minutes of modeling saves weeks of rework. Use the diagram in section 3 as the starting point.</span>
+      </li>
+      <li>
+        <strong>Decide regulation strategy — Option A (versioned) or Option B (composite key)</strong>
+        <span>For MVP: Option B. Mark this in the schema and revisit at phase 2.</span>
+      </li>
+      <li>
+        <strong>Add <code>course_type</code> on catalog as a first-class field</strong>
+        <span>Values: <code>Core</code>, <code>Programme Elective</code>, <code>Open Elective</code>. Without this, the elective flow becomes a refactor in phase 2.</span>
+      </li>
+      <li>
+        <strong>Add the snapshot fields on offering from day one</strong>
+        <span><code>syllabus_snapshot</code>, <code>credits_snapshot</code>, <code>regulation_snapshot</code>. Even if MVP just copies them at create time, having them in the schema makes Issue 8 a non-event.</span>
+      </li>
+      <li>
+        <strong>Add faculty assignment to the same drawer as "add course to section"</strong>
+        <span>Don't make it a separate page nobody clicks. Mark offerings without faculty as <code>draft</code> and surface a warning chip in the offerings list.</span>
+      </li>
+      <li>
+        <strong>Add child <code>offering_component</code> table from day one</strong>
+        <span>Even if MVP creates exactly one component per offering. Adding this later means migrating a table that already has student enrollment data.</span>
+      </li>
+      <li>
+        <strong>Re-confirm 4 vs 5 personas with Tamilarasi</strong>
+        <span>HOD-level scoping is the difference between "university admin micromanages everything" and "HODs own their dept catalogs." Decide before building permissions middleware.</span>
+      </li>
+    </ol>
+
+    <div class="callout" style="margin-top: 28px;">
+      <h4>Bottom line</h4>
+      <p>The two-tier idea (catalog vs offering) is correct. The edges — regulation versioning, electives, components, faculty assignment, edit propagation — are where real universities differ from a generic SIS. Get these right before code, and the build is straightforward. Skip them, and every one becomes a customer-visible bug in the first semester of use.</p>
+    </div>
+  </section>
+
+</div>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'base',
+    themeVariables: {
+      primaryColor: '#ede9fe',
+      primaryTextColor: '#1e293b',
+      primaryBorderColor: '#4a3aba',
+      lineColor: '#94a3b8',
+      secondaryColor: '#fef3c7',
+      tertiaryColor: '#d1fae5',
+      fontFamily: 'Segoe UI, system-ui, -apple-system, sans-serif',
+      fontSize: '13px'
+    },
+    flowchart: { curve: 'basis', padding: 20 },
+    er: { layoutDirection: 'LR' },
+    sequence: { actorMargin: 60, mirrorActors: false }
+  });
+</script>
+
+</body>
+</html>

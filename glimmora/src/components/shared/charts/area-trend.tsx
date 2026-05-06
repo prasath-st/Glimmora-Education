@@ -20,6 +20,12 @@ interface AreaTrendProps {
   height?: number;
   showGrid?: boolean;
   className?: string;
+  /**
+   * Y-axis domain. Defaults to a tight auto-fit around the data so trends
+   * read clearly when values are far from zero (e.g. enrollment ~12,000,
+   * retention rate 85–90%). Pass `[0, "auto"]` to force a zero-based scale.
+   */
+  yDomain?: [number | "auto" | "dataMin" | "dataMax", number | "auto" | "dataMin" | "dataMax"];
 }
 
 const DEFAULT_COLOR = "#2563eb";
@@ -58,8 +64,30 @@ export function AreaTrend({
   height = 280,
   showGrid = true,
   className,
+  yDomain,
 }: AreaTrendProps) {
   const gradientId = `area-gradient-${title.replace(/\s+/g, "-")}`;
+
+  // Auto-fit: when no explicit domain is given, tighten the y-axis around
+  // the actual data with ~5% padding on each side. Otherwise a 0-based
+  // recharts default flattens trends whose values sit far above zero.
+  const computedDomain: AreaTrendProps["yDomain"] = (() => {
+    if (yDomain) return yDomain;
+    if (!data || data.length === 0) return [0, "auto"];
+    const values = data
+      .map((d) => Number(d[dataKey]))
+      .filter((v) => Number.isFinite(v));
+    if (values.length === 0) return [0, "auto"];
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    if (min === max) {
+      const pad = Math.max(1, Math.abs(min) * 0.05);
+      return [min - pad, max + pad];
+    }
+    const range = max - min;
+    const pad = Math.max(range * 0.1, Math.abs(max) * 0.02);
+    return [Math.max(0, min - pad), max + pad];
+  })();
 
   if (!data || data.length === 0) {
     return (
@@ -118,6 +146,8 @@ export function AreaTrend({
             tickLine={false}
             tick={{ fontSize: 12, fill: "#9ca3af" }}
             dx={-4}
+            domain={computedDomain}
+            allowDecimals={false}
           />
           <Tooltip content={<CustomTooltip />} />
           <Area
