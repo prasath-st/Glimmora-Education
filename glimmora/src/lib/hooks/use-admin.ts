@@ -154,7 +154,10 @@ export function useBulkImportUsers() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (data: { users: BulkImportUserRequest[] }) =>
-      api.post<{ imported: number; errors: number }>("/api/admin/users/bulk", data),
+      api.post<{ imported: number; invited: number; errors: number }>(
+        "/api/admin/users/bulk",
+        data,
+      ),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin", "users"] });
     },
@@ -168,6 +171,20 @@ export function useUpdateUser() {
       api.patch<AdminUser>(`/api/admin/users/${id}`, data),
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ["admin", "user", vars.id] });
+      qc.invalidateQueries({ queryKey: ["admin", "users"] });
+    },
+  });
+}
+
+// Resend the login-invitation email for a user that's still pending.
+// Used by the Users-page 3-dot row action.
+export function useResendInvitation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (userId: string) =>
+      api.post<AdminUser>(`/api/admin/users/${userId}/resend-invitation`, {}),
+    onSuccess: (_, userId) => {
+      qc.invalidateQueries({ queryKey: ["admin", "user", userId] });
       qc.invalidateQueries({ queryKey: ["admin", "users"] });
     },
   });

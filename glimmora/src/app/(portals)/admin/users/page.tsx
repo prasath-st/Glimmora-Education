@@ -1,14 +1,14 @@
 "use client";
 
 import { useState, useCallback, useEffect, useMemo } from "react";
-import { UserCog, Plus, Loader2, X, Upload, Download, MoreHorizontal, Eye, Pencil, ShieldBan, ShieldCheck, Mail, Phone, Building, Calendar, Clock, Hash, Save } from "lucide-react";
+import { UserCog, Plus, Loader2, X, Upload, Download, MoreHorizontal, Eye, Pencil, ShieldBan, ShieldCheck, Mail, Phone, Building, Calendar, Clock, Hash, Save, Send } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import * as Dialog from "@radix-ui/react-dialog";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { type ColumnDef } from "@tanstack/react-table";
-import { useAdminUsers, useAdminUserDetail, useCreateUser, useUpdateUser, useBulkImportUsers, usePrograms } from "@/lib/hooks/use-admin";
+import { useAdminUsers, useAdminUserDetail, useCreateUser, useUpdateUser, useBulkImportUsers, usePrograms, useResendInvitation } from "@/lib/hooks/use-admin";
 import { FileUpload } from "@/components/shared/forms/file-upload";
 import {
   createUserSchema,
@@ -41,6 +41,7 @@ const CREATE_ROLE_OPTIONS = [
 const STATUS_OPTIONS = [
   { value: "", label: "All Status" },
   { value: "active", label: "Active" },
+  { value: "pending_invitation", label: "Pending Invitation" },
   { value: "inactive", label: "Inactive" },
   { value: "suspended", label: "Suspended" },
 ];
@@ -56,15 +57,41 @@ const ROLE_FILTER_OPTIONS = [
 ];
 
 function getStatusVariant(
-  status: "active" | "inactive" | "suspended"
-): "success" | "muted" | "danger" {
-  const map = { active: "success" as const, inactive: "muted" as const, suspended: "danger" as const };
+  status: "active" | "inactive" | "suspended" | "pending_invitation",
+): "success" | "muted" | "danger" | "warning" {
+  const map = {
+    active: "success" as const,
+    inactive: "muted" as const,
+    suspended: "danger" as const,
+    pending_invitation: "warning" as const,
+  };
   return map[status];
 }
 
-function RowActions({ user, onView, onEdit, onToggleStatus }: {
-  user: AdminUser; onView: () => void; onEdit: () => void; onToggleStatus: () => void;
+const STATUS_LABELS: Record<
+  "active" | "inactive" | "suspended" | "pending_invitation",
+  string
+> = {
+  active: "Active",
+  inactive: "Inactive",
+  suspended: "Suspended",
+  pending_invitation: "Pending Invitation",
+};
+
+function RowActions({
+  user,
+  onView,
+  onEdit,
+  onToggleStatus,
+  onResendInvitation,
+}: {
+  user: AdminUser;
+  onView: () => void;
+  onEdit: () => void;
+  onToggleStatus: () => void;
+  onResendInvitation: () => void;
 }) {
+  const isPending = user.status === "pending_invitation";
   return (
     <DropdownMenu.Root>
       <DropdownMenu.Trigger asChild>
@@ -77,17 +104,52 @@ function RowActions({ user, onView, onEdit, onToggleStatus }: {
         </button>
       </DropdownMenu.Trigger>
       <DropdownMenu.Portal>
-        <DropdownMenu.Content align="end" sideOffset={4} onClick={(e) => e.stopPropagation()} className="z-50 w-48 rounded-lg bg-card py-2 shadow-2xl ring-1 ring-border/30">
-          <DropdownMenu.Item onSelect={onView} className="flex cursor-pointer items-center gap-3 px-4 py-2.5 text-sm outline-none transition-colors hover:bg-muted focus:bg-muted">
+        <DropdownMenu.Content
+          align="end"
+          sideOffset={4}
+          onClick={(e) => e.stopPropagation()}
+          className="z-50 w-52 rounded-lg bg-card py-2 shadow-2xl ring-1 ring-border/30"
+        >
+          <DropdownMenu.Item
+            onSelect={onView}
+            className="flex cursor-pointer items-center gap-3 px-4 py-2.5 text-sm outline-none transition-colors hover:bg-muted focus:bg-muted"
+          >
             <Eye className="h-4 w-4 text-muted-foreground" /> View profile
           </DropdownMenu.Item>
-          <DropdownMenu.Item onSelect={onEdit} className="flex cursor-pointer items-center gap-3 px-4 py-2.5 text-sm outline-none transition-colors hover:bg-muted focus:bg-muted">
+          <DropdownMenu.Item
+            onSelect={onEdit}
+            className="flex cursor-pointer items-center gap-3 px-4 py-2.5 text-sm outline-none transition-colors hover:bg-muted focus:bg-muted"
+          >
             <Pencil className="h-4 w-4 text-muted-foreground" /> Edit user
           </DropdownMenu.Item>
-          <DropdownMenu.Separator className="my-1 h-px bg-border/50" />
-          <DropdownMenu.Item onSelect={onToggleStatus} className={`flex cursor-pointer items-center gap-3 px-4 py-2.5 text-sm outline-none transition-colors hover:bg-muted focus:bg-muted ${user.status === "active" ? "text-danger" : "text-success"}`}>
-            {user.status === "active" ? <><ShieldBan className="h-4 w-4" /> Suspend</> : <><ShieldCheck className="h-4 w-4" /> Activate</>}
-          </DropdownMenu.Item>
+          {isPending && (
+            <DropdownMenu.Item
+              onSelect={onResendInvitation}
+              className="flex cursor-pointer items-center gap-3 px-4 py-2.5 text-sm text-portal-accent outline-none transition-colors hover:bg-muted focus:bg-muted"
+            >
+              <Send className="h-4 w-4" />
+              {user.invitedAt ? "Resend invitation" : "Send invitation"}
+            </DropdownMenu.Item>
+          )}
+          {!isPending && (
+            <>
+              <DropdownMenu.Separator className="my-1 h-px bg-border/50" />
+              <DropdownMenu.Item
+                onSelect={onToggleStatus}
+                className={`flex cursor-pointer items-center gap-3 px-4 py-2.5 text-sm outline-none transition-colors hover:bg-muted focus:bg-muted ${user.status === "active" ? "text-danger" : "text-success"}`}
+              >
+                {user.status === "active" ? (
+                  <>
+                    <ShieldBan className="h-4 w-4" /> Suspend
+                  </>
+                ) : (
+                  <>
+                    <ShieldCheck className="h-4 w-4" /> Activate
+                  </>
+                )}
+              </DropdownMenu.Item>
+            </>
+          )}
         </DropdownMenu.Content>
       </DropdownMenu.Portal>
     </DropdownMenu.Root>
@@ -98,6 +160,7 @@ function createUserColumns(callbacks: {
   onView: (user: AdminUser) => void;
   onEdit: (user: AdminUser) => void;
   onToggleStatus: (user: AdminUser) => void;
+  onResendInvitation: (user: AdminUser) => void;
 }): ColumnDef<AdminUser, unknown>[] {
   return [
     { accessorKey: "name", header: "Name" },
@@ -119,12 +182,22 @@ function createUserColumns(callbacks: {
     {
       accessorKey: "status",
       header: "Status",
-      cell: ({ getValue }) => {
+      cell: ({ getValue, row }) => {
         const status = getValue() as AdminUser["status"];
+        const invitedAt = row.original.invitedAt;
         return (
-          <StatusBadge variant={getStatusVariant(status)} dot>
-            {status}
-          </StatusBadge>
+          <div className="flex flex-col gap-0.5">
+            <StatusBadge variant={getStatusVariant(status)} dot>
+              {STATUS_LABELS[status]}
+            </StatusBadge>
+            {status === "pending_invitation" && (
+              <span className="text-[10px] text-muted-foreground">
+                {invitedAt
+                  ? `Invited ${formatRelative(invitedAt)}`
+                  : "Not invited yet"}
+              </span>
+            )}
+          </div>
         );
       },
     },
@@ -149,6 +222,7 @@ function createUserColumns(callbacks: {
           onView={() => callbacks.onView(row.original)}
           onEdit={() => callbacks.onEdit(row.original)}
           onToggleStatus={() => callbacks.onToggleStatus(row.original)}
+          onResendInvitation={() => callbacks.onResendInvitation(row.original)}
         />
       ),
     },
@@ -206,6 +280,15 @@ function CreateUserDialog({
   const selectedRole = watch("role");
   const selectedProgram = watch("program");
 
+  // Whether to dispatch the login-invitation email on submit. Default ON;
+  // turn off when the institution provisions through SSO and doesn't need
+  // the email step. The email is sent only on Create — toggling this
+  // checkbox alone does NOT send anything.
+  const [sendInvitation, setSendInvitation] = useState(true);
+  useEffect(() => {
+    if (open) setSendInvitation(true);
+  }, [open]);
+
   // Auto-derive Department from Program for students
   const handleProgramChange = useCallback(
     (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -231,14 +314,19 @@ function CreateUserDialog({
   const onSubmit = useCallback(
     async (data: CreateUserFormData) => {
       try {
-        await createUser.mutateAsync(data);
+        await createUser.mutateAsync({ ...data, sendInvitation });
+        toast.success(
+          sendInvitation
+            ? `${data.firstName} ${data.lastName} created. Login invitation sent to ${data.email}.`
+            : `${data.firstName} ${data.lastName} created. No invitation sent — you can resend from the Users list.`,
+        );
         reset();
         onOpenChange(false);
       } catch {
         // error shown via mutation state
       }
     },
-    [createUser, reset, onOpenChange]
+    [createUser, sendInvitation, reset, onOpenChange],
   );
 
   return (
@@ -348,6 +436,24 @@ function CreateUserDialog({
         {createUser.isError && (
           <p className="text-sm text-danger">Failed to create user. Please try again.</p>
         )}
+
+        <section className="rounded-lg border border-border bg-muted/30 p-3">
+          <label className="flex cursor-pointer items-start gap-3">
+            <input
+              type="checkbox"
+              checked={sendInvitation}
+              onChange={(e) => setSendInvitation(e.target.checked)}
+              className="mt-0.5 h-3.5 w-3.5 rounded border-border accent-portal-accent"
+            />
+            <div className="text-sm">
+              <p className="font-medium">Send login invitation</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                Email is dispatched on Create. The user activates their account
+                from the link. Untick if the institution provisions through SSO.
+              </p>
+            </div>
+          </label>
+        </section>
       </form>
     </SlideDrawer>
   );
@@ -434,12 +540,26 @@ function ImportUsersDialog({
   const [parsedRows, setParsedRows] = useState<ParsedRow[]>([]);
   const [parseError, setParseError] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
+  // Per-row "send credential email on import" decision. Keyed by the
+  // index of the parsed row. Defaults to true for every valid row when
+  // the file is parsed; stays in sync as the admin toggles checkboxes.
+  // The credential is dispatched only on Import — clicking the row
+  // checkbox alone does NOT send anything.
+  const [issueFor, setIssueFor] = useState<Record<number, boolean>>({});
 
   const validRows = parsedRows.filter((r) => r.valid);
   const errorRows = parsedRows.filter((r) => !r.valid);
+  const issuingCount = parsedRows.reduce(
+    (acc, _r, i) => acc + (issueFor[i] ? 1 : 0),
+    0,
+  );
+  const allValidSelected =
+    validRows.length > 0 &&
+    parsedRows.every((r, i) => !r.valid || issueFor[i]);
 
   const handleFilesChange = useCallback((files: File[]) => {
     setParsedRows([]);
+    setIssueFor({});
     setParseError("");
     setSuccessMsg("");
 
@@ -452,43 +572,73 @@ function ImportUsersDialog({
       const rows = parseCSV(text);
       if (rows.length === 0) {
         setParseError(
-          "Could not parse the CSV. Ensure columns: email, name, role, department"
+          "Could not parse the CSV. Ensure columns: email, name, role, department",
         );
       } else {
         setParsedRows(rows);
+        // Default: every valid row is set to receive a credential on Import.
+        const next: Record<number, boolean> = {};
+        rows.forEach((r, i) => {
+          if (r.valid) next[i] = true;
+        });
+        setIssueFor(next);
       }
     };
     reader.onerror = () => setParseError("Failed to read file.");
     reader.readAsText(file);
   }, []);
 
+  const toggleRow = useCallback((idx: number) => {
+    setIssueFor((prev) => ({ ...prev, [idx]: !prev[idx] }));
+  }, []);
+
+  const toggleAll = useCallback(() => {
+    setIssueFor((prev) => {
+      const allChecked =
+        validRows.length > 0 &&
+        parsedRows.every((r, i) => !r.valid || prev[i]);
+      const next: Record<number, boolean> = {};
+      parsedRows.forEach((r, i) => {
+        if (r.valid) next[i] = !allChecked;
+      });
+      return next;
+    });
+  }, [parsedRows, validRows.length]);
+
   const handleImport = useCallback(async () => {
     if (validRows.length === 0) return;
     try {
-      await bulkImport.mutateAsync({
-        users: validRows.map((r) => ({
-          email: r.email,
-          firstName: r.firstName,
-          lastName: r.lastName,
-          role: r.role as "student" | "faculty" | "admin" | "placement",
-          department: r.department,
-          studentId: r.studentId,
-          program: r.program,
-          employeeId: r.employeeId,
-        })),
-      });
+      const payload = parsedRows
+        .map((r, i) => ({ row: r, idx: i }))
+        .filter(({ row }) => row.valid)
+        .map(({ row, idx }) => ({
+          email: row.email,
+          firstName: row.firstName,
+          lastName: row.lastName,
+          role: row.role as "student" | "faculty" | "admin" | "placement",
+          department: row.department,
+          studentId: row.studentId,
+          program: row.program,
+          employeeId: row.employeeId,
+          sendInvitation: !!issueFor[idx],
+        }));
+      const invitedNow = payload.filter((p) => p.sendInvitation).length;
+      await bulkImport.mutateAsync({ users: payload });
       setSuccessMsg(
-        `Successfully imported ${validRows.length} user${validRows.length > 1 ? "s" : ""}. Activation emails sent.`
+        invitedNow > 0
+          ? `Imported ${validRows.length} user${validRows.length > 1 ? "s" : ""}. Credential email${invitedNow > 1 ? "s" : ""} sent to ${invitedNow}.`
+          : `Imported ${validRows.length} user${validRows.length > 1 ? "s" : ""}. No credentials sent — you can resend invitations from the Users list.`,
       );
       setParsedRows([]);
+      setIssueFor({});
       setTimeout(() => {
         setSuccessMsg("");
         onOpenChange(false);
-      }, 1500);
+      }, 1800);
     } catch {
       // error shown via mutation state
     }
-  }, [validRows, bulkImport, onOpenChange]);
+  }, [validRows.length, parsedRows, issueFor, bulkImport, onOpenChange]);
 
   const handleDownloadTemplate = useCallback(() => {
     const csv =
@@ -506,6 +656,7 @@ function ImportUsersDialog({
 
   const handleClose = useCallback(() => {
     setParsedRows([]);
+    setIssueFor({});
     setParseError("");
     setSuccessMsg("");
     bulkImport.reset();
@@ -516,41 +667,53 @@ function ImportUsersDialog({
     <SlideDrawer
       open={open}
       onClose={handleClose}
-      width="xl"
+      width="2xl"
       title="Import Users"
-      description="Upload a CSV with: email, firstName, lastName, role, department, studentId, program, employeeId"
+      description="Upload a CSV, review the preview, pick who gets a login invitation, then click Import."
       footer={
-        <div className="flex justify-end gap-3">
-          <button
-            type="button"
-            onClick={handleClose}
-            className="flex items-center gap-2 rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium transition-colors hover:bg-muted"
-          >
-            <X className="h-3.5 w-3.5" />
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={handleImport}
-            disabled={bulkImport.isPending || validRows.length === 0}
-            className="flex items-center gap-2 rounded-lg bg-portal-accent px-4 py-2 text-sm font-medium text-portal-accent-foreground transition-colors hover:bg-portal-accent-hover disabled:opacity-50"
-          >
-            {bulkImport.isPending && (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            )}
-            <Upload className="h-3.5 w-3.5" />
-            Import {validRows.length > 0 ? `${validRows.length} User${validRows.length > 1 ? "s" : ""}` : "Users"}
-          </button>
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-xs text-muted-foreground">
+            {parsedRows.length === 0
+              ? "Upload a CSV to preview rows."
+              : `Importing ${validRows.length} of ${parsedRows.length} · ${issuingCount} will receive credentials.`}
+          </p>
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={handleClose}
+              className="flex items-center gap-2 rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium transition-colors hover:bg-muted"
+            >
+              <X className="h-3.5 w-3.5" />
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleImport}
+              disabled={bulkImport.isPending || validRows.length === 0}
+              className="flex items-center gap-2 rounded-lg bg-portal-accent px-4 py-2 text-sm font-medium text-portal-accent-foreground transition-colors hover:bg-portal-accent-hover disabled:opacity-50"
+            >
+              {bulkImport.isPending && (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              )}
+              <Upload className="h-3.5 w-3.5" />
+              Import{" "}
+              {validRows.length > 0
+                ? `${validRows.length} user${validRows.length > 1 ? "s" : ""}`
+                : "users"}
+              {issuingCount > 0 && ` (${issuingCount} with credentials)`}
+            </button>
+          </div>
         </div>
       }
     >
       <div className="space-y-4">
         {/* Template download */}
         <div className="rounded-lg border border-border bg-muted/50 p-3">
-          <p className="text-xs font-medium text-muted-foreground mb-2">
-            Expected CSV format (studentId required for student, employeeId required for faculty, program optional):
+          <p className="mb-2 text-xs font-medium text-muted-foreground">
+            Expected CSV format (studentId required for student, employeeId
+            required for faculty, program optional):
           </p>
-          <pre className="text-xs font-mono text-muted-foreground bg-background rounded p-2 overflow-x-auto">
+          <pre className="overflow-x-auto rounded bg-background p-2 font-mono text-xs text-muted-foreground">
 {`email,firstName,lastName,role,department,studentId,program,employeeId
 john@university.edu,John,Smith,student,Computer Science,STU-2026-001,BSc Computer Science,
 jane@university.edu,Jane,Doe,faculty,Computer Science,,,FAC-2026-001`}
@@ -577,48 +740,96 @@ jane@university.edu,Jane,Doe,faculty,Computer Science,,,FAC-2026-001`}
         {/* Parse results */}
         {parsedRows.length > 0 && (
           <div className="space-y-3">
-            <div className="flex items-center gap-3 text-sm">
-              <span>
-                Found <span className="font-semibold">{parsedRows.length}</span> row{parsedRows.length > 1 ? "s" : ""}.
-              </span>
-              <span className="text-success font-medium">
-                {validRows.length} valid
-              </span>
-              {errorRows.length > 0 && (
-                <span className="text-danger font-medium">
-                  {errorRows.length} error{errorRows.length > 1 ? "s" : ""}
+            <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
+              <div className="flex items-center gap-3">
+                <span>
+                  Found{" "}
+                  <span className="font-semibold">{parsedRows.length}</span>{" "}
+                  row{parsedRows.length > 1 ? "s" : ""}.
                 </span>
-              )}
+                <span className="font-medium text-success">
+                  {validRows.length} valid
+                </span>
+                {errorRows.length > 0 && (
+                  <span className="font-medium text-danger">
+                    {errorRows.length} error{errorRows.length > 1 ? "s" : ""}
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Tick rows whose login credentials should be sent on Import.
+                Unticked rows are still imported — you can resend invitations
+                later from the Users list.
+              </p>
             </div>
 
-            {/* Preview table */}
-            <div className="rounded-lg border border-border overflow-hidden">
-              <div className="max-h-48 overflow-y-auto">
+            {/* Preview table — checkbox per row, full list (scrollable) */}
+            <div className="overflow-hidden rounded-lg border border-border">
+              <div className="max-h-96 overflow-y-auto">
                 <table className="w-full text-xs">
-                  <thead>
-                    <tr className="border-b border-border bg-muted/50">
-                      <th className="px-2 py-1.5 text-left font-medium">Email</th>
-                      <th className="px-2 py-1.5 text-left font-medium">Name</th>
-                      <th className="px-2 py-1.5 text-left font-medium">Role</th>
-                      <th className="px-2 py-1.5 text-left font-medium">Dept</th>
-                      <th className="px-2 py-1.5 text-left font-medium">Status</th>
+                  <thead className="sticky top-0 bg-muted/80 backdrop-blur-sm">
+                    <tr className="border-b border-border">
+                      <th className="w-10 px-3 py-2 text-left">
+                        <input
+                          type="checkbox"
+                          aria-label="Select all valid rows"
+                          checked={allValidSelected}
+                          onChange={toggleAll}
+                          disabled={validRows.length === 0}
+                          className="h-3.5 w-3.5 rounded border-border accent-portal-accent disabled:opacity-50"
+                        />
+                      </th>
+                      <th className="px-2 py-2 text-left font-medium">
+                        Email
+                      </th>
+                      <th className="px-2 py-2 text-left font-medium">Name</th>
+                      <th className="px-2 py-2 text-left font-medium">Role</th>
+                      <th className="px-2 py-2 text-left font-medium">Dept</th>
+                      <th className="px-2 py-2 text-left font-medium">
+                        Status
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
-                    {parsedRows.slice(0, 5).map((row, i) => (
+                    {parsedRows.map((row, i) => (
                       <tr
                         key={i}
                         className={`border-b border-border last:border-0 ${!row.valid ? "bg-danger/5" : ""}`}
                       >
-                        <td className="px-2 py-1.5 truncate max-w-30">{row.email}</td>
-                        <td className="px-2 py-1.5 truncate max-w-25">{row.firstName} {row.lastName}</td>
-                        <td className="px-2 py-1.5">{row.role}</td>
-                        <td className="px-2 py-1.5 truncate max-w-25">{row.department}</td>
-                        <td className="px-2 py-1.5">
+                        <td className="px-3 py-2">
+                          <input
+                            type="checkbox"
+                            aria-label={
+                              row.valid
+                                ? `Issue credential for ${row.email}`
+                                : "Row has errors and cannot be imported"
+                            }
+                            checked={!!issueFor[i]}
+                            onChange={() => toggleRow(i)}
+                            disabled={!row.valid}
+                            className="h-3.5 w-3.5 rounded border-border accent-portal-accent disabled:opacity-30"
+                          />
+                        </td>
+                        <td className="max-w-50 truncate px-2 py-2">
+                          {row.email}
+                        </td>
+                        <td className="max-w-40 truncate px-2 py-2">
+                          {row.firstName} {row.lastName}
+                        </td>
+                        <td className="px-2 py-2">{row.role}</td>
+                        <td className="max-w-40 truncate px-2 py-2">
+                          {row.department}
+                        </td>
+                        <td className="px-2 py-2">
                           {row.valid ? (
                             <span className="text-success">OK</span>
                           ) : (
-                            <span className="text-danger" title={row.error}>{row.error}</span>
+                            <span
+                              className="text-danger"
+                              title={row.error}
+                            >
+                              {row.error}
+                            </span>
                           )}
                         </td>
                       </tr>
@@ -626,11 +837,6 @@ jane@university.edu,Jane,Doe,faculty,Computer Science,,,FAC-2026-001`}
                   </tbody>
                 </table>
               </div>
-              {parsedRows.length > 5 && (
-                <p className="px-2 py-1.5 text-xs text-muted-foreground border-t border-border bg-muted/30">
-                  ...and {parsedRows.length - 5} more row{parsedRows.length - 5 > 1 ? "s" : ""}
-                </p>
-              )}
             </div>
           </div>
         )}
@@ -640,9 +846,7 @@ jane@university.edu,Jane,Doe,faculty,Computer Science,,,FAC-2026-001`}
             Failed to import users. Please check the file and try again.
           </p>
         )}
-        {successMsg && (
-          <p className="text-xs text-success">{successMsg}</p>
-        )}
+        {successMsg && <p className="text-xs text-success">{successMsg}</p>}
       </div>
     </SlideDrawer>
   );
@@ -735,6 +939,23 @@ export default function AdminUsersPage() {
     }
   }, [confirm.user, updateUser]);
 
+  const resendInvitation = useResendInvitation();
+  const handleResendInvitation = useCallback(
+    async (user: AdminUser) => {
+      try {
+        await resendInvitation.mutateAsync(user.id);
+        toast.success(
+          user.invitedAt
+            ? `Invitation resent to ${user.email}`
+            : `Invitation sent to ${user.email}`,
+        );
+      } catch {
+        toast.error("Failed to send invitation");
+      }
+    },
+    [resendInvitation],
+  );
+
   const columns = createUserColumns({
     // Row click and "View profile" both open the drawer in view mode.
     // "Edit user" opens the same drawer pre-set to edit mode. Suspend /
@@ -742,6 +963,7 @@ export default function AdminUsersPage() {
     onView: handleRowClick,
     onEdit: handleEditUser,
     onToggleStatus: handleToggleStatus,
+    onResendInvitation: handleResendInvitation,
   });
 
   return (

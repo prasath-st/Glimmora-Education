@@ -45,7 +45,9 @@ export const updateUserSchema = z.object({
     .enum(["student", "faculty", "admin", "placement"])
     .optional(),
   department: z.string().min(1).optional(),
-  status: z.enum(["active", "inactive", "suspended"]).optional(),
+  status: z
+    .enum(["active", "inactive", "suspended", "pending_invitation"])
+    .optional(),
 });
 
 export type UpdateUserFormData = z.infer<typeof updateUserSchema>;

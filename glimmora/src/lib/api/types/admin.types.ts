@@ -85,13 +85,24 @@ export interface AuditLogEntry extends Identifiable {
 }
 
 // === Users & Roles ===
+// `pending_invitation` covers users who have been provisioned but haven't
+// activated their account yet. `invitedAt` is null when the invitation
+// email hasn't been sent (admin can send it via "Resend invitation");
+// otherwise it's the timestamp of the most recent send.
+export type AdminUserStatus =
+  | "active"
+  | "inactive"
+  | "suspended"
+  | "pending_invitation";
+
 export interface AdminUser extends Identifiable, Timestamps, TenantScoped {
   email: string;
   name: string;
   role: PortalRole;
   department: string;
-  status: "active" | "inactive" | "suspended";
+  status: AdminUserStatus;
   lastLoginAt: string | null;
+  invitedAt: string | null;
   avatarUrl: string | null;
   phone?: string;
   // Student-specific
@@ -141,6 +152,10 @@ export interface CreateUserRequest {
   employeeId?: string;
   designation?: string;
   specialization?: string;
+  // When true (default), the backend dispatches a login-invitation email and
+  // sets invitedAt. When false, the user is provisioned but no email is sent —
+  // useful when the institution provisions via SSO or wants to invite later.
+  sendInvitation?: boolean;
 }
 
 // === AI Governance ===
@@ -411,6 +426,9 @@ export interface CreateAcademicYearRequest {
 }
 
 // === Bulk Import ===
+// `sendInvitation` is per-row so the import drawer can let admins pick
+// which users get the credential email on submit. Unselected rows are
+// imported but no email is sent — admin can resend later from Users.
 export interface BulkImportUserRequest {
   email: string;
   firstName: string;
@@ -420,6 +438,7 @@ export interface BulkImportUserRequest {
   studentId?: string;
   program?: string;
   employeeId?: string;
+  sendInvitation?: boolean;
 }
 
 // === Settings ===

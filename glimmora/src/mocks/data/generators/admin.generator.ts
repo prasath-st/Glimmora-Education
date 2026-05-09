@@ -583,22 +583,46 @@ export function generateUsers(count: number = 60): AdminUser[] {
     const lastName = pick(LAST_NAMES);
     const name = `${firstName} ${lastName}`;
     const role = ROLE_DISTRIBUTION[i % ROLE_DISTRIBUTION.length];
+    // 82% active, 8% pending invitation (recently provisioned, hasn't
+    // activated yet), 6% inactive, 4% suspended — reflects a real fleet
+    // mid-term where some onboarded students/faculty haven't logged in yet.
     const statusRoll = faker.number.float({ min: 0, max: 1 });
-    const status: "active" | "inactive" | "suspended" =
-      statusRoll < 0.82 ? "active" : statusRoll < 0.94 ? "inactive" : "suspended";
+    const status: "active" | "inactive" | "suspended" | "pending_invitation" =
+      statusRoll < 0.82
+        ? "active"
+        : statusRoll < 0.9
+          ? "pending_invitation"
+          : statusRoll < 0.96
+            ? "inactive"
+            : "suspended";
+
+    const createdAt = pastDate(
+      Math.max(1, faker.number.int({ min: 90, max: 730 })),
+    );
 
     return {
       id: id("usr"),
-      email: faker.internet.email({ firstName, lastName, provider: "glimmora.edu" }).toLowerCase(),
+      email: faker.internet
+        .email({ firstName, lastName, provider: "glimmora.edu" })
+        .toLowerCase(),
       name,
       role,
       department: pick(DEPARTMENTS),
       status,
-      lastLoginAt: status === "active" ? pastDate(Math.max(1, faker.number.int({ min: 1, max: 14 }))) : null,
+      lastLoginAt:
+        status === "active"
+          ? pastDate(Math.max(1, faker.number.int({ min: 1, max: 14 })))
+          : null,
+      // Pending users were "invited" at some point in the recent past, so
+      // their Resend / Pending-since UX has something to render.
+      invitedAt:
+        status === "pending_invitation"
+          ? pastDate(Math.max(1, faker.number.int({ min: 1, max: 30 })))
+          : null,
       avatarUrl: faker.image.avatar(),
       phone: faker.phone.number({ style: "international" }),
       tenantId: "tenant_glimmora_main",
-      createdAt: pastDate(Math.max(1, faker.number.int({ min: 90, max: 730 }))),
+      createdAt,
       updatedAt: pastDate(Math.max(1, faker.number.int({ min: 1, max: 30 }))),
     };
   });

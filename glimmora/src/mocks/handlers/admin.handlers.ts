@@ -358,14 +358,19 @@ export const adminHandlers = [
     if (Object.keys(errors).length > 0) return validationError(errors);
 
     const now = new Date().toISOString();
+    // Default to sending the invitation when the flag is omitted; if false
+    // the user is provisioned but invitedAt stays null until the admin
+    // resends from the Users page.
+    const willInvite = body.sendInvitation !== false;
     const newUser: AdminUser = {
       id: `usr_${Date.now()}`,
       email: body.email,
       name: `${body.firstName} ${body.lastName}`,
       role: body.role,
       department: body.department,
-      status: "active",
+      status: "pending_invitation",
       lastLoginAt: null,
+      invitedAt: willInvite ? now : null,
       avatarUrl: null,
       tenantId: "tenant_glimmora_main",
       createdAt: now,
@@ -394,30 +399,67 @@ export const adminHandlers = [
     }
 
     const now = new Date().toISOString();
-    const newUsers: AdminUser[] = body.users.map((u) => ({
-      id: `usr_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-      email: u.email,
-      name: `${u.firstName} ${u.lastName}`,
-      role: u.role,
-      department: u.department,
-      status: "active" as const,
-      lastLoginAt: null,
-      avatarUrl: null,
-      tenantId: "tenant_glimmora_main",
-      createdAt: now,
-      updatedAt: now,
-      studentId: u.studentId,
-      program: u.program,
-      employeeId: u.employeeId,
-    }));
+    let invitedCount = 0;
+    const newUsers: AdminUser[] = body.users.map((u) => {
+      const willInvite = u.sendInvitation !== false;
+      if (willInvite) invitedCount += 1;
+      return {
+        id: `usr_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        email: u.email,
+        name: `${u.firstName} ${u.lastName}`,
+        role: u.role,
+        department: u.department,
+        status: "pending_invitation" as const,
+        lastLoginAt: null,
+        invitedAt: willInvite ? now : null,
+        avatarUrl: null,
+        tenantId: "tenant_glimmora_main",
+        createdAt: now,
+        updatedAt: now,
+        studentId: u.studentId,
+        program: u.program,
+        employeeId: u.employeeId,
+      };
+    });
 
     users = [...newUsers, ...users];
 
     return HttpResponse.json(
-      { data: { imported: newUsers.length, errors: 0 } },
-      { status: 201 }
+      {
+        data: {
+          imported: newUsers.length,
+          invited: invitedCount,
+          errors: 0,
+        },
+      },
+      { status: 201 },
     );
   }),
+
+  // Resend the login-invitation email for a user that's still pending.
+  // In production this would dispatch via SendGrid/SES/etc. and persist the
+  // last-sent timestamp; here we simply touch invitedAt so the UI reflects it.
+  http.post(
+    "/api/admin/users/:userId/resend-invitation",
+    async ({ params }) => {
+      await randomDelay();
+      const userId = params.userId as string;
+      const idx = users.findIndex((u) => u.id === userId);
+      if (idx === -1) return notFound("User");
+      if (users[idx].status !== "pending_invitation") {
+        return validationError({
+          status: ["Invitation can only be resent while the user is pending"],
+        });
+      }
+      const now = new Date().toISOString();
+      users[idx] = {
+        ...users[idx],
+        invitedAt: now,
+        updatedAt: now,
+      };
+      return HttpResponse.json({ data: users[idx] });
+    },
+  ),
 
   http.patch("/api/admin/users/:userId", async ({ params, request }) => {
     await randomDelay();
