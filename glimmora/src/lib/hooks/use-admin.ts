@@ -13,8 +13,6 @@ import type {
   AiModel,
   BiasReport,
   AiOverrideLog,
-  AdminCredential,
-  IssueCredentialRequest,
   ReportTemplate,
   GeneratedReport,
   InstitutionSettings,
@@ -267,50 +265,6 @@ export function useOverrideLog(params?: { page?: number; pageSize?: number }) {
     queryKey: ["admin", "ai-governance", "overrides", params],
     queryFn: () => api.get<AiOverrideLog[]>(`/api/admin/ai-governance/overrides${qs ? `?${qs}` : ""}`),
     select: (res) => ({ overrides: res.data, meta: res.meta as PaginationMeta }),
-  });
-}
-
-// === Credentials ===
-export function useAdminCredentials(params?: {
-  search?: string;
-  type?: string;
-  status?: string;
-  page?: number;
-  pageSize?: number;
-}) {
-  const sp = new URLSearchParams();
-  if (params?.search) sp.set("search", params.search);
-  if (params?.type) sp.set("type", params.type);
-  if (params?.status) sp.set("status", params.status);
-  if (params?.page) sp.set("page", String(params.page));
-  if (params?.pageSize) sp.set("pageSize", String(params.pageSize));
-  const qs = sp.toString();
-  return useQuery({
-    queryKey: ["admin", "credentials", params],
-    queryFn: () => api.get<AdminCredential[]>(`/api/admin/credentials${qs ? `?${qs}` : ""}`),
-    select: (res) => ({ credentials: res.data, meta: res.meta as PaginationMeta }),
-  });
-}
-
-export function useIssueCredential() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (data: IssueCredentialRequest) =>
-      api.post<AdminCredential>("/api/admin/credentials", data),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["admin", "credentials"] });
-    },
-  });
-}
-
-export function useRevokeCredential() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, reason }: { id: string; reason: string }) =>
-      api.post(`/api/admin/credentials/${id}/revoke`, { reason }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["admin", "credentials"] });
-    },
   });
 }
 

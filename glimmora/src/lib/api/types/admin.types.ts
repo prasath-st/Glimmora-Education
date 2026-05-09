@@ -5,7 +5,6 @@ import type {
   PortalRole,
   RiskLevel,
   ComplianceStatus,
-  CredentialStatus,
   ModelStatus,
 } from "./common.types";
 
@@ -183,26 +182,6 @@ export interface AiOverrideLog extends Identifiable {
   reason: string;
   overriddenBy: string;
   affectedEntity: string;
-}
-
-// === Credentials Management ===
-export interface AdminCredential extends Identifiable, Timestamps {
-  studentName: string;
-  studentId: string;
-  title: string;
-  type: "degree" | "certificate" | "badge" | "transcript";
-  status: CredentialStatus;
-  issuedDate: string;
-  verificationHash?: string;
-  revokedAt?: string;
-  revokedReason?: string;
-}
-
-export interface IssueCredentialRequest {
-  studentId: string;
-  title: string;
-  type: "degree" | "certificate" | "badge" | "transcript";
-  description: string;
 }
 
 // === Reports ===

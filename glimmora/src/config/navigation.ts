@@ -173,7 +173,6 @@ export const PORTAL_NAVIGATION: Record<PortalRole, NavSection[]> = {
       label: "Intelligence",
       items: [
         { label: "AI Governance", href: "/admin/ai-governance", icon: Bot },
-        { label: "Credentials", href: "/admin/credentials", icon: BadgeCheck },
         { label: "Reports", href: "/admin/reports", icon: FileBarChart },
       ],
     },

@@ -10,7 +10,6 @@ import type {
   AiModel,
   BiasReport,
   AiOverrideLog,
-  AdminCredential,
   ReportTemplate,
   ReportParameter,
   GeneratedReport,
@@ -28,7 +27,6 @@ import type {
   PortalRole,
   RiskLevel,
   ComplianceStatus,
-  CredentialStatus,
   ModelStatus,
 } from "@/lib/api/types/common.types";
 
@@ -715,41 +713,6 @@ export function generateOverrideLog(): AiOverrideLog[] {
     overriddenBy: `${pick(FIRST_NAMES)} ${pick(LAST_NAMES)}`,
     affectedEntity: def.entity,
   }));
-}
-
-export function generateCredentials(count: number = 30): AdminCredential[] {
-  const credentialTitles: Record<string, string[]> = {
-    degree: ["Bachelor of Technology in Computer Science", "Master of Science in Data Analytics", "Bachelor of Engineering in Electrical", "Master of Business Administration", "Bachelor of Science in Mathematics"],
-    certificate: ["AWS Certified Solutions Architect", "Google Cloud Professional", "TensorFlow Developer Certificate", "Cisco CCNA Certification", "Project Management Professional"],
-    badge: ["Dean's List — Fall 2025", "Hackathon Winner 2025", "Research Excellence Award", "Community Service Honor", "Academic Integrity Pledge"],
-    transcript: ["Official Transcript — Spring 2026", "Official Transcript — Fall 2025", "Consolidated Marksheet 2023-2026", "Semester Grade Report", "Transfer Credit Evaluation"],
-  };
-
-  const types: ("degree" | "certificate" | "badge" | "transcript")[] = ["degree", "certificate", "badge", "transcript"];
-  const statuses: CredentialStatus[] = ["active", "active", "active", "pending_verification", "revoked", "expired"];
-
-  return Array.from({ length: count }, () => {
-    const type = pick(types);
-    const title = pick(credentialTitles[type]);
-    const status = pick(statuses);
-    const firstName = pick(FIRST_NAMES);
-    const lastName = pick(LAST_NAMES);
-
-    return {
-      id: id("cred"),
-      studentName: `${firstName} ${lastName}`,
-      studentId: id("stu"),
-      title,
-      type,
-      status,
-      issuedDate: pastDate(Math.max(1, faker.number.int({ min: 30, max: 365 }))),
-      verificationHash: status === "active" ? faker.string.hexadecimal({ length: 64, casing: "lower" }).slice(2) : undefined,
-      revokedAt: status === "revoked" ? pastDate(Math.max(1, faker.number.int({ min: 1, max: 30 }))) : undefined,
-      revokedReason: status === "revoked" ? pick(["Academic integrity violation", "Fraudulent documentation", "Administrative error — reissue pending", "Student request"]) : undefined,
-      createdAt: pastDate(Math.max(1, faker.number.int({ min: 30, max: 400 }))),
-      updatedAt: pastDate(Math.max(1, faker.number.int({ min: 1, max: 30 }))),
-    };
-  });
 }
 
 export function generateReportTemplates(): ReportTemplate[] {

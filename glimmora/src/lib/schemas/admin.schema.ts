@@ -72,32 +72,6 @@ export const editUserSchema = z.object({
 
 export type EditUserFormData = z.infer<typeof editUserSchema>;
 
-export const issueCredentialSchema = z.object({
-  studentId: z.string().min(1, "Please select a student"),
-  title: z
-    .string()
-    .min(1, "Title is required")
-    .min(3, "Title must be at least 3 characters"),
-  type: z.enum(["degree", "certificate", "badge", "transcript"], {
-    error: "Please select a type",
-  }),
-  description: z
-    .string()
-    .min(1, "Description is required")
-    .min(10, "Description must be at least 10 characters"),
-});
-
-export type IssueCredentialFormData = z.infer<typeof issueCredentialSchema>;
-
-export const revokeCredentialSchema = z.object({
-  reason: z
-    .string()
-    .min(1, "Reason is required")
-    .min(10, "Please provide a detailed reason (at least 10 characters)"),
-});
-
-export type RevokeCredentialFormData = z.infer<typeof revokeCredentialSchema>;
-
 export const institutionSettingsSchema = z.object({
   name: z.string().min(1, "Institution name is required"),
   shortName: z.string().min(1, "Short name is required"),

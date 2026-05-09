@@ -7,12 +7,10 @@ import type {
   AiModel,
   BiasReport,
   AiOverrideLog,
-  AdminCredential,
   ReportTemplate,
   GeneratedReport,
   InstitutionSettings,
   CreateUserRequest,
-  IssueCredentialRequest,
   AdminCourse,
   CreateCourseRequest,
   Semester,
@@ -42,7 +40,6 @@ import {
   generateAiModels,
   generateBiasReports,
   generateOverrideLog,
-  generateCredentials,
   generateReportTemplates,
   generateReports,
   generateSettings,
@@ -63,7 +60,6 @@ let users: AdminUser[] = generateUsers(2000);
 const aiModels: AiModel[] = generateAiModels();
 let biasReports: BiasReport[] = generateBiasReports();
 let overrideLog: AiOverrideLog[] = generateOverrideLog();
-let credentials: AdminCredential[] = generateCredentials(30);
 const reportTemplates: ReportTemplate[] = generateReportTemplates();
 let generatedReports: GeneratedReport[] = generateReports();
 let settings: InstitutionSettings = generateSettings();
@@ -545,94 +541,6 @@ export const adminHandlers = [
     const url = new URL(request.url);
     const result = paginate(overrideLog, url);
     return HttpResponse.json({ data: result.data, meta: result.meta });
-  }),
-
-  // ── Credentials ───────────────────────────────────────────────────────────
-  http.get("/api/admin/credentials", async ({ request }) => {
-    await randomDelay();
-    const url = new URL(request.url);
-    const search = url.searchParams.get("search");
-    const type = url.searchParams.get("type");
-    const status = url.searchParams.get("status");
-
-    let filtered = [...credentials];
-
-    if (type && ["degree", "certificate", "badge", "transcript"].includes(type)) {
-      filtered = filtered.filter((c) => c.type === type);
-    }
-    if (
-      status &&
-      ["active", "revoked", "expired", "pending_verification"].includes(status)
-    ) {
-      filtered = filtered.filter((c) => c.status === status);
-    }
-    filtered = searchFilter(filtered, search, [
-      "studentName",
-      "title",
-      "studentId",
-    ] as (keyof AdminCredential)[]);
-
-    const result = paginate(filtered, url);
-    return HttpResponse.json({ data: result.data, meta: result.meta });
-  }),
-
-  http.post("/api/admin/credentials", async ({ request }) => {
-    await randomDelay();
-    const body = (await request.json()) as IssueCredentialRequest;
-    const errors: Record<string, string[]> = {};
-
-    if (!body.studentId) errors.studentId = ["Student ID is required"];
-    if (!body.title) errors.title = ["Title is required"];
-    if (!body.type) errors.type = ["Credential type is required"];
-    if (!body.description) errors.description = ["Description is required"];
-
-    if (Object.keys(errors).length > 0) return validationError(errors);
-
-    const now = new Date().toISOString();
-    const newCredential: AdminCredential = {
-      id: `cred_${Date.now()}`,
-      studentName: "Pending Lookup",
-      studentId: body.studentId,
-      title: body.title,
-      type: body.type,
-      status: "pending_verification",
-      issuedDate: now,
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    credentials = [newCredential, ...credentials];
-    return HttpResponse.json({ data: newCredential }, { status: 201 });
-  }),
-
-  http.post("/api/admin/credentials/:id/revoke", async ({ params, request }) => {
-    await randomDelay();
-    const credId = params.id as string;
-    const body = (await request.json()) as { reason?: string };
-
-    const idx = credentials.findIndex((c) => c.id === credId);
-    if (idx === -1) return notFound("Credential");
-
-    if (!body.reason) {
-      return validationError({ reason: ["Revocation reason is required"] });
-    }
-
-    if (credentials[idx].status === "revoked") {
-      return validationError({
-        status: ["Credential is already revoked"],
-      });
-    }
-
-    const now = new Date().toISOString();
-    credentials[idx] = {
-      ...credentials[idx],
-      status: "revoked",
-      revokedAt: now,
-      revokedReason: body.reason,
-      updatedAt: now,
-    };
-
-    return HttpResponse.json({ data: credentials[idx] });
   }),
 
   // ── Reports ───────────────────────────────────────────────────────────────
