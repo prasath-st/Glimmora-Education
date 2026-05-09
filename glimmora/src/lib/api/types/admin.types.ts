@@ -144,38 +144,6 @@ export interface CreateUserRequest {
   specialization?: string;
 }
 
-export interface RoleDefinition {
-  role: PortalRole;
-  label: string;
-  description: string;
-  userCount: number;
-  permissions: Permission[];
-}
-
-export interface Permission {
-  module: string;
-  actions: { name: string; allowed: boolean }[];
-}
-
-// === Budget ===
-export interface BudgetOverview {
-  totalBudget: number;
-  spent: number;
-  remaining: number;
-  utilizationRate: number;
-  byDepartment: { department: string; allocated: number; spent: number }[];
-  monthlySpend: { month: string; amount: number }[];
-  alerts: BudgetAlert[];
-}
-
-export interface BudgetAlert extends Identifiable {
-  department: string;
-  type: "overspend" | "approaching_limit" | "anomaly";
-  message: string;
-  severity: RiskLevel;
-  date: string;
-}
-
 // === AI Governance ===
 export interface AiModel extends Identifiable {
   name: string;
@@ -403,6 +371,7 @@ export interface CourseOffering extends Identifiable, Timestamps {
   facultyId: string | null;
   facultyName: string | null;
   enrolledCount: number;
+  enrolledStudentIds?: string[];
   maxCapacity: number;
   lectureHours: number;
   tutorialHours: number;

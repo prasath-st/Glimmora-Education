@@ -7,10 +7,6 @@ import type {
   ComplianceDeviation,
   AuditLogEntry,
   AdminUser,
-  RoleDefinition,
-  Permission,
-  BudgetOverview,
-  BudgetAlert,
   AiModel,
   BiasReport,
   AiOverrideLog,
@@ -95,8 +91,6 @@ const MODULES = [
   "Settings",
 ];
 
-const ACTIONS_PER_MODULE = ["view", "create", "edit", "delete", "export"];
-
 const AUDIT_ACTIONS = [
   "login",
   "data_export",
@@ -180,18 +174,6 @@ const AI_MODEL_DEFINITIONS = [
     domain: "Academic Planning",
     description: "Recommends curriculum adjustments based on industry trends, student outcomes, and accreditation requirements.",
     version: "1.2.3",
-  },
-  {
-    name: "Financial Aid Allocator",
-    domain: "Financial Services",
-    description: "Optimizes financial aid distribution based on need, merit, and institutional priorities while ensuring equitable access.",
-    version: "2.0.1",
-  },
-  {
-    name: "Faculty Workload Balancer",
-    domain: "HR & Operations",
-    description: "Analyzes and balances faculty teaching loads, research commitments, and administrative duties across departments.",
-    version: "1.1.0",
   },
 ];
 
@@ -624,145 +606,12 @@ export function generateUsers(count: number = 60): AdminUser[] {
   });
 }
 
-export function generateRoles(): RoleDefinition[] {
-  const roleDefs: { role: PortalRole; label: string; description: string; userCount: number }[] = [
-    { role: "admin", label: "Administrator", description: "Full system access with configuration and user management capabilities.", userCount: 8 },
-    { role: "faculty", label: "Faculty", description: "Course management, student advising, and research collaboration tools.", userCount: 15 },
-    { role: "student", label: "Student", description: "Access to personal academic records, courses, career services, and credentials.", userCount: 25 },
-    { role: "placement", label: "Placement Officer", description: "Job posting management, employer relations, and student placement tracking.", userCount: 4 },
-  ];
-
-  const permissionsByRole: Record<PortalRole, Record<string, string[]>> = {
-    admin: {
-      Dashboard: ["view"], Students: ["view", "create", "edit", "delete", "export"],
-      Courses: ["view", "create", "edit", "delete", "export"], Research: ["view", "create", "edit", "export"],
-      Compliance: ["view", "create", "edit", "export"], Users: ["view", "create", "edit", "delete"],
-      AI: ["view", "create", "edit"], Reports: ["view", "create", "export"],
-      Settings: ["view", "edit"],
-    },
-    faculty: {
-      Dashboard: ["view"], Students: ["view", "export"],
-      Courses: ["view", "create", "edit"], Research: ["view", "create", "edit", "export"],
-      Compliance: ["view"], Users: [],
-      AI: ["view"], Reports: ["view", "create"],
-      Settings: ["view"],
-    },
-    student: {
-      Dashboard: ["view"], Students: ["view"],
-      Courses: ["view"], Research: ["view"],
-      Compliance: [], Users: [],
-      AI: [], Reports: ["view"],
-      Settings: ["view"],
-    },
-    placement: {
-      Dashboard: ["view"], Students: ["view", "export"],
-      Courses: ["view"], Research: [],
-      Compliance: [], Users: [],
-      AI: ["view"], Reports: ["view", "create", "export"],
-      Settings: ["view"],
-    },
-    super_admin: {
-      Dashboard: ["view"], Students: ["view", "create", "edit", "delete", "export"],
-      Courses: ["view", "create", "edit", "delete", "export"], Research: ["view", "create", "edit", "export"],
-      Compliance: ["view", "create", "edit", "export"], Users: ["view", "create", "edit", "delete"],
-      AI: ["view", "create", "edit"], Reports: ["view", "create", "export"],
-      Settings: ["view", "edit"],
-    },
-  };
-
-  return roleDefs.map(({ role, label, description, userCount }) => {
-    const rolePerms = permissionsByRole[role];
-    const permissions: Permission[] = MODULES.map((mod) => ({
-      module: mod,
-      actions: ACTIONS_PER_MODULE.map((action) => ({
-        name: action,
-        allowed: (rolePerms[mod] || []).includes(action),
-      })),
-    }));
-
-    return { role, label, description, userCount, permissions };
-  });
-}
-
-export function generateBudgetOverview(): BudgetOverview {
-  const totalBudget = 45_000_000;
-
-  const deptAllocations = [
-    { department: "Computer Science", allocated: 8_500_000 },
-    { department: "Electrical Engineering", allocated: 7_200_000 },
-    { department: "Mechanical Engineering", allocated: 6_800_000 },
-    { department: "Business Administration", allocated: 5_500_000 },
-    { department: "Biotechnology", allocated: 5_200_000 },
-    { department: "Mathematics", allocated: 4_100_000 },
-    { department: "Physics", allocated: 4_000_000 },
-    { department: "Civil Engineering", allocated: 3_700_000 },
-  ];
-
-  const byDepartment = deptAllocations.map((d) => {
-    const utilizationRate = faker.number.float({ min: 0.62, max: 0.88 });
-    return {
-      department: d.department,
-      allocated: d.allocated,
-      spent: Math.round(d.allocated * utilizationRate),
-    };
-  });
-
-  const totalSpent = byDepartment.reduce((sum, d) => sum + d.spent, 0);
-
-  const monthlySpend = MONTHS.map((month) => ({
-    month,
-    amount: faker.number.int({ min: 2_800_000, max: 4_200_000 }),
-  }));
-
-  const alerts: BudgetAlert[] = [
-    {
-      id: id("ba"),
-      department: "Computer Science",
-      type: "approaching_limit" as const,
-      message: "Computer Science department has utilized 87% of annual budget with 3 months remaining.",
-      severity: "medium" as RiskLevel,
-      date: pastDate(Math.max(1, 3)),
-    },
-    {
-      id: id("ba"),
-      department: "Biotechnology",
-      type: "overspend" as const,
-      message: "Biotechnology lab equipment purchases exceeded quarterly allocation by ₹12L.",
-      severity: "high" as RiskLevel,
-      date: pastDate(Math.max(1, 7)),
-    },
-    {
-      id: id("ba"),
-      department: "Business Administration",
-      type: "anomaly" as const,
-      message: "Unusual spike in travel expenses detected — 340% increase over last month.",
-      severity: "medium" as RiskLevel,
-      date: pastDate(Math.max(1, 2)),
-    },
-    {
-      id: id("ba"),
-      department: "Physics",
-      type: "approaching_limit" as const,
-      message: "Research grant fund for Physics nearly exhausted — 94% utilized.",
-      severity: "low" as RiskLevel,
-      date: pastDate(Math.max(1, 10)),
-    },
-  ];
-
-  return {
-    totalBudget,
-    spent: totalSpent,
-    remaining: totalBudget - totalSpent,
-    utilizationRate: roundTo((totalSpent / totalBudget) * 100, 1),
-    byDepartment,
-    monthlySpend,
-    alerts,
-  };
-}
 
 export function generateAiModels(): AiModel[] {
   return AI_MODEL_DEFINITIONS.map((def) => {
-    const statuses: ModelStatus[] = ["active", "active", "active", "active", "training", "inactive", "active"];
+    // One training, one inactive, the rest active — reflects a typical fleet
+    // mid-cycle with at least one model under retrain.
+    const statuses: ModelStatus[] = ["active", "training", "active", "active", "inactive"];
     const status = statuses[AI_MODEL_DEFINITIONS.indexOf(def)];
 
     return {
@@ -793,9 +642,9 @@ export function generateBiasReports(): BiasReport[] {
   const reportDefs = [
     { modelIdx: 0, overallScore: 92 },
     { modelIdx: 1, overallScore: 87 },
+    { modelIdx: 2, overallScore: 95 },
     { modelIdx: 3, overallScore: 78 },
-    { modelIdx: 5, overallScore: 95 },
-    { modelIdx: 6, overallScore: 84 },
+    { modelIdx: 4, overallScore: 84 },
   ];
 
   return reportDefs.map((def) => {
@@ -849,14 +698,11 @@ export function generateOverrideLog(): AiOverrideLog[] {
   const overrideDefs = [
     { model: "Student Risk Predictor", original: "High Risk — Recommend Academic Probation", overridden: "Medium Risk — Assign Faculty Mentor", reason: "Student showed significant improvement in last 3 assignments; probation would be premature.", entity: "Student: Aarav Sharma (STU-2024-1847)" },
     { model: "Placement Matching Agent", original: "Not Recommended for Axiom Software", overridden: "Recommended — Fast-Track Interview", reason: "Candidate has exceptional open-source contributions not captured in academic transcript.", entity: "Student: Priya Patel (STU-2023-0921)" },
-    { model: "Financial Aid Allocator", original: "Partial Scholarship (50%)", overridden: "Full Scholarship (100%)", reason: "Family financial situation changed drastically after parent job loss — verified by documentation.", entity: "Student: Rohan Gupta (STU-2025-0334)" },
     { model: "Curriculum Advisor", original: "Drop Advanced ML Course", overridden: "Continue with Additional Support", reason: "Student is struggling but highly motivated; dropping course would delay graduation by a semester.", entity: "Student: Kavya Singh (STU-2024-1102)" },
     { model: "Compliance Monitor", original: "Flag as Non-Compliant", overridden: "Compliant with Conditions", reason: "Department submitted corrective action plan; full compliance expected within 30 days.", entity: "Department: Biotechnology" },
     { model: "Student Risk Predictor", original: "Low Risk — No Action", overridden: "Medium Risk — Schedule Check-in", reason: "Faculty advisor noted concerning behavioral changes not reflected in academic metrics.", entity: "Student: Siddharth Reddy (STU-2024-0756)" },
     { model: "Research Optimization Engine", original: "Reject Grant Application", overridden: "Forward to Committee Review", reason: "Novel interdisciplinary approach not well-evaluated by current model parameters.", entity: "Grant: SERB-2026-AI-0042" },
     { model: "Placement Matching Agent", original: "Match Score: 42% — Skip", overridden: "Match Score Override: 78% — Include", reason: "Student is career-switching from mechanical engineering; prior skills highly transferable.", entity: "Student: Vikram Kumar (STU-2023-1455)" },
-    { model: "Faculty Workload Balancer", original: "Assign 4 Courses Next Semester", overridden: "Assign 2 Courses + Research Release", reason: "Faculty member received major research grant requiring dedicated time allocation.", entity: "Faculty: Dr. Meera Nair (FAC-2019-0088)" },
-    { model: "Financial Aid Allocator", original: "Merit Scholarship Renewal — Deny", overridden: "Merit Scholarship Renewal — Approve (Probationary)", reason: "GPA dip was due to documented medical leave; student has since recovered.", entity: "Student: Ananya Joshi (STU-2024-0667)" },
   ];
 
   return overrideDefs.map((def) => ({

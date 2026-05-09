@@ -4,8 +4,6 @@ import type {
   ComplianceDeviation,
   AuditLogEntry,
   AdminUser,
-  RoleDefinition,
-  BudgetOverview,
   AiModel,
   BiasReport,
   AiOverrideLog,
@@ -41,8 +39,6 @@ import {
   generateCompliancePulse,
   generateAuditLog,
   generateUsers,
-  generateRoles,
-  generateBudgetOverview,
   generateAiModels,
   generateBiasReports,
   generateOverrideLog,
@@ -64,8 +60,6 @@ import {
 let compliancePulse: CompliancePulse = generateCompliancePulse();
 let auditLog: AuditLogEntry[] = generateAuditLog(100);
 let users: AdminUser[] = generateUsers(2000);
-let roles: RoleDefinition[] = generateRoles();
-const budget: BudgetOverview = generateBudgetOverview();
 const aiModels: AiModel[] = generateAiModels();
 let biasReports: BiasReport[] = generateBiasReports();
 let overrideLog: AiOverrideLog[] = generateOverrideLog();
@@ -111,6 +105,7 @@ function toOfferingView(c: AdminCourse): CourseOffering {
     facultyId: c.facultyId || null,
     facultyName: c.facultyName || null,
     enrolledCount: c.enrolledCount,
+    enrolledStudentIds: c.enrolledStudentIds,
     maxCapacity: c.maxCapacity,
     lectureHours: c.lectureHours ?? catalog?.lectureHours ?? 3,
     tutorialHours: c.tutorialHours ?? catalog?.tutorialHours ?? 0,
@@ -291,6 +286,7 @@ export const adminHandlers = [
     const search = url.searchParams.get("search");
     const action = url.searchParams.get("action");
     const role = url.searchParams.get("role");
+    const outcome = url.searchParams.get("outcome");
 
     let filtered = [...auditLog];
 
@@ -299,6 +295,9 @@ export const adminHandlers = [
     }
     if (role && role !== "all") {
       filtered = filtered.filter((e) => e.userRole === role);
+    }
+    if (outcome && (outcome === "success" || outcome === "failure")) {
+      filtered = filtered.filter((e) => e.outcome === outcome);
     }
     filtered = searchFilter(filtered, search, [
       "userName",
@@ -387,11 +386,6 @@ export const adminHandlers = [
 
     users = [newUser, ...users];
 
-    // Update role user counts
-    roles = roles.map((r) =>
-      r.role === body.role ? { ...r, userCount: r.userCount + 1 } : r
-    );
-
     return HttpResponse.json({ data: newUser }, { status: 201 });
   }),
 
@@ -423,12 +417,6 @@ export const adminHandlers = [
 
     users = [...newUsers, ...users];
 
-    for (const u of newUsers) {
-      roles = roles.map((r) =>
-        r.role === u.role ? { ...r, userCount: r.userCount + 1 } : r
-      );
-    }
-
     return HttpResponse.json(
       { data: { imported: newUsers.length, errors: 0 } },
       { status: 201 }
@@ -445,7 +433,6 @@ export const adminHandlers = [
     const idx = users.findIndex((u) => u.id === userId);
     if (idx === -1) return notFound("User");
 
-    const oldRole = users[idx].role;
     const now = new Date().toISOString();
 
     users[idx] = {
@@ -454,62 +441,7 @@ export const adminHandlers = [
       updatedAt: now,
     };
 
-    // Update role counts if role changed
-    if (body.role && body.role !== oldRole) {
-      roles = roles.map((r) => {
-        if (r.role === oldRole) return { ...r, userCount: Math.max(0, r.userCount - 1) };
-        if (r.role === body.role) return { ...r, userCount: r.userCount + 1 };
-        return r;
-      });
-    }
-
     return HttpResponse.json({ data: users[idx] });
-  }),
-
-  // ── Roles & Permissions ───────────────────────────────────────────────────
-  http.get("/api/admin/roles", async () => {
-    await randomDelay();
-    return HttpResponse.json({ data: roles });
-  }),
-
-  http.patch("/api/admin/roles/:role/permissions", async ({ params, request }) => {
-    await randomDelay();
-    const roleKey = params.role as PortalRole;
-    const body = (await request.json()) as {
-      module: string;
-      action: string;
-      allowed: boolean;
-    };
-
-    const roleIdx = roles.findIndex((r) => r.role === roleKey);
-    if (roleIdx === -1) return notFound("Role");
-
-    if (!body.module || !body.action || typeof body.allowed !== "boolean") {
-      return validationError({
-        permissions: ["module, action, and allowed fields are required"],
-      });
-    }
-
-    const permIdx = roles[roleIdx].permissions.findIndex(
-      (p) => p.module === body.module
-    );
-    if (permIdx === -1) return notFound("Module");
-
-    const actionIdx = roles[roleIdx].permissions[permIdx].actions.findIndex(
-      (a) => a.name === body.action
-    );
-    if (actionIdx === -1) return notFound("Action");
-
-    roles[roleIdx].permissions[permIdx].actions[actionIdx].allowed =
-      body.allowed;
-
-    return HttpResponse.json({ data: roles[roleIdx] });
-  }),
-
-  // ── Budget ────────────────────────────────────────────────────────────────
-  http.get("/api/admin/budget", async () => {
-    await randomDelay();
-    return HttpResponse.json({ data: budget });
   }),
 
   // ── AI Governance ─────────────────────────────────────────────────────────
@@ -1537,9 +1469,17 @@ export const adminHandlers = [
 
   http.get("/api/admin/course-offerings/:id", async ({ params }) => {
     await randomDelay();
-    const c = courses.find((c) => c.id === params.id);
-    if (!c) return notFound("Course offering");
-    return HttpResponse.json({ data: toOfferingView(c) });
+    const idx = courses.findIndex((c) => c.id === params.id);
+    if (idx === -1) return notFound("Course offering");
+    // Hydrate enrolledStudentIds on first detail fetch so roster shows seed students
+    if (!courses[idx].enrolledStudentIds && courses[idx].enrolledCount > 0) {
+      const matching = users
+        .filter((u) => u.role === "student" && u.department === courses[idx].department)
+        .slice(0, courses[idx].enrolledCount)
+        .map((u) => u.id);
+      courses[idx] = { ...courses[idx], enrolledStudentIds: matching };
+    }
+    return HttpResponse.json({ data: toOfferingView(courses[idx]) });
   }),
 
   http.post(

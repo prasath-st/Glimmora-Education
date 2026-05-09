@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import Link from "next/link";
-import { ScrollText, ArrowLeft, ChevronDown, ChevronRight, Copy, Check } from "lucide-react";
+import { ScrollText, ChevronDown, ChevronRight, Copy, Check } from "lucide-react";
 import { useAuditTrail } from "@/lib/hooks/use-admin";
 import { PageHeader } from "@/components/shared/misc/page-header";
 import { StatusBadge } from "@/components/shared/feedback/status-badge";
@@ -20,14 +19,27 @@ const ROLE_OPTIONS = [
   { value: "placement", label: "Placement" },
 ];
 
+// Action values must match the seed AUDIT_ACTIONS in admin.generator.ts.
+// If you add a new audit action there, add it here too — otherwise the
+// filter silently returns nothing.
 const ACTION_OPTIONS = [
   { value: "", label: "All Actions" },
-  { value: "create", label: "Create" },
-  { value: "read", label: "Read" },
-  { value: "update", label: "Update" },
-  { value: "delete", label: "Delete" },
   { value: "login", label: "Login" },
-  { value: "export", label: "Export" },
+  { value: "user_create", label: "User Created" },
+  { value: "data_export", label: "Data Export" },
+  { value: "role_change", label: "Role Change" },
+  { value: "permission_change", label: "Permission Change" },
+  { value: "config_update", label: "Config Update" },
+  { value: "credential_issue", label: "Credential Issued" },
+  { value: "report_generate", label: "Report Generated" },
+  { value: "compliance_review", label: "Compliance Review" },
+  { value: "integration_sync", label: "Integration Sync" },
+];
+
+const OUTCOME_OPTIONS = [
+  { value: "", label: "All Outcomes" },
+  { value: "success", label: "Success only" },
+  { value: "failure", label: "Failure only" },
 ];
 
 function AuditRow({ entry }: { entry: AuditLogEntry }) {
@@ -44,14 +56,17 @@ function AuditRow({ entry }: { entry: AuditLogEntry }) {
     <div className="border-b border-border last:border-0">
       <button
         onClick={() => setExpanded((v) => !v)}
-        className="grid w-full grid-cols-[24px_minmax(140px,_1.2fr)_minmax(120px,_1fr)_80px_minmax(80px,_0.8fr)_minmax(120px,_1fr)_70px] items-center gap-3 px-5 py-3 text-left transition-colors hover:bg-muted/30"
+        className="grid w-full grid-cols-[24px_minmax(140px,1.2fr)_minmax(120px,1fr)_80px_minmax(80px,0.8fr)_minmax(120px,1fr)_70px] items-center gap-3 px-5 py-3 text-left transition-colors hover:bg-muted/30"
       >
         {expanded ? (
           <ChevronDown className="h-4 w-4 text-muted-foreground" />
         ) : (
           <ChevronRight className="h-4 w-4 text-muted-foreground" />
         )}
-        <span className="whitespace-nowrap text-xs text-muted-foreground">
+        <span
+          className="whitespace-nowrap text-xs text-muted-foreground"
+          title={formatDateTime(entry.timestamp)}
+        >
           {formatRelative(entry.timestamp)}
         </span>
         <span className="truncate text-sm font-medium">{entry.userName}</span>
@@ -142,12 +157,14 @@ export default function AdminAuditTrailPage() {
   const [search, setSearch] = useState("");
   const [actionFilter, setActionFilter] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
+  const [outcomeFilter, setOutcomeFilter] = useState("");
   const [page, setPage] = useState(1);
 
   const { data, isLoading, isError, refetch } = useAuditTrail({
     search: search || undefined,
     action: actionFilter || undefined,
     role: roleFilter || undefined,
+    outcome: outcomeFilter || undefined,
     page,
     pageSize: 20,
   });
@@ -160,13 +177,6 @@ export default function AdminAuditTrailPage() {
   return (
     <div className="space-y-6">
       <div>
-        <Link
-          href="/admin/compliance"
-          className="mb-4 inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
-        >
-          <ArrowLeft className="h-3.5 w-3.5" />
-          Back to Compliance
-        </Link>
         <PageHeader
           icon={ScrollText}
           title="Audit Trail"
@@ -174,7 +184,7 @@ export default function AdminAuditTrailPage() {
         />
         <p className="mt-2 text-sm text-muted-foreground">
           Showing all system activities. Use filters to narrow results by action
-          type, user role, or search term.
+          type, user role, outcome, or search term.
         </p>
       </div>
 
@@ -213,6 +223,20 @@ export default function AdminAuditTrailPage() {
             </option>
           ))}
         </select>
+        <select
+          value={outcomeFilter}
+          onChange={(e) => {
+            setOutcomeFilter(e.target.value);
+            setPage(1);
+          }}
+          className="flex h-10 rounded-lg border border-input bg-background px-3 text-sm transition-colors hover:border-muted-foreground focus:outline-none focus:ring-2 focus:ring-portal-accent focus:ring-offset-1"
+        >
+          {OUTCOME_OPTIONS.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
       </div>
 
       {/* Content */}
@@ -233,7 +257,7 @@ export default function AdminAuditTrailPage() {
             </div>
           ) : (
             <div className="overflow-hidden rounded-xl border border-border bg-card">
-              <div className="grid grid-cols-[24px_minmax(140px,_1.2fr)_minmax(120px,_1fr)_80px_minmax(80px,_0.8fr)_minmax(120px,_1fr)_70px] items-center gap-3 border-b border-border bg-muted/40 px-5 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              <div className="grid grid-cols-[24px_minmax(140px,1.2fr)_minmax(120px,1fr)_80px_minmax(80px,0.8fr)_minmax(120px,1fr)_70px] items-center gap-3 border-b border-border bg-muted/40 px-5 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 <span />
                 <span>When</span>
                 <span>User</span>

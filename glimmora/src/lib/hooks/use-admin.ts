@@ -10,8 +10,6 @@ import type {
   AuditLogEntry,
   AdminUser,
   CreateUserRequest,
-  RoleDefinition,
-  BudgetOverview,
   AiModel,
   BiasReport,
   AiOverrideLog,
@@ -94,6 +92,7 @@ export function useAuditTrail(params?: {
   search?: string;
   action?: string;
   role?: string;
+  outcome?: string;
   page?: number;
   pageSize?: number;
 }) {
@@ -101,6 +100,7 @@ export function useAuditTrail(params?: {
   if (params?.search) sp.set("search", params.search);
   if (params?.action) sp.set("action", params.action);
   if (params?.role) sp.set("role", params.role);
+  if (params?.outcome) sp.set("outcome", params.outcome);
   if (params?.page) sp.set("page", String(params.page));
   if (params?.pageSize) sp.set("pageSize", String(params.pageSize));
   const qs = sp.toString();
@@ -175,34 +175,6 @@ export function useUpdateUser() {
   });
 }
 
-// === Roles ===
-export function useRoles() {
-  return useQuery({
-    queryKey: ["admin", "roles"],
-    queryFn: () => api.get<RoleDefinition[]>("/api/admin/roles"),
-    select: (res) => res.data,
-  });
-}
-
-export function useTogglePermission() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ role, module, action }: { role: string; module: string; action: string }) =>
-      api.patch(`/api/admin/roles/${role}/permissions`, { module, action }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["admin", "roles"] });
-    },
-  });
-}
-
-// === Budget ===
-export function useBudgetOverview() {
-  return useQuery({
-    queryKey: ["admin", "budget"],
-    queryFn: () => api.get<BudgetOverview>("/api/admin/budget"),
-    select: (res) => res.data,
-  });
-}
 
 // === AI Governance ===
 export function useAiGovernanceOverview() {
@@ -427,6 +399,19 @@ export function useAdminCourseDetail(id: string) {
   return useQuery({
     queryKey: ["admin", "course", id],
     queryFn: () => api.get<AdminCourse>(`/api/admin/courses/${id}`),
+    select: (res) => res.data,
+    enabled: !!id,
+  });
+}
+
+// Returns the CourseOffering view (joined with catalog/section/programme) for a
+// single offering. Use this in offering-centric UIs that need fields like
+// `catalogCode`, `catalogName`, `programmeName` etc. — the bare /courses/:id
+// endpoint returns AdminCourse without those joined fields.
+export function useOfferingDetail(id: string) {
+  return useQuery({
+    queryKey: ["admin", "course-offering", id],
+    queryFn: () => api.get<CourseOffering>(`/api/admin/course-offerings/${id}`),
     select: (res) => res.data,
     enabled: !!id,
   });

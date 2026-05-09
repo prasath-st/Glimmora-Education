@@ -14,7 +14,6 @@ import {
   FlaskConical,
   Search,
   BrainCircuit,
-  UserPlus,
   Network,
   FileText,
   TrendingUp,
@@ -22,7 +21,6 @@ import {
   ShieldCheck,
   ScrollText,
   UserCog,
-  Wallet,
   Bot,
   FileBarChart,
   Building2,
@@ -165,12 +163,10 @@ export const PORTAL_NAVIGATION: Record<PortalRole, NavSection[]> = {
     {
       label: "Management",
       items: [
-        { label: "Admissions", href: "/admin/admissions", icon: UserPlus },
-        { label: "Users & Roles", href: "/admin/users", icon: UserCog },
+        { label: "Users", href: "/admin/users", icon: UserCog },
         { label: "Programs & Degrees", href: "/admin/programs", icon: BookOpen },
         { label: "Academic Calendar", href: "/admin/semesters", icon: Calendar },
         { label: "Course Catalog", href: "/admin/courses", icon: GraduationCap },
-        { label: "Budget & Resources", href: "/admin/budget", icon: Wallet },
       ],
     },
     {

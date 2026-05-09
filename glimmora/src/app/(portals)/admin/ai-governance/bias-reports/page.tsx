@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import Link from "next/link";
 import {
   Scale,
@@ -12,9 +12,7 @@ import {
   AlertTriangle,
   Download,
   Loader2,
-  X,
 } from "lucide-react";
-import * as Dialog from "@radix-ui/react-dialog";
 import { toast } from "sonner";
 import { useBiasReports, useReviewBiasReport } from "@/lib/hooks/use-admin";
 import { PageHeader } from "@/components/shared/misc/page-header";
@@ -22,6 +20,8 @@ import { GaugeChart } from "@/components/shared/charts/gauge-chart";
 import { StatusBadge } from "@/components/shared/feedback/status-badge";
 import { CardSkeleton } from "@/components/shared/feedback/loading-skeleton";
 import { ErrorState } from "@/components/shared/feedback/error-state";
+import { SlideDrawer } from "@/components/shared/feedback/slide-drawer";
+import { FormField } from "@/components/shared/forms/form-field";
 import { formatDate } from "@/lib/utils/format";
 import type { BiasReport } from "@/lib/api/types/admin.types";
 
@@ -235,25 +235,38 @@ function BiasReportCard({ report }: { report: BiasReport }) {
           </div>
         </div>
       )}
-      <ReviewBiasReportDialog open={reviewOpen} onOpenChange={setReviewOpen} report={report} />
+      <ReviewBiasReportDrawer
+        open={reviewOpen}
+        onClose={() => setReviewOpen(false)}
+        report={report}
+      />
     </div>
   );
 }
 
-function ReviewBiasReportDialog({
+function ReviewBiasReportDrawer({
   open,
-  onOpenChange,
+  onClose,
   report,
 }: {
   open: boolean;
-  onOpenChange: (o: boolean) => void;
+  onClose: () => void;
   report: BiasReport;
 }) {
   const [reviewer, setReviewer] = useState("");
   const [error, setError] = useState("");
   const review = useReviewBiasReport();
 
-  const handleSubmit = async () => {
+  // Re-seed local state whenever the drawer opens so a previous unsaved value
+  // doesn't leak across opens (or across reports if the user switches).
+  useEffect(() => {
+    if (open) {
+      setReviewer("");
+      setError("");
+    }
+  }, [open]);
+
+  const handleSubmit = useCallback(async () => {
     setError("");
     if (!reviewer.trim()) {
       setError("Reviewer name is required");
@@ -261,67 +274,55 @@ function ReviewBiasReportDialog({
     }
     try {
       await review.mutateAsync({ id: report.id, reviewedBy: reviewer.trim() });
-      toast.success(`${report.modelName} report marked as reviewed by ${reviewer.trim()}`);
-      onOpenChange(false);
+      toast.success(
+        `${report.modelName} report marked as reviewed by ${reviewer.trim()}`,
+      );
+      onClose();
     } catch {
       setError("Failed to mark as reviewed");
     }
-  };
+  }, [reviewer, report.id, report.modelName, review, onClose]);
 
   return (
-    <Dialog.Root
+    <SlideDrawer
       open={open}
-      onOpenChange={(o) => {
-        if (!o) {
-          setReviewer("");
-          setError("");
-        }
-        onOpenChange(o);
-      }}
+      onClose={onClose}
+      width="md"
+      title="Mark Report Reviewed"
+      description={`Confirm review of the ${report.modelName} bias report. Your name and timestamp will be logged in the Audit Trail.`}
+      footer={
+        <div className="flex justify-end gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg border border-border px-4 py-2 text-sm font-medium transition-colors hover:bg-muted"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={review.isPending}
+            className="flex items-center gap-2 rounded-lg bg-portal-accent px-4 py-2 text-sm font-medium text-portal-accent-foreground transition-colors hover:bg-portal-accent-hover disabled:opacity-50"
+          >
+            {review.isPending && (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            )}
+            Mark Reviewed
+          </button>
+        </div>
+      }
     >
-      <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-xl border border-border bg-card p-6 shadow-lg">
-          <div className="flex items-center justify-between">
-            <Dialog.Title className="text-lg font-semibold">Mark Report Reviewed</Dialog.Title>
-            <Dialog.Close className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
-              <X className="h-4 w-4" />
-            </Dialog.Close>
-          </div>
-          <Dialog.Description className="mt-1 text-sm text-muted-foreground">
-            Confirm you have reviewed the {report.modelName} bias report. Your name and timestamp will be logged in the Audit Trail.
-          </Dialog.Description>
-          <div className="mt-4 space-y-2">
-            <label className="text-sm font-medium">Reviewer Name</label>
-            <input
-              value={reviewer}
-              onChange={(e) => setReviewer(e.target.value)}
-              placeholder="e.g. Dr. Priya Patel — AI Ethics Committee"
-              className="flex h-10 w-full rounded-lg border border-input bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary-400"
-            />
-            {error && <p className="text-xs text-danger">{error}</p>}
-          </div>
-          <div className="mt-6 flex justify-end gap-3">
-            <button
-              type="button"
-              onClick={() => onOpenChange(false)}
-              className="rounded-lg border border-border px-4 py-2 text-sm font-medium transition-colors hover:bg-muted"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={handleSubmit}
-              disabled={review.isPending}
-              className="flex items-center gap-2 rounded-lg bg-portal-accent px-4 py-2 text-sm font-medium text-portal-accent-foreground transition-colors hover:bg-portal-accent-hover disabled:opacity-50"
-            >
-              {review.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-              Mark Reviewed
-            </button>
-          </div>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
+      <FormField
+        label="Reviewer Name"
+        placeholder="e.g. Dr. Priya Patel — AI Ethics Committee"
+        value={reviewer}
+        onChange={(e) => setReviewer(e.target.value)}
+        error={error}
+        hint="Your name will be appended to this report and recorded in the audit trail."
+        required
+      />
+    </SlideDrawer>
   );
 }
 

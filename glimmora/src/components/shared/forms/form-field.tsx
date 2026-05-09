@@ -1,6 +1,7 @@
 "use client";
 
 import { forwardRef } from "react";
+import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 
 interface FormFieldProps extends React.InputHTMLAttributes<HTMLInputElement> {
@@ -124,32 +125,38 @@ export const FormSelect = forwardRef<HTMLSelectElement, FormSelectProps>(
           {label}
           {required && <span className="ml-0.5 text-danger">*</span>}
         </label>
-        <select
-          ref={ref}
-          id={fieldId}
-          className={cn(
-            "flex h-10 w-full rounded-lg border bg-background px-3 text-sm transition-colors appearance-none",
-            "focus:outline-none focus:ring-1 focus:ring-primary-400",
-            "disabled:cursor-not-allowed disabled:opacity-50",
-            error
-              ? "border-danger focus:ring-danger"
-              : "border-input hover:border-muted-foreground",
-            className
-          )}
-          aria-invalid={!!error}
-          {...props}
-        >
-          {placeholder && (
-            <option value="" disabled>
-              {placeholder}
-            </option>
-          )}
-          {options.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
+        <div className="relative">
+          <select
+            ref={ref}
+            id={fieldId}
+            className={cn(
+              "flex h-10 w-full rounded-lg border bg-background pl-3 pr-9 text-sm transition-colors appearance-none",
+              "focus:outline-none focus:ring-1 focus:ring-primary-400",
+              "disabled:cursor-not-allowed disabled:opacity-50",
+              error
+                ? "border-danger focus:ring-danger"
+                : "border-input hover:border-muted-foreground",
+              className
+            )}
+            aria-invalid={!!error}
+            {...props}
+          >
+            {placeholder && (
+              <option value="" disabled>
+                {placeholder}
+              </option>
+            )}
+            {options.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+          <ChevronDown
+            aria-hidden="true"
+            className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+          />
+        </div>
         {error && (
           <p className="text-xs text-danger">{error}</p>
         )}

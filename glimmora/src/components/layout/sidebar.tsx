@@ -18,6 +18,19 @@ export function Sidebar({ portalName, sections }: SidebarProps) {
   const { sidebarCollapsed, toggleSidebar } = useUiStore();
   const { user } = useAuthStore();
 
+  // Pick the single most-specific nav item that matches the current path so
+  // a parent link (e.g. /admin/compliance) doesn't also highlight when the
+  // user is on a deeper sibling (e.g. /admin/compliance/audit-trail). The
+  // longest-prefix match wins; ties are impossible because hrefs are unique.
+  const activeHref = (() => {
+    const matches = sections
+      .flatMap((s) => s.items)
+      .map((i) => i.href)
+      .filter((href) => pathname === href || pathname.startsWith(href + "/"));
+    if (matches.length === 0) return null;
+    return matches.reduce((longest, h) => (h.length > longest.length ? h : longest));
+  })();
+
   return (
     <aside
       className={cn(
@@ -68,10 +81,7 @@ export function Sidebar({ portalName, sections }: SidebarProps) {
               )}
               <ul className="flex flex-col gap-0.5">
                 {section.items.map((item) => {
-                  const isActive =
-                    pathname === item.href ||
-                    (pathname.startsWith(item.href + "/") &&
-                      !item.href.endsWith("/dashboard"));
+                  const isActive = item.href === activeHref;
                   const Icon = item.icon;
 
                   return (

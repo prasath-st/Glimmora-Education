@@ -1,8 +1,10 @@
 import { z } from "zod";
 
 export const createUserSchema = z.object({
+  // Admin role intentionally excluded — Super Admin onboards University Admins,
+  // not the University Admin themselves.
   role: z.enum(
-    ["student", "faculty", "admin", "placement"],
+    ["student", "faculty", "placement"],
     { error: "Please select a role" }
   ),
   firstName: z.string().min(1, "First name is required"),
@@ -47,6 +49,28 @@ export const updateUserSchema = z.object({
 });
 
 export type UpdateUserFormData = z.infer<typeof updateUserSchema>;
+
+// Full edit form for the user detail page. All fields a University Admin
+// can change in a single edit session — name, contact, role, dept, plus
+// the role-specific fields. Status is a quick action elsewhere, not a form
+// field. studentId / employeeId are immutable and not edited here.
+export const editUserSchema = z.object({
+  name: z.string().min(2, "Name must be at least 2 characters"),
+  email: z.string().min(1, "Email is required").email("Please enter a valid email address"),
+  phone: z.string().optional(),
+  department: z.string().min(1, "Department is required"),
+  role: z.enum(["student", "faculty", "admin", "placement"]),
+  // Student-specific
+  program: z.string().optional(),
+  academicYearStart: z.string().optional(),
+  academicYearEnd: z.string().optional(),
+  currentSemester: z.string().optional(),
+  // Faculty-specific
+  designation: z.string().optional(),
+  specialization: z.string().optional(),
+});
+
+export type EditUserFormData = z.infer<typeof editUserSchema>;
 
 export const issueCredentialSchema = z.object({
   studentId: z.string().min(1, "Please select a student"),
@@ -159,7 +183,11 @@ export const createOfferingSchema = z.object({
   sectionId: z.string().min(1, "Select a section"),
   // Optional: leaving faculty empty marks the offering as draft.
   facultyId: z.string().nullable().optional(),
-  maxCapacity: z.coerce.number().min(1, "Capacity must be at least 1").max(500),
+  // Capacity is no longer a per-offering policy — anyone can enrol. We keep
+  // the field on the request payload (backed by a generous fixed default in
+  // the form) so the data shape stays compatible with existing handlers and
+  // future admission caps if a policy ever changes.
+  maxCapacity: z.coerce.number().min(1, "Capacity must be at least 1"),
 });
 
 export type CreateOfferingFormData = z.output<typeof createOfferingSchema>;
@@ -196,7 +224,8 @@ export const bulkImportUserSchema = z.object({
   email: z.string().min(1, "Email is required").email("Invalid email"),
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
-  role: z.enum(["student", "faculty", "admin", "placement"]),
+  // Admin role intentionally excluded — see createUserSchema rationale.
+  role: z.enum(["student", "faculty", "placement"]),
   department: z.string().min(1, "Department is required"),
   studentId: z.string().optional(),
   program: z.string().optional(),

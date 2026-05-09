@@ -1,48 +1,41 @@
 "use client";
 
-import { use, useState, useCallback, useMemo } from "react";
+import { use, useCallback, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
-  GraduationCap,
   ArrowLeft,
+  GraduationCap,
+  Hash,
+  Layers3,
+  Building2,
+  User,
   Users,
   Calendar,
-  User,
-  Hash,
-  Archive,
-  ArchiveRestore,
-  Upload,
-  X,
-  Mail,
-  Building2,
-  Layers3,
   BookText,
   AlertCircle,
+  Mail,
+  X,
+  Archive,
+  ArchiveRestore,
+  UserCog,
+  ClipboardList,
+  Search,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
-  useAdminCourseDetail,
-  useAdminUsers,
+  useOfferingDetail,
   useUpdateCourse,
   useUnenrollStudent,
+  useAdminUsers,
 } from "@/lib/hooks/use-admin";
 import { StatusBadge } from "@/components/shared/feedback/status-badge";
 import { CardSkeleton } from "@/components/shared/feedback/loading-skeleton";
 import { ErrorState } from "@/components/shared/feedback/error-state";
 import { ConfirmDialog } from "@/components/shared/feedback/confirm-dialog";
+import { AssignFacultyDialog } from "../_components/drawers";
 import { cn } from "@/lib/utils/cn";
 import type { AdminUser, CourseType } from "@/lib/api/types/admin.types";
-
-function getStatusVariant(
-  status: "draft" | "active" | "archived"
-): "warning" | "success" | "muted" {
-  const map = {
-    draft: "warning" as const,
-    active: "success" as const,
-    archived: "muted" as const,
-  };
-  return map[status];
-}
 
 const COURSE_TYPE_LABEL: Record<CourseType, string> = {
   core: "Core",
@@ -50,72 +43,75 @@ const COURSE_TYPE_LABEL: Record<CourseType, string> = {
   open_elective: "Open Elective",
 };
 
-function getCourseTypeVariant(type: CourseType): "info" | "warning" | "default" {
-  return type === "core" ? "info" : type === "programme_elective" ? "warning" : "default";
+function getCourseTypeVariant(
+  type: CourseType,
+): "info" | "warning" | "default" {
+  return type === "core"
+    ? "info"
+    : type === "programme_elective"
+      ? "warning"
+      : "default";
 }
 
-export default function AdminCourseDetailPage({
+function getStatusVariant(
+  status: "draft" | "active" | "archived",
+): "warning" | "success" | "muted" {
+  return status === "draft"
+    ? "warning"
+    : status === "active"
+      ? "success"
+      : "muted";
+}
+
+type Tab = "overview" | "roster";
+
+export default function OfferingDetailPage({
   params,
 }: {
   params: Promise<{ courseId: string }>;
 }) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const { courseId } = use(params);
-  const { data: course, isLoading, isError, refetch } = useAdminCourseDetail(courseId);
-  const updateCourse = useUpdateCourse();
-  const unenrollStudent = useUnenrollStudent();
 
-  // Fetch all students (paged big) so we can resolve enrolled IDs to user objects.
-  // For very large institutions this would be a dedicated /enrolled endpoint; mock is fine.
-  const { data: studentsData } = useAdminUsers({ role: "student", pageSize: 100 });
-  const allStudents = studentsData?.users ?? [];
-
-  const enrolledIds = course?.enrolledStudentIds ?? [];
-  const enrolled: AdminUser[] = useMemo(
-    () => allStudents.filter((s) => enrolledIds.includes(s.id)),
-    [allStudents, enrolledIds]
+  const tab = (searchParams.get("tab") as Tab) ?? "overview";
+  const setTab = useCallback(
+    (next: Tab) => {
+      const sp = new URLSearchParams(searchParams.toString());
+      sp.set("tab", next);
+      router.replace(`?${sp.toString()}`);
+    },
+    [router, searchParams],
   );
 
-  const [search, setSearch] = useState("");
-  const filteredEnrolled = useMemo(() => {
-    if (!search) return enrolled;
-    const q = search.toLowerCase();
-    return enrolled.filter(
-      (s) =>
-        s.name.toLowerCase().includes(q) ||
-        s.email.toLowerCase().includes(q) ||
-        (s.studentId ?? "").toLowerCase().includes(q)
-    );
-  }, [enrolled, search]);
+  const {
+    data: course,
+    isLoading,
+    isError,
+    refetch,
+  } = useOfferingDetail(courseId);
+  const updateCourse = useUpdateCourse();
 
-  const [archiveConfirm, setArchiveConfirm] = useState(false);
-  const [unenrollConfirm, setUnenrollConfirm] = useState<{ open: boolean; student: AdminUser | null }>({
-    open: false,
-    student: null,
-  });
+  const [archiveOpen, setArchiveOpen] = useState(false);
+  const [assignOpen, setAssignOpen] = useState(false);
+
+  const isArchived = course?.status === "archived";
+  const needsFaculty = course && !course.facultyId;
 
   const handleArchive = useCallback(async () => {
     if (!course) return;
-    const next = course.status === "archived" ? "active" : "archived";
+    const next = isArchived ? "active" : "archived";
     try {
       await updateCourse.mutateAsync({ id: course.id, status: next });
-      toast.success(next === "archived" ? `${course.code} archived` : `${course.code} restored`);
+      toast.success(
+        next === "archived"
+          ? `${course.catalogCode} archived. Existing students keep access to past materials.`
+          : `${course.catalogCode} restored.`,
+      );
     } catch {
-      toast.error("Failed to update course status");
+      toast.error("Could not change offering status.");
     }
-  }, [course, updateCourse]);
-
-  const handleUnenroll = useCallback(async () => {
-    if (!course || !unenrollConfirm.student) return;
-    try {
-      await unenrollStudent.mutateAsync({
-        courseId: course.id,
-        studentId: unenrollConfirm.student.id,
-      });
-      toast.success(`${unenrollConfirm.student.name} unenrolled from ${course.code}`);
-    } catch {
-      toast.error("Failed to unenroll student");
-    }
-  }, [course, unenrollConfirm.student, unenrollStudent]);
+  }, [course, isArchived, updateCourse]);
 
   if (isLoading) {
     return (
@@ -135,17 +131,13 @@ export default function AdminCourseDetailPage({
       <div className="space-y-6">
         <BackLink />
         <ErrorState
-          title="Failed to load course"
-          message="Could not retrieve course details."
+          title="Failed to load offering"
+          message="Could not retrieve the offering."
           onRetry={() => refetch()}
         />
       </div>
     );
   }
-
-  const capacityPct = Math.round((course.enrolledCount / course.maxCapacity) * 100);
-  const capacityColor =
-    capacityPct >= 90 ? "bg-danger" : capacityPct >= 70 ? "bg-yellow-500" : "bg-success";
 
   return (
     <div className="space-y-6">
@@ -155,23 +147,24 @@ export default function AdminCourseDetailPage({
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="font-mono text-sm text-portal-accent">{course.code}</span>
-            {course.regulationSnapshot && (
-              <span className="font-mono text-xs text-muted-foreground">
-                {course.regulationSnapshot}
-              </span>
-            )}
-            {course.courseType && (
-              <StatusBadge variant={getCourseTypeVariant(course.courseType)}>
-                {COURSE_TYPE_LABEL[course.courseType]}
-              </StatusBadge>
-            )}
+            <span className="font-mono text-sm text-portal-accent">
+              {course.catalogCode}
+            </span>
+            <span className="rounded-md border border-border bg-muted/40 px-2 py-0.5 font-mono text-xs text-muted-foreground">
+              {course.regulationSnapshot}
+            </span>
+            <StatusBadge variant={getCourseTypeVariant(course.courseType)}>
+              {COURSE_TYPE_LABEL[course.courseType]}
+            </StatusBadge>
             <StatusBadge variant={getStatusVariant(course.status)} dot>
               {course.status}
             </StatusBadge>
           </div>
-          <h1 className="mt-1 text-2xl font-semibold">{course.name}</h1>
-          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">{course.description}</p>
+          <h1 className="mt-1 text-2xl font-semibold">{course.catalogName}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {course.sectionName} · {course.semesterName} ·{" "}
+            {course.academicYearName}
+          </p>
           {course.catalogId && (
             <Link
               href={`/admin/courses/catalog/${course.catalogId}`}
@@ -182,17 +175,28 @@ export default function AdminCourseDetailPage({
             </Link>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {!isArchived && needsFaculty && (
+            <button
+              type="button"
+              onClick={() => setAssignOpen(true)}
+              className="flex items-center gap-2 rounded-lg border border-portal-accent/40 bg-portal-accent-light px-3 py-2 text-sm font-medium text-portal-accent transition-colors hover:bg-portal-accent-light/80"
+            >
+              <UserCog className="h-3.5 w-3.5" />
+              Assign faculty
+            </button>
+          )}
           <button
-            onClick={() => setArchiveConfirm(true)}
+            type="button"
+            onClick={() => setArchiveOpen(true)}
             className={cn(
               "flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
-              course.status === "archived"
+              isArchived
                 ? "border-success/30 text-success hover:bg-success-light"
-                : "border-danger/30 text-danger hover:bg-danger-light"
+                : "border-danger/30 text-danger hover:bg-danger-light",
             )}
           >
-            {course.status === "archived" ? (
+            {isArchived ? (
               <>
                 <ArchiveRestore className="h-3.5 w-3.5" /> Restore
               </>
@@ -205,50 +209,146 @@ export default function AdminCourseDetailPage({
         </div>
       </div>
 
-      {/* Draft warning when faculty is unassigned */}
+      {/* Draft warning */}
       {course.status === "draft" && !course.facultyId && (
         <div className="flex items-center gap-2 rounded-lg border border-warning/30 bg-warning-light px-3 py-2 text-xs text-warning">
           <AlertCircle className="h-3.5 w-3.5" />
           <span>
-            This offering is in <strong>Draft</strong> — assign faculty to make it visible
-            in the faculty and student portals.
+            This offering is in <strong>Draft</strong> — assign faculty to make
+            it visible in the faculty and student portals.
           </span>
         </div>
       )}
 
-      {/* Info grid */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {/* Tabs */}
+      <div className="flex w-fit items-center gap-1 rounded-lg border border-border bg-muted/40 p-1">
+        <TabButton
+          active={tab === "overview"}
+          onClick={() => setTab("overview")}
+          icon={ClipboardList}
+          label="Overview"
+        />
+        <TabButton
+          active={tab === "roster"}
+          onClick={() => setTab("roster")}
+          icon={Users}
+          label="Roster"
+          count={course.enrolledCount}
+        />
+      </div>
+
+      {tab === "overview" ? (
+        <OverviewTab course={course} />
+      ) : (
+        <RosterTab
+          courseId={course.id}
+          enrolledIds={course.enrolledStudentIds ?? []}
+          isArchived={isArchived ?? false}
+          courseCode={course.catalogCode}
+        />
+      )}
+
+      <AssignFacultyDialog
+        open={assignOpen}
+        onClose={() => setAssignOpen(false)}
+        offering={course}
+      />
+      <ConfirmDialog
+        open={archiveOpen}
+        onOpenChange={setArchiveOpen}
+        title={isArchived ? "Restore offering" : "Archive offering"}
+        description={
+          isArchived
+            ? `Restore "${course.catalogCode}" for ${course.sectionName}? Faculty and students will see it again.`
+            : `Archive "${course.catalogCode}" for ${course.sectionName}? Existing enrollments are preserved; new ones are blocked.`
+        }
+        confirmLabel={isArchived ? "Restore" : "Archive"}
+        variant={isArchived ? "default" : "danger"}
+        onConfirm={handleArchive}
+      />
+    </div>
+  );
+}
+
+/* ── Tabs ──────────────────────────────────────────────────────────────── */
+
+function TabButton({
+  active,
+  onClick,
+  icon: Icon,
+  label,
+  count,
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: typeof Users;
+  label: string;
+  count?: number;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-all",
+        active
+          ? "bg-background text-foreground shadow-sm ring-1 ring-border/50"
+          : "text-muted-foreground hover:bg-background/50 hover:text-foreground",
+      )}
+    >
+      <Icon className="h-3.5 w-3.5" />
+      <span>{label}</span>
+      {typeof count === "number" && (
+        <span
+          className={cn(
+            "rounded-full px-1.5 text-[10px] tabular-nums",
+            active
+              ? "bg-portal-accent-light text-portal-accent"
+              : "bg-muted text-muted-foreground",
+          )}
+        >
+          {count}
+        </span>
+      )}
+    </button>
+  );
+}
+
+/* ── Overview Tab ──────────────────────────────────────────────────────── */
+
+function OverviewTab({
+  course,
+}: {
+  course: NonNullable<ReturnType<typeof useOfferingDetail>["data"]>;
+}) {
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <InfoCard
           icon={Hash}
           label="Credits"
-          value={`${course.creditsSnapshot ?? course.credits} credit${(course.creditsSnapshot ?? course.credits) !== 1 ? "s" : ""}`}
+          value={`${course.creditsSnapshot} credit${course.creditsSnapshot !== 1 ? "s" : ""}`}
         />
         <InfoCard
           icon={Layers3}
           label="Weekly L:T:P"
-          value={
-            course.lectureHours !== undefined
-              ? `${course.lectureHours} : ${course.tutorialHours} : ${course.practicalHours}`
-              : "—"
-          }
+          value={`${course.lectureHours} : ${course.tutorialHours} : ${course.practicalHours}`}
         />
-        <InfoCard icon={GraduationCap} label="Department" value={course.department} />
+        <InfoCard
+          icon={GraduationCap}
+          label="Department"
+          value={course.department}
+        />
         <InfoCard
           icon={User}
           label="Faculty"
-          value={course.facultyName || "Unassigned"}
+          value={course.facultyName ?? "Unassigned"}
         />
-
         <InfoCard
           icon={Building2}
           label="Programme"
-          value={course.programmeName ?? "—"}
-          hint={course.studyYear ? `Study Year ${course.studyYear}` : undefined}
-        />
-        <InfoCard
-          icon={Users}
-          label="Section"
-          value={course.sectionName ?? "—"}
+          value={course.programmeName}
+          hint={`Year ${course.studyYear}`}
         />
         <InfoCard
           icon={Calendar}
@@ -256,126 +356,199 @@ export default function AdminCourseDetailPage({
           value={course.semesterName}
           hint={course.academicYearName}
         />
-
-        {/* Capacity card spans 1 in the 4-col grid; widen on smaller layouts */}
-        <div className="rounded-xl border border-border bg-card p-5 sm:col-span-2 lg:col-span-1">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-              <Users className="h-4 w-4" />
-              Enrollment
-            </div>
-            <p className="text-sm">
-              <span className="font-semibold text-foreground">{course.enrolledCount}</span>
-              <span className="text-muted-foreground"> / {course.maxCapacity}</span>
-              <span className="ml-2 text-xs text-muted-foreground">({capacityPct}%)</span>
-            </p>
-          </div>
-          <div className="mt-3 h-2 w-full rounded-full bg-muted">
-            <div
-              className={cn("h-2 rounded-full transition-all", capacityColor)}
-              style={{ width: `${Math.min(100, capacityPct)}%` }}
-            />
-          </div>
-          {capacityPct >= 90 && (
-            <p className="mt-2 text-xs text-danger">Near capacity — consider increasing the limit before next term.</p>
-          )}
-        </div>
       </div>
 
-      {/* Enrolled students */}
-      <div className="rounded-xl border border-border bg-card">
-        <div className="flex flex-col gap-3 border-b border-border p-5 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h2 className="text-base font-semibold">Enrolled Students</h2>
-            <p className="text-xs text-muted-foreground">
-              {enrolled.length} of {course.maxCapacity} seats filled
-            </p>
-          </div>
-          {course.status !== "archived" && (
-            <Link
-              href={`/admin/courses?enroll=${course.id}`}
-              className="flex items-center gap-2 self-start rounded-lg bg-portal-accent px-3 py-1.5 text-xs font-medium text-portal-accent-foreground transition-colors hover:bg-portal-accent-hover"
-            >
-              <Upload className="h-3 w-3" /> Enroll More
-            </Link>
-          )}
+      <div className="rounded-xl border border-border bg-card p-5">
+        <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+          <Users className="h-4 w-4" /> Enrollment
         </div>
+        <p className="mt-3 text-sm">
+          <span className="text-3xl font-semibold text-foreground">
+            {course.enrolledCount}
+          </span>
+          <span className="ml-2 text-muted-foreground">
+            student{course.enrolledCount === 1 ? "" : "s"} enrolled
+          </span>
+        </p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Open enrolment — anyone can join.
+        </p>
+      </div>
+    </div>
+  );
+}
 
-        <div className="border-b border-border p-3">
+/* ── Roster Tab ────────────────────────────────────────────────────────── */
+
+function RosterTab({
+  courseId,
+  enrolledIds,
+  isArchived,
+  courseCode,
+}: {
+  courseId: string;
+  enrolledIds: string[];
+  isArchived: boolean;
+  courseCode: string;
+}) {
+  const unenrollStudent = useUnenrollStudent();
+  const { data: studentsData, isLoading } = useAdminUsers({
+    role: "student",
+    pageSize: 500,
+  });
+  const allStudents = studentsData?.users ?? [];
+
+  const enrolled: AdminUser[] = useMemo(
+    () => allStudents.filter((s) => enrolledIds.includes(s.id)),
+    [allStudents, enrolledIds],
+  );
+
+  const [search, setSearch] = useState("");
+  const filtered = useMemo(() => {
+    if (!search) return enrolled;
+    const q = search.toLowerCase();
+    return enrolled.filter(
+      (s) =>
+        s.name.toLowerCase().includes(q) ||
+        s.email.toLowerCase().includes(q) ||
+        (s.studentId ?? "").toLowerCase().includes(q),
+    );
+  }, [enrolled, search]);
+
+  const [unenrollConfirm, setUnenrollConfirm] = useState<{
+    open: boolean;
+    student: AdminUser | null;
+  }>({ open: false, student: null });
+
+  const handleUnenroll = useCallback(async () => {
+    if (!unenrollConfirm.student) return;
+    try {
+      await unenrollStudent.mutateAsync({
+        courseId,
+        studentId: unenrollConfirm.student.id,
+      });
+      toast.success(
+        `${unenrollConfirm.student.name} unenrolled from ${courseCode}`,
+      );
+    } catch {
+      toast.error("Failed to unenroll student");
+    }
+  }, [courseId, courseCode, unenrollConfirm.student, unenrollStudent]);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="relative w-full sm:max-w-sm">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <input
             type="text"
-            placeholder="Search enrolled students by name, email, or student ID..."
+            placeholder="Search by name, email, or student ID..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="flex h-9 w-full rounded-lg border border-input bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary-400"
+            className="flex h-10 w-full rounded-lg border border-input bg-background pl-9 pr-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary-400"
           />
         </div>
+        <p className="text-xs text-muted-foreground">
+          {enrolled.length} enrolled{search ? ` · ${filtered.length} match` : ""}
+        </p>
+      </div>
 
-        {enrolled.length === 0 ? (
-          <div className="flex flex-col items-center justify-center px-6 py-12 text-center">
+      <div className="overflow-hidden rounded-xl border border-border bg-card">
+        {isLoading ? (
+          <div className="p-5">
+            <CardSkeleton />
+          </div>
+        ) : enrolled.length === 0 ? (
+          <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
             <Users className="h-10 w-10 text-muted-foreground/40" />
-            <p className="mt-3 text-sm font-medium">No students enrolled yet</p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Use the Enroll More button to add students from {course.department}.
+            <p className="mt-3 text-sm font-medium">No students enrolled</p>
+            <p className="mt-1 max-w-sm text-xs text-muted-foreground">
+              {isArchived
+                ? "This offering is archived; no student records were retained on it."
+                : "Students will appear here once enrolled."}
             </p>
           </div>
-        ) : filteredEnrolled.length === 0 ? (
+        ) : filtered.length === 0 ? (
           <div className="px-6 py-12 text-center text-sm text-muted-foreground">
             No students match &ldquo;{search}&rdquo;.
           </div>
         ) : (
-          <div className="divide-y divide-border">
-            {filteredEnrolled.map((s) => (
-              <div
-                key={s.id}
-                className="grid grid-cols-[2fr_2fr_1fr_120px] items-center gap-3 px-5 py-3"
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="grid h-8 w-8 place-items-center rounded-full bg-portal-accent-light text-xs font-semibold text-portal-accent shrink-0">
-                    {s.name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium">{s.name}</p>
-                    {s.studentId && (
-                      <p className="truncate text-xs font-mono text-muted-foreground">{s.studentId}</p>
-                    )}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground min-w-0">
-                  <Mail className="h-3.5 w-3.5 shrink-0" />
-                  <span className="truncate">{s.email}</span>
-                </div>
-                <p className="text-sm text-muted-foreground">{s.department}</p>
-                <div className="flex justify-end">
-                  {course.status !== "archived" && (
-                    <button
-                      onClick={() => setUnenrollConfirm({ open: true, student: s })}
-                      className="rounded-lg border border-danger/20 px-3 py-1.5 text-xs font-medium text-danger transition-colors hover:bg-danger-light"
-                    >
-                      <X className="inline h-3 w-3 mr-1" />
-                      Unenroll
-                    </button>
-                  )}
-                </div>
-              </div>
-            ))}
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-muted/50">
+                <tr className="border-b border-border">
+                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Student
+                  </th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Email
+                  </th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Department
+                  </th>
+                  <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((s) => (
+                  <tr
+                    key={s.id}
+                    className="border-b border-border last:border-0 hover:bg-muted/30"
+                  >
+                    <td className="px-5 py-3">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-portal-accent-light text-xs font-semibold text-portal-accent">
+                          {s.name
+                            .split(" ")
+                            .map((n) => n[0])
+                            .join("")
+                            .slice(0, 2)
+                            .toUpperCase()}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium">
+                            {s.name}
+                          </p>
+                          {s.studentId && (
+                            <p className="truncate font-mono text-xs text-muted-foreground">
+                              {s.studentId}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-5 py-3">
+                      <span className="flex min-w-0 items-center gap-2 text-sm text-muted-foreground">
+                        <Mail className="h-3.5 w-3.5 shrink-0" />
+                        <span className="truncate">{s.email}</span>
+                      </span>
+                    </td>
+                    <td className="px-5 py-3 text-sm text-muted-foreground">
+                      {s.department}
+                    </td>
+                    <td className="px-5 py-3 text-right">
+                      {!isArchived && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setUnenrollConfirm({ open: true, student: s })
+                          }
+                          className="rounded-lg border border-danger/20 px-3 py-1.5 text-xs font-medium text-danger transition-colors hover:bg-danger-light"
+                        >
+                          <X className="mr-1 inline h-3 w-3" />
+                          Unenroll
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </div>
-
-      <ConfirmDialog
-        open={archiveConfirm}
-        onOpenChange={setArchiveConfirm}
-        title={course.status === "archived" ? "Restore Course" : "Archive Course"}
-        description={
-          course.status === "archived"
-            ? `Restore "${course.code}"? It will become available for enrollment again.`
-            : `Archive "${course.code}"? ${course.enrolledCount} student${course.enrolledCount !== 1 ? "s" : ""} currently enrolled. Existing enrollments stay; new enrollments will be blocked.`
-        }
-        confirmLabel={course.status === "archived" ? "Restore" : "Archive"}
-        variant={course.status === "archived" ? "default" : "danger"}
-        onConfirm={handleArchive}
-      />
 
       <ConfirmDialog
         open={unenrollConfirm.open}
@@ -383,7 +556,7 @@ export default function AdminCourseDetailPage({
         title="Unenroll Student"
         description={
           unenrollConfirm.student
-            ? `Remove ${unenrollConfirm.student.name} from ${course.code}? Their grade history (if any) is preserved.`
+            ? `Remove ${unenrollConfirm.student.name} from ${courseCode}? Their grade history (if any) is preserved.`
             : ""
         }
         confirmLabel="Unenroll"
@@ -394,10 +567,12 @@ export default function AdminCourseDetailPage({
   );
 }
 
+/* ── Helpers ───────────────────────────────────────────────────────────── */
+
 function BackLink() {
   return (
     <Link
-      href="/admin/courses"
+      href="/admin/courses?tab=offerings"
       className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
     >
       <ArrowLeft className="h-3.5 w-3.5" />

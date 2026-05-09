@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import Link from "next/link";
 import {
   Cpu,
@@ -13,26 +13,34 @@ import {
   RefreshCw,
   Pencil,
   Ban,
+  ArchiveRestore,
   Loader2,
-  X,
+  MoreHorizontal,
 } from "lucide-react";
-import * as Dialog from "@radix-ui/react-dialog";
+import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { toast } from "sonner";
-import { useAiModels, useUpdateAiModel, useTriggerRetrain } from "@/lib/hooks/use-admin";
+import {
+  useAiModels,
+  useUpdateAiModel,
+  useTriggerRetrain,
+} from "@/lib/hooks/use-admin";
 import { PageHeader } from "@/components/shared/misc/page-header";
 import { StatusBadge } from "@/components/shared/feedback/status-badge";
 import { CardSkeleton } from "@/components/shared/feedback/loading-skeleton";
 import { ErrorState } from "@/components/shared/feedback/error-state";
 import { ConfirmDialog } from "@/components/shared/feedback/confirm-dialog";
+import { SlideDrawer } from "@/components/shared/feedback/slide-drawer";
+import { FormField } from "@/components/shared/forms/form-field";
 import {
   formatPercentage,
   formatNumber,
   formatRelative,
 } from "@/lib/utils/format";
+import { cn } from "@/lib/utils/cn";
 import type { AiModel } from "@/lib/api/types/admin.types";
 
 function getModelStatusVariant(
-  status: AiModel["status"]
+  status: AiModel["status"],
 ): "success" | "muted" | "warning" | "danger" {
   const map = {
     active: "success" as const,
@@ -41,6 +49,78 @@ function getModelStatusVariant(
     deprecated: "danger" as const,
   };
   return map[status];
+}
+
+function ModelRowActions({
+  model,
+  onRetrain,
+  onEditOwner,
+  onToggleDeprecate,
+}: {
+  model: AiModel;
+  onRetrain: () => void;
+  onEditOwner: () => void;
+  onToggleDeprecate: () => void;
+}) {
+  const isDeprecated = model.status === "deprecated";
+  const retrainDisabled =
+    model.status === "training" || model.status === "deprecated";
+
+  return (
+    <DropdownMenu.Root>
+      <DropdownMenu.Trigger asChild>
+        <button
+          onClick={(e) => e.stopPropagation()}
+          aria-label="Model actions"
+          className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+        >
+          <MoreHorizontal className="h-4 w-4" />
+        </button>
+      </DropdownMenu.Trigger>
+      <DropdownMenu.Portal>
+        <DropdownMenu.Content
+          align="end"
+          sideOffset={4}
+          onClick={(e) => e.stopPropagation()}
+          className="z-50 w-52 rounded-lg bg-card py-2 shadow-2xl ring-1 ring-border/30"
+        >
+          <DropdownMenu.Item
+            onSelect={onRetrain}
+            disabled={retrainDisabled}
+            className="flex cursor-pointer items-center gap-3 px-4 py-2.5 text-sm outline-none transition-colors hover:bg-muted focus:bg-muted data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50"
+          >
+            <RefreshCw className="h-4 w-4 text-muted-foreground" />
+            {model.status === "training" ? "Retraining…" : "Trigger Retrain"}
+          </DropdownMenu.Item>
+          <DropdownMenu.Item
+            onSelect={onEditOwner}
+            className="flex cursor-pointer items-center gap-3 px-4 py-2.5 text-sm outline-none transition-colors hover:bg-muted focus:bg-muted"
+          >
+            <Pencil className="h-4 w-4 text-muted-foreground" />
+            Edit owner
+          </DropdownMenu.Item>
+          <DropdownMenu.Separator className="my-1 h-px bg-border/50" />
+          <DropdownMenu.Item
+            onSelect={onToggleDeprecate}
+            className={cn(
+              "flex cursor-pointer items-center gap-3 px-4 py-2.5 text-sm outline-none transition-colors hover:bg-muted focus:bg-muted",
+              isDeprecated ? "text-success" : "text-danger",
+            )}
+          >
+            {isDeprecated ? (
+              <>
+                <ArchiveRestore className="h-4 w-4" /> Reactivate
+              </>
+            ) : (
+              <>
+                <Ban className="h-4 w-4" /> Deprecate
+              </>
+            )}
+          </DropdownMenu.Item>
+        </DropdownMenu.Content>
+      </DropdownMenu.Portal>
+    </DropdownMenu.Root>
+  );
 }
 
 function ModelCard({ model }: { model: AiModel }) {
@@ -52,10 +132,15 @@ function ModelCard({ model }: { model: AiModel }) {
   const triggerRetrain = useTriggerRetrain();
 
   const handleDeprecate = useCallback(async () => {
-    const next: AiModel["status"] = model.status === "deprecated" ? "active" : "deprecated";
+    const next: AiModel["status"] =
+      model.status === "deprecated" ? "active" : "deprecated";
     try {
       await updateModel.mutateAsync({ id: model.id, status: next });
-      toast.success(next === "deprecated" ? `${model.name} deprecated` : `${model.name} reactivated`);
+      toast.success(
+        next === "deprecated"
+          ? `${model.name} deprecated`
+          : `${model.name} reactivated`,
+      );
     } catch {
       toast.error("Failed to update model status");
     }
@@ -64,7 +149,9 @@ function ModelCard({ model }: { model: AiModel }) {
   const handleRetrain = useCallback(async () => {
     try {
       await triggerRetrain.mutateAsync(model.id);
-      toast.success(`Retraining started for ${model.name}. Status will update when complete.`);
+      toast.success(
+        `Retraining started for ${model.name}. Status will update when complete.`,
+      );
     } catch {
       toast.error("Failed to trigger retrain");
     }
@@ -72,18 +159,18 @@ function ModelCard({ model }: { model: AiModel }) {
 
   return (
     <div className="rounded-xl border border-border bg-card">
-      <button
-        onClick={() => setExpanded(!expanded)}
-        className="flex w-full items-start justify-between p-6 text-left transition-colors hover:bg-muted/30"
-      >
-        <div className="flex items-start gap-3">
+      <div className="flex items-start justify-between gap-3 p-6">
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="flex flex-1 items-start gap-3 text-left"
+        >
           {expanded ? (
-            <ChevronDown className="mt-0.5 h-4 w-4 flex-shrink-0 text-muted-foreground" />
+            <ChevronDown className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
           ) : (
-            <ChevronRight className="mt-0.5 h-4 w-4 flex-shrink-0 text-muted-foreground" />
+            <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
           )}
-          <div>
-            <div className="flex items-center gap-2">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
               <h3 className="text-sm font-semibold">{model.name}</h3>
               <StatusBadge variant="muted">v{model.version}</StatusBadge>
               <StatusBadge variant={getModelStatusVariant(model.status)} dot>
@@ -106,47 +193,20 @@ function ModelCard({ model }: { model: AiModel }) {
               </span>
             </div>
           </div>
-        </div>
-      </button>
+        </button>
+        <ModelRowActions
+          model={model}
+          onRetrain={() => setRetrainOpen(true)}
+          onEditOwner={() => setEditOpen(true)}
+          onToggleDeprecate={() => setDeprecateOpen(true)}
+        />
+      </div>
       {expanded && (
         <div className="space-y-4 border-t border-border p-6">
-          {/* Actions */}
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => setRetrainOpen(true)}
-              disabled={model.status === "training" || model.status === "deprecated"}
-              className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted disabled:opacity-50"
-            >
-              {model.status === "training" ? (
-                <>
-                  <Loader2 className="h-3 w-3 animate-spin" /> Retraining…
-                </>
-              ) : (
-                <>
-                  <RefreshCw className="h-3 w-3" /> Trigger Retrain
-                </>
-              )}
-            </button>
-            <button
-              onClick={() => setEditOpen(true)}
-              className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted"
-            >
-              <Pencil className="h-3 w-3" /> Edit Owner
-            </button>
-            <button
-              onClick={() => setDeprecateOpen(true)}
-              className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
-                model.status === "deprecated"
-                  ? "border-success/30 text-success hover:bg-success-light"
-                  : "border-danger/30 text-danger hover:bg-danger-light"
-              }`}
-            >
-              <Ban className="h-3 w-3" /> {model.status === "deprecated" ? "Reactivate" : "Deprecate"}
-            </button>
-          </div>
-
           <div>
-            <p className="text-xs font-medium text-muted-foreground">Description</p>
+            <p className="text-xs font-medium text-muted-foreground">
+              Description
+            </p>
             <p className="mt-1 text-sm">{model.description}</p>
           </div>
           <div className="flex items-center gap-2">
@@ -186,7 +246,11 @@ function ModelCard({ model }: { model: AiModel }) {
           )}
         </div>
       )}
-      <EditOwnerDialog open={editOpen} onOpenChange={setEditOpen} model={model} />
+      <EditOwnerDrawer
+        open={editOpen}
+        onClose={() => setEditOpen(false)}
+        model={model}
+      />
       <ConfirmDialog
         open={retrainOpen}
         onOpenChange={setRetrainOpen}
@@ -198,7 +262,9 @@ function ModelCard({ model }: { model: AiModel }) {
       <ConfirmDialog
         open={deprecateOpen}
         onOpenChange={setDeprecateOpen}
-        title={model.status === "deprecated" ? "Reactivate Model" : "Deprecate Model"}
+        title={
+          model.status === "deprecated" ? "Reactivate Model" : "Deprecate Model"
+        }
         description={
           model.status === "deprecated"
             ? `Reactivate ${model.name}? It will resume serving predictions.`
@@ -212,20 +278,29 @@ function ModelCard({ model }: { model: AiModel }) {
   );
 }
 
-function EditOwnerDialog({
+function EditOwnerDrawer({
   open,
-  onOpenChange,
+  onClose,
   model,
 }: {
   open: boolean;
-  onOpenChange: (o: boolean) => void;
+  onClose: () => void;
   model: AiModel;
 }) {
   const [owner, setOwner] = useState(model.owner);
   const [error, setError] = useState("");
   const updateModel = useUpdateAiModel();
 
-  const handleSave = async () => {
+  // Re-seed local state whenever the drawer opens so a previous unsaved edit
+  // doesn't leak across opens (or across models if the user switches).
+  useEffect(() => {
+    if (open) {
+      setOwner(model.owner);
+      setError("");
+    }
+  }, [open, model.owner]);
+
+  const handleSave = useCallback(async () => {
     setError("");
     if (!owner.trim()) {
       setError("Owner name is required");
@@ -234,66 +309,52 @@ function EditOwnerDialog({
     try {
       await updateModel.mutateAsync({ id: model.id, owner: owner.trim() });
       toast.success(`Owner updated to ${owner.trim()}`);
-      onOpenChange(false);
+      onClose();
     } catch {
       setError("Failed to update owner");
     }
-  };
+  }, [owner, model.id, updateModel, onClose]);
 
   return (
-    <Dialog.Root
+    <SlideDrawer
       open={open}
-      onOpenChange={(o) => {
-        if (!o) {
-          setOwner(model.owner);
-          setError("");
-        }
-        onOpenChange(o);
-      }}
+      onClose={onClose}
+      width="md"
+      title="Edit Model Owner"
+      description={`Update the responsible owner for ${model.name}. Used for escalations and audits.`}
+      footer={
+        <div className="flex justify-end gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg border border-border px-4 py-2 text-sm font-medium transition-colors hover:bg-muted"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={updateModel.isPending}
+            className="flex items-center gap-2 rounded-lg bg-portal-accent px-4 py-2 text-sm font-medium text-portal-accent-foreground transition-colors hover:bg-portal-accent-hover disabled:opacity-50"
+          >
+            {updateModel.isPending && (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            )}
+            Save changes
+          </button>
+        </div>
+      }
     >
-      <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-xl border border-border bg-card p-6 shadow-lg">
-          <div className="flex items-center justify-between">
-            <Dialog.Title className="text-lg font-semibold">Edit Model Owner</Dialog.Title>
-            <Dialog.Close className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
-              <X className="h-4 w-4" />
-            </Dialog.Close>
-          </div>
-          <Dialog.Description className="mt-1 text-sm text-muted-foreground">
-            Update the responsible owner for {model.name}. Used for escalations and audits.
-          </Dialog.Description>
-          <div className="mt-4 space-y-2">
-            <label className="text-sm font-medium">Owner</label>
-            <input
-              value={owner}
-              onChange={(e) => setOwner(e.target.value)}
-              placeholder="e.g. Dr. Aarav Sharma — AI Governance Lead"
-              className="flex h-10 w-full rounded-lg border border-input bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary-400"
-            />
-            {error && <p className="text-xs text-danger">{error}</p>}
-          </div>
-          <div className="mt-6 flex justify-end gap-3">
-            <button
-              type="button"
-              onClick={() => onOpenChange(false)}
-              className="rounded-lg border border-border px-4 py-2 text-sm font-medium transition-colors hover:bg-muted"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={handleSave}
-              disabled={updateModel.isPending}
-              className="flex items-center gap-2 rounded-lg bg-portal-accent px-4 py-2 text-sm font-medium text-portal-accent-foreground transition-colors hover:bg-portal-accent-hover disabled:opacity-50"
-            >
-              {updateModel.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-              Save
-            </button>
-          </div>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
+      <FormField
+        label="Owner"
+        placeholder="e.g. Dr. Aarav Sharma — AI Governance Lead"
+        value={owner}
+        onChange={(e) => setOwner(e.target.value)}
+        error={error}
+        hint="Person accountable for this model — receives escalations and audit notices."
+        required
+      />
+    </SlideDrawer>
   );
 }
 
@@ -366,7 +427,8 @@ export default function AdminAiModelsPage() {
       </div>
 
       <p className="text-xs text-muted-foreground">
-        Models are automatically retrained based on data drift detection. Last system-wide retraining check: 7 days ago.
+        Models are automatically retrained based on data drift detection. Last
+        system-wide retraining check: 7 days ago.
       </p>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">

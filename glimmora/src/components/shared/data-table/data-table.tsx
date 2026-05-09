@@ -14,6 +14,15 @@ import {
   type VisibilityState,
   type RowSelectionState,
 } from "@tanstack/react-table";
+
+declare module "@tanstack/react-table" {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  interface ColumnMeta<TData extends RowData, TValue> {
+    /** Extra classes applied to both <th> and <td> for this column. */
+    cellClassName?: string;
+  }
+}
+import type { RowData } from "@tanstack/react-table";
 import {
   ArrowUpDown,
   ArrowUp,
@@ -112,7 +121,10 @@ export function DataTable<TData, TValue>({
                   {headerGroup.headers.map((header) => (
                     <th
                       key={header.id}
-                      className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground"
+                      className={cn(
+                        "px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground",
+                        header.column.columnDef.meta?.cellClassName,
+                      )}
                     >
                       {header.isPlaceholder ? null : (
                         <div
@@ -162,13 +174,19 @@ export function DataTable<TData, TValue>({
                     key={row.id}
                     onClick={() => onRowClick?.(row.original)}
                     className={cn(
-                      "border-b border-border last:border-b-0 transition-colors",
+                      "group border-b border-border last:border-b-0 transition-colors",
                       onRowClick && "cursor-pointer hover:bg-muted/50",
                       row.getIsSelected() && "bg-portal-accent-light/50"
                     )}
                   >
                     {row.getVisibleCells().map((cell) => (
-                      <td key={cell.id} className="px-4 py-3 text-sm">
+                      <td
+                        key={cell.id}
+                        className={cn(
+                          "px-4 py-3 text-sm",
+                          cell.column.columnDef.meta?.cellClassName,
+                        )}
+                      >
                         {flexRender(
                           cell.column.columnDef.cell,
                           cell.getContext()
