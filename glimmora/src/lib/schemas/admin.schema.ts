@@ -13,7 +13,7 @@ export const createUserSchema = z.object({
     .string()
     .min(1, "Email is required")
     .email("Please enter a valid email address"),
-  department: z.string().min(1, "Department is required"),
+  department: z.string().min(1, "Specialization is required"),
   // Student-specific
   studentId: z.string().optional(),
   program: z.string().optional(),
@@ -30,7 +30,7 @@ export type CreateUserFormData = z.infer<typeof createUserSchema>;
 
 export const createProgramSchema = z.object({
   name: z.string().min(1, "Program name is required"),
-  department: z.string().min(1, "Department is required"),
+  department: z.string().min(1, "Specialization is required"),
   duration: z.coerce.number().min(1, "Duration must be at least 1 year").max(8),
   totalSemesters: z.coerce.number().min(1, "Must have at least 1 semester").max(16),
   degreeType: z.enum(["UG", "PG", "Diploma", "PhD"], { error: "Please select a degree type" }),
@@ -60,7 +60,7 @@ export const editUserSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   email: z.string().min(1, "Email is required").email("Please enter a valid email address"),
   phone: z.string().optional(),
-  department: z.string().min(1, "Department is required"),
+  department: z.string().min(1, "Specialization is required"),
   role: z.enum(["student", "faculty", "admin", "placement"]),
   // Student-specific
   program: z.string().optional(),
@@ -109,7 +109,7 @@ export const createCourseSchema = z.object({
   name: z.string().min(1, "Course name is required"),
   description: z.string().min(1, "Description is required"),
   credits: z.coerce.number().min(1, "Credits must be at least 1").max(12),
-  department: z.string().min(1, "Department is required"),
+  department: z.string().min(1, "Specialization is required"),
   semesterId: z.string().min(1, "Semester is required"),
   facultyId: z.string().min(1, "Faculty is required"),
   maxCapacity: z.coerce.number().min(1, "Capacity must be at least 1"),
@@ -202,7 +202,7 @@ export const bulkImportUserSchema = z.object({
   lastName: z.string().min(1, "Last name is required"),
   // Admin role intentionally excluded — see createUserSchema rationale.
   role: z.enum(["student", "faculty", "placement"]),
-  department: z.string().min(1, "Department is required"),
+  department: z.string().min(1, "Specialization is required"),
   studentId: z.string().optional(),
   program: z.string().optional(),
   employeeId: z.string().optional(),

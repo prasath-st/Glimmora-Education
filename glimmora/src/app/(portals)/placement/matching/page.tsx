@@ -374,7 +374,7 @@ export default function PlacementMatchingPage() {
             <div className="mt-6 space-y-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">
-                  Department Filter
+                  Specialization Filter
                 </label>
                 <input
                   type="text"
@@ -382,7 +382,7 @@ export default function PlacementMatchingPage() {
                   onChange={(e) =>
                     setConfig((p) => ({ ...p, department: e.target.value }))
                   }
-                  placeholder="All departments (leave empty)"
+                  placeholder="All specializations (leave empty)"
                   className="flex h-10 w-full rounded-lg border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-portal-accent focus:ring-offset-1"
                 />
               </div>

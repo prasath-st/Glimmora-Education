@@ -37,7 +37,7 @@ function formatKpiValue(value: number, unit: string): string {
 }
 
 const deptColumns: ColumnDef<DeptRow, unknown>[] = [
-  { accessorKey: "department", header: "Department" },
+  { accessorKey: "department", header: "Specialization" },
   {
     accessorKey: "enrollment",
     header: "Enrollment",
@@ -144,16 +144,16 @@ export default function AdminAnalyticsPage() {
       {/* Enrollment counts by department — own chart so percentages aren't
           flattened to invisible stubs by the enrollment-scale y-axis. */}
       <BarComparison
-        title="Enrollment by Department"
+        title="Enrollment by Specialization"
         data={barData}
         bars={[
           { dataKey: "enrollment", label: "Enrollment", color: "#2563eb" },
         ]}
       />
 
-      {/* Performance rates by department — single 0–100 percentage scale. */}
+      {/* Performance rates by specialization — single 0–100 percentage scale. */}
       <BarComparison
-        title="Performance Rates by Department"
+        title="Performance Rates by Specialization"
         data={barData}
         bars={[
           { dataKey: "retention", label: "Retention %", color: "#059669" },
@@ -170,18 +170,18 @@ export default function AdminAnalyticsPage() {
         color="#2563eb"
       />
 
-      {/* Department Details Table */}
+      {/* Specialization Details Table */}
       <div>
-        <h2 className="mb-4 text-sm font-semibold">Department Details</h2>
+        <h2 className="mb-4 text-sm font-semibold">Specialization Details</h2>
         <DataTable
           columns={deptColumns}
           data={data.departmentComparison}
           searchKey="department"
-          searchPlaceholder="Search departments..."
+          searchPlaceholder="Search specializations..."
           showPagination={false}
         />
         <p className="mt-3 text-xs text-muted-foreground">
-          Showing current academic year performance across all departments.
+          Showing current academic year performance across all specializations.
         </p>
       </div>
     </div>

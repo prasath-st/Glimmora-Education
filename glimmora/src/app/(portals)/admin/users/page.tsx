@@ -23,6 +23,7 @@ import { TableSkeleton, CardSkeleton } from "@/components/shared/feedback/loadin
 import { ErrorState } from "@/components/shared/feedback/error-state";
 import { SearchInput } from "@/components/shared/forms/search-input";
 import { FormField, FormSelect } from "@/components/shared/forms/form-field";
+import { SpecializationSelect } from "@/components/shared/forms/specialization-select";
 import { ConfirmDialog } from "@/components/shared/feedback/confirm-dialog";
 import { SlideDrawer } from "@/components/shared/feedback/slide-drawer";
 import { formatDate, formatRelative } from "@/lib/utils/format";
@@ -178,7 +179,7 @@ function createUserColumns(callbacks: {
         <StatusBadge variant="default">{getValue() as string}</StatusBadge>
       ),
     },
-    { accessorKey: "department", header: "Department" },
+    { accessorKey: "department", header: "Specialization" },
     {
       accessorKey: "status",
       header: "Status",
@@ -397,7 +398,7 @@ function CreateUserDialog({
               {...register("program", { onChange: handleProgramChange })}
             />
             <FormField
-              label="Department"
+              label="Specialization"
               error={errors.department?.message}
               hint="Auto-filled from selected program"
               readOnly
@@ -417,19 +418,37 @@ function CreateUserDialog({
             <h3 className="text-sm font-semibold">Professional Information</h3>
             <div className="grid grid-cols-2 gap-3">
               <FormField label="Employee ID" placeholder="e.g. FAC-2024-001" error={errors.employeeId?.message} required {...register("employeeId")} />
-              <FormSelect label="Department" options={departmentOptions} error={errors.department?.message} required {...register("department")} />
+              <SpecializationSelect
+                label="Specialization"
+                options={departmentOptions.filter((o) => o.value !== "")}
+                value={watch("department") ?? ""}
+                onChange={(v) =>
+                  setValue("department", v, { shouldValidate: true, shouldDirty: true })
+                }
+                error={errors.department?.message}
+                required
+              />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <FormSelect label="Designation" options={DESIGNATION_OPTIONS} error={errors.designation?.message} required {...register("designation")} />
-              <FormField label="Specialization" placeholder="e.g. Machine Learning" error={errors.specialization?.message} {...register("specialization")} />
+              <FormField label="Research area" placeholder="e.g. Machine Learning" hint="Research focus or sub-specialty (optional)" error={errors.specialization?.message} {...register("specialization")} />
             </div>
           </section>
         )}
 
         {selectedRole === "placement" && (
           <section className="space-y-3">
-            <h3 className="text-sm font-semibold">Department</h3>
-            <FormSelect label="Department" options={departmentOptions} error={errors.department?.message} required {...register("department")} />
+            <h3 className="text-sm font-semibold">Specialization</h3>
+            <SpecializationSelect
+              label="Specialization"
+              options={departmentOptions.filter((o) => o.value !== "")}
+              value={watch("department") ?? ""}
+              onChange={(v) =>
+                setValue("department", v, { shouldValidate: true, shouldDirty: true })
+              }
+              error={errors.department?.message}
+              required
+            />
           </section>
         )}
 
@@ -481,7 +500,12 @@ function parseCSV(text: string): ParsedRow[] {
   const firstNameIdx = header.indexOf("firstname");
   const lastNameIdx = header.indexOf("lastname");
   const roleIdx = header.indexOf("role");
-  const deptIdx = header.indexOf("department");
+  // Accept both "specialization" (new canonical name) and "department"
+  // (legacy column name) so old templates / exports still round-trip.
+  const deptIdx =
+    header.indexOf("specialization") !== -1
+      ? header.indexOf("specialization")
+      : header.indexOf("department");
   const studentIdIdx = header.indexOf("studentid");
   const programIdx = header.indexOf("program");
   const employeeIdIdx = header.indexOf("employeeid");
@@ -510,7 +534,7 @@ function parseCSV(text: string): ParsedRow[] {
     if (!firstName) errors.push("missing firstName");
     if (!lastName) errors.push("missing lastName");
     if (!validRoles.includes(role)) errors.push("invalid role");
-    if (!department) errors.push("missing department");
+    if (!department) errors.push("missing specialization");
     if (role === "student" && !studentId) errors.push("missing studentId for student");
     if (role === "faculty" && !employeeId) errors.push("missing employeeId for faculty");
 
@@ -572,7 +596,7 @@ function ImportUsersDialog({
       const rows = parseCSV(text);
       if (rows.length === 0) {
         setParseError(
-          "Could not parse the CSV. Ensure columns: email, name, role, department",
+          "Could not parse the CSV. Ensure columns: email, firstName, lastName, role, specialization (the legacy column name 'department' is also accepted).",
         );
       } else {
         setParsedRows(rows);
@@ -642,7 +666,7 @@ function ImportUsersDialog({
 
   const handleDownloadTemplate = useCallback(() => {
     const csv =
-      "email,firstName,lastName,role,department,studentId,program,employeeId\n" +
+      "email,firstName,lastName,role,specialization,studentId,program,employeeId\n" +
       "john@university.edu,John,Smith,student,Computer Science,STU-2026-001,BSc Computer Science,\n" +
       "jane@university.edu,Jane,Doe,faculty,Computer Science,,,FAC-2026-001\n";
     const blob = new Blob([csv], { type: "text/csv" });
@@ -714,7 +738,7 @@ function ImportUsersDialog({
             required for faculty, program optional):
           </p>
           <pre className="overflow-x-auto rounded bg-background p-2 font-mono text-xs text-muted-foreground">
-{`email,firstName,lastName,role,department,studentId,program,employeeId
+{`email,firstName,lastName,role,specialization,studentId,program,employeeId
 john@university.edu,John,Smith,student,Computer Science,STU-2026-001,BSc Computer Science,
 jane@university.edu,Jane,Doe,faculty,Computer Science,,,FAC-2026-001`}
           </pre>
@@ -784,7 +808,7 @@ jane@university.edu,Jane,Doe,faculty,Computer Science,,,FAC-2026-001`}
                       </th>
                       <th className="px-2 py-2 text-left font-medium">Name</th>
                       <th className="px-2 py-2 text-left font-medium">Role</th>
-                      <th className="px-2 py-2 text-left font-medium">Dept</th>
+                      <th className="px-2 py-2 text-left font-medium">Specialization</th>
                       <th className="px-2 py-2 text-left font-medium">
                         Status
                       </th>
@@ -883,7 +907,7 @@ export default function AdminUsersPage() {
 
   const handleExport = useCallback(() => {
     if (!users.length) return;
-    const headers = ["Name", "Email", "Role", "Department", "Status", "Last Login", "Created"];
+    const headers = ["Name", "Email", "Role", "Specialization", "Status", "Last Login", "Created"];
     const rows = users.map((u: AdminUser) => [
       u.name,
       u.email,
@@ -1251,6 +1275,7 @@ function UserDetailDrawer({
     handleSubmit,
     reset,
     watch,
+    setValue,
     formState: { errors, isSubmitting, isDirty },
   } = useForm<EditUserFormData>({
     resolver: zodResolver(editUserSchema),
@@ -1398,10 +1423,10 @@ function UserDetailDrawer({
             </div>
           </section>
 
-          {/* Role + Department */}
+          {/* Role + Specialization */}
           <section className="space-y-4">
             <h3 className="text-sm font-semibold text-foreground">
-              Role &amp; Department
+              Role &amp; Specialization
             </h3>
             {user.role === "admin" ? (
               <div className="rounded-lg border border-border bg-muted/30 px-4 py-3 text-xs text-muted-foreground">
@@ -1425,15 +1450,18 @@ function UserDetailDrawer({
                 {...register("role")}
               />
             )}
-            <FormSelect
-              label="Department"
-              options={[
-                { value: "", label: "Select department..." },
-                ...distinctDepartments.map((d) => ({ value: d, label: d })),
-              ]}
+            <SpecializationSelect
+              label="Specialization"
+              options={distinctDepartments.map((d) => ({ value: d, label: d }))}
+              value={watch("department") ?? ""}
+              onChange={(v) =>
+                setValue("department", v, {
+                  shouldValidate: true,
+                  shouldDirty: true,
+                })
+              }
               error={errors.department?.message}
               required
-              {...register("department")}
             />
           </section>
 
@@ -1503,8 +1531,9 @@ function UserDetailDrawer({
                   {...register("designation")}
                 />
                 <FormField
-                  label="Specialization"
+                  label="Research area"
                   placeholder="e.g. Machine Learning"
+                  hint="Research focus or sub-specialty (optional)"
                   error={errors.specialization?.message}
                   {...register("specialization")}
                 />
@@ -1544,7 +1573,7 @@ function UserDetailDrawer({
             )}
             <DrawerDetailRow
               icon={Building}
-              label="Department"
+              label="Specialization"
               value={user.department}
             />
             {user.role === "student" && (
@@ -1581,7 +1610,7 @@ function UserDetailDrawer({
                   />
                 )}
                 {user.specialization && (
-                  <DrawerDetailRow icon={Hash} label="Specialization" value={user.specialization} />
+                  <DrawerDetailRow icon={Hash} label="Research area" value={user.specialization} />
                 )}
               </>
             )}

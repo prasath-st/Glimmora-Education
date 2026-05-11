@@ -189,7 +189,7 @@ export function CatalogDrawer({
 
   const departmentSelectOptions = useMemo(
     () => [
-      { value: "", label: "No owning department (cross-cutting)" },
+      { value: "", label: "No owning specialization (cross-cutting)" },
       ...departmentOptions,
     ],
     [departmentOptions],
@@ -292,7 +292,7 @@ export function CatalogDrawer({
               {...register("courseType")}
             />
             <FormSelect
-              label="Owning Department"
+              label="Owning Specialization"
               options={departmentSelectOptions}
               error={errors.owningDepartmentId?.message}
               hint="Optional — leave blank for cross-cutting courses"
@@ -604,7 +604,7 @@ export function OfferingDrawer({
                   value={`${selectedCatalog.lectureHours}:${selectedCatalog.tutorialHours}:${selectedCatalog.practicalHours}`}
                 />
                 <Datum
-                  label="Owning Dept"
+                  label="Owning Specialization"
                   value={
                     selectedCatalog.owningDepartmentName ?? "Cross-cutting"
                   }
@@ -657,7 +657,7 @@ export function OfferingDrawer({
                   label="Programme"
                   value={selectedSection.programmeName}
                 />
-                <Datum label="Department" value={selectedSection.department} />
+                <Datum label="Specialization" value={selectedSection.department} />
                 <Datum
                   label="Study Year"
                   value={`Year ${selectedSection.studyYear}`}

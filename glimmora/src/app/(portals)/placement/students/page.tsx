@@ -15,7 +15,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import type { PlacementStudent } from "@/lib/api/types/placement.types";
 
 const DEPARTMENTS = [
-  { value: "", label: "All Departments" },
+  { value: "", label: "All Specializations" },
   { value: "Computer Science", label: "Computer Science" },
   { value: "Engineering", label: "Engineering" },
   { value: "Business", label: "Business" },
@@ -77,7 +77,7 @@ export default function PlacementStudentsPage() {
       },
       {
         accessorKey: "department",
-        header: "Department",
+        header: "Specialization",
         cell: ({ row }) => (
           <span className="text-sm">{row.original.department}</span>
         ),

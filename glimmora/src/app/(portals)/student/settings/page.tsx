@@ -238,7 +238,7 @@ function ProfileTab({
       <FormSection title="Academic Info" description="These fields are managed by your institution">
         <div className="grid grid-cols-2 gap-4">
           <FormField label="Student ID" value={profile.studentId} disabled />
-          <FormField label="Department" value={profile.department} disabled />
+          <FormField label="Specialization" value={profile.department} disabled />
           <FormField label="Program" value={profile.program} disabled />
           <FormField label="Enrollment Year" value={String(profile.enrollmentYear)} disabled />
           <FormField label="Expected Graduation" value={profile.expectedGraduation} disabled />

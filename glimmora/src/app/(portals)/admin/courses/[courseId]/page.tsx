@@ -336,7 +336,7 @@ function OverviewTab({
         />
         <InfoCard
           icon={GraduationCap}
-          label="Department"
+          label="Specialization"
           value={course.department}
         />
         <InfoCard

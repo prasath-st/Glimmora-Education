@@ -232,7 +232,7 @@ export default function CatalogDetailPage({
         />
         <InfoCard
           icon={Building2}
-          label="Owning Department"
+          label="Owning Specialization"
           value={catalog.owningDepartmentName ?? "Cross-cutting"}
         />
         <InfoCard

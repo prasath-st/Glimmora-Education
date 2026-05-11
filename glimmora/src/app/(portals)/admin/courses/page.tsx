@@ -333,7 +333,7 @@ function CatalogTab({
     [departments],
   );
   const departmentFilterOptions = useMemo(
-    () => [{ value: "", label: "All Departments" }, ...departmentOptions],
+    () => [{ value: "", label: "All Specializations" }, ...departmentOptions],
     [departmentOptions],
   );
 

@@ -353,7 +353,7 @@ export const adminHandlers = [
     if (!body.firstName) errors.firstName = ["First name is required"];
     if (!body.lastName) errors.lastName = ["Last name is required"];
     if (!body.role) errors.role = ["Role is required"];
-    if (!body.department) errors.department = ["Department is required"];
+    if (!body.department) errors.department = ["Specialization is required"];
 
     if (Object.keys(errors).length > 0) return validationError(errors);
 
@@ -718,7 +718,7 @@ export const adminHandlers = [
     if (!body.name) errors.name = ["Course name is required"];
     if (!body.description) errors.description = ["Description is required"];
     if (!body.credits || body.credits < 1) errors.credits = ["Credits must be at least 1"];
-    if (!body.department) errors.department = ["Department is required"];
+    if (!body.department) errors.department = ["Specialization is required"];
     if (!body.semesterId) errors.semesterId = ["Semester is required"];
     if (!body.facultyId) errors.facultyId = ["Faculty is required"];
     if (!body.maxCapacity || body.maxCapacity < 1) errors.maxCapacity = ["Capacity must be at least 1"];

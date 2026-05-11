@@ -160,7 +160,7 @@ export default function AdminDashboardPage() {
           color="#2563eb"
         />
         <DonutBreakdown
-          title="Enrollment by Department"
+          title="Enrollment by Specialization"
           data={departmentDonutData}
           centerLabel="Total"
           centerValue={data.enrollment.total}

@@ -186,7 +186,7 @@ function ProfileTab({ profile }: { profile: FacultyProfile }) {
           disabled
         />
         <FormField
-          label="Department"
+          label="Specialization"
           value={profile.department}
           disabled
         />

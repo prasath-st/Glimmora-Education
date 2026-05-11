@@ -36,6 +36,7 @@ import { TableSkeleton } from "@/components/shared/feedback/loading-skeleton";
 import { ErrorState } from "@/components/shared/feedback/error-state";
 import { SearchInput } from "@/components/shared/forms/search-input";
 import { FormField, FormSelect } from "@/components/shared/forms/form-field";
+import { SpecializationSelect } from "@/components/shared/forms/specialization-select";
 import { ConfirmDialog } from "@/components/shared/feedback/confirm-dialog";
 import { SlideDrawer } from "@/components/shared/feedback/slide-drawer";
 import { formatDate } from "@/lib/utils/format";
@@ -243,7 +244,7 @@ function ProgramFormDrawer({
   const isEditing = mode === "edit";
   const formId = "program-form";
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<
+  const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm<
     CreateProgramFormInput,
     unknown,
     CreateProgramFormData
@@ -266,6 +267,8 @@ function ProgramFormDrawer({
             degreeType: "UG",
           },
   });
+
+  const watchedDepartment = watch("department") ?? "";
 
   const onSubmit = useCallback(
     async (data: CreateProgramFormData) => {
@@ -334,13 +337,16 @@ function ProgramFormDrawer({
           required
           {...register("name")}
         />
-        <FormSelect
-          label="Department"
-          placeholder="Select a department"
+        <SpecializationSelect
+          label="Specialization"
+          placeholder="Select a specialization"
           options={departmentOptions}
+          value={watchedDepartment}
+          onChange={(v) =>
+            setValue("department", v, { shouldValidate: true, shouldDirty: true })
+          }
           error={errors.department?.message}
           required
-          {...register("department")}
         />
         <div className="grid grid-cols-3 gap-3">
           <FormField
@@ -407,7 +413,7 @@ function ProgramViewBody({ program }: { program: Program }) {
           />
           <FactCell
             icon={<Building2 className="h-4 w-4" />}
-            label="Department"
+            label="Specialization"
             value={program.department}
           />
           <FactCell
@@ -438,7 +444,7 @@ function ProgramViewBody({ program }: { program: Program }) {
           </div>
           <p className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
             <UsersIcon className="h-3.5 w-3.5" />
-            Live count from Users matching this program or department.
+            Live count from Users matching this program or specialization.
           </p>
         </div>
       </section>
@@ -615,7 +621,7 @@ export default function ProgramsPage() {
         <div className="overflow-hidden rounded-lg border border-border bg-card">
           <div className="grid grid-cols-[2.5fr_1.2fr_0.8fr_0.8fr_0.7fr_0.8fr_36px] items-center gap-3 border-b border-border bg-muted/50 px-5 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             <span>Program</span>
-            <span>Department</span>
+            <span>Specialization</span>
             <span>Type</span>
             <span>Duration</span>
             <span>Students</span>
