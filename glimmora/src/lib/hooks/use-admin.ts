@@ -467,6 +467,18 @@ export function useUpdateSemester() {
   });
 }
 
+export function useDeleteSemester() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      api.delete<{ id: string }>(`/api/admin/semesters/${id}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin", "academic-years"] });
+      qc.invalidateQueries({ queryKey: ["admin", "semesters"] });
+    },
+  });
+}
+
 // === Programs & Degrees ===
 
 export function usePrograms(params?: { search?: string; degreeType?: string; status?: string }) {
@@ -543,6 +555,33 @@ export function useUpdateNestedSemester() {
   return useMutation({
     mutationFn: ({ id, ...data }: { id: string } & Partial<Semester>) =>
       api.patch<Semester>(`/api/admin/semesters/${id}`, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin", "academic-years"] });
+      qc.invalidateQueries({ queryKey: ["admin", "semesters"] });
+    },
+  });
+}
+
+// Used to attach a brand-new semester to an existing academic year.
+// Distinct from useCreateSemester (top-level) only so callers can
+// invalidate the academic-years cache too.
+export function useCreateNestedSemester() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: CreateSemesterRequest) =>
+      api.post<Semester>("/api/admin/semesters", data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin", "academic-years"] });
+      qc.invalidateQueries({ queryKey: ["admin", "semesters"] });
+    },
+  });
+}
+
+export function useDeleteAcademicYear() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      api.delete<{ id: string }>(`/api/admin/academic-years/${id}`),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin", "academic-years"] });
       qc.invalidateQueries({ queryKey: ["admin", "semesters"] });

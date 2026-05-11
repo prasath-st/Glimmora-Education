@@ -909,8 +909,21 @@ export const adminHandlers = [
     if (!body.startDate) errors.startDate = ["Start date is required"];
     if (!body.endDate) errors.endDate = ["End date is required"];
 
-    if (body.startDate && body.endDate && new Date(body.startDate) >= new Date(body.endDate)) {
+    if (
+      body.startDate &&
+      body.endDate &&
+      new Date(body.startDate) >= new Date(body.endDate)
+    ) {
       errors.endDate = ["End date must be after start date"];
+    }
+
+    // Refuse duplicate semester name under the same academic year so the
+    // calendar doesn't accumulate "Spring 2027 (1)", "Spring 2027 (2)".
+    if (body.academicYearId && body.name) {
+      const year = academicYears.find((y) => y.id === body.academicYearId);
+      if (year?.semesters.some((s) => s.name === body.name)) {
+        errors.name = [`A semester named "${body.name}" already exists in this year`];
+      }
     }
 
     if (Object.keys(errors).length > 0) return validationError(errors);
@@ -924,12 +937,51 @@ export const adminHandlers = [
       endDate: body.endDate,
       status: "upcoming",
       courseCount: 0,
+      academicYearId: body.academicYearId,
       createdAt: now,
       updatedAt: now,
     };
 
     semesters = [...semesters, newSemester];
+
+    // Attach to the parent academic year so /academic-years reflects it
+    // immediately (the page reads from the nested list).
+    if (body.academicYearId) {
+      academicYears = academicYears.map((y) =>
+        y.id === body.academicYearId
+          ? { ...y, semesters: [...y.semesters, newSemester], updatedAt: now }
+          : y,
+      );
+    }
+
     return HttpResponse.json({ data: newSemester }, { status: 201 });
+  }),
+
+  http.delete("/api/admin/semesters/:id", async ({ params }) => {
+    await randomDelay();
+    const semId = params.id as string;
+    const sem = semesters.find((s) => s.id === semId);
+    if (!sem) return notFound("Semester");
+
+    // Refuse delete when courses are attached — orphaning them would break
+    // the catalog → offering link silently. Admin has to clear courses first.
+    const attachedCourses = courses.filter((c) => c.semesterId === semId).length;
+    if (attachedCourses > 0) {
+      return validationError({
+        semesterId: [
+          `Cannot delete: ${attachedCourses} course${attachedCourses === 1 ? " is" : "s are"} scheduled in this semester. Archive or move them first.`,
+        ],
+      });
+    }
+
+    semesters = semesters.filter((s) => s.id !== semId);
+    academicYears = academicYears.map((y) => ({
+      ...y,
+      semesters: y.semesters.filter((s) => s.id !== semId),
+      updatedAt: new Date().toISOString(),
+    }));
+
+    return HttpResponse.json({ data: { id: semId } });
   }),
 
   http.patch("/api/admin/semesters/:id", async ({ params, request }) => {
@@ -1127,6 +1179,32 @@ export const adminHandlers = [
       updatedAt: new Date().toISOString(),
     };
     return HttpResponse.json({ data: academicYears[idx] });
+  }),
+
+  http.delete("/api/admin/academic-years/:id", async ({ params }) => {
+    await randomDelay();
+    const yearId = params.id as string;
+    const year = academicYears.find((y) => y.id === yearId);
+    if (!year) return notFound("Academic Year");
+
+    // Refuse if any semester under the year has attached courses. Admin
+    // must clear courses first; partial cascade isn't safe here.
+    const semIds = year.semesters.map((s) => s.id);
+    const attachedCourses = courses.filter((c) =>
+      semIds.includes(c.semesterId),
+    ).length;
+    if (attachedCourses > 0) {
+      return validationError({
+        academicYearId: [
+          `Cannot delete: ${attachedCourses} course${attachedCourses === 1 ? " is" : "s are"} scheduled across this year's semesters. Archive or move them first.`,
+        ],
+      });
+    }
+
+    academicYears = academicYears.filter((y) => y.id !== yearId);
+    semesters = semesters.filter((s) => !semIds.includes(s.id));
+
+    return HttpResponse.json({ data: { id: yearId } });
   }),
 
   // ── Departments (master data for catalog ownership) ──────────────────────

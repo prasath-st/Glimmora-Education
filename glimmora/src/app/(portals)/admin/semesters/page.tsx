@@ -5,36 +5,45 @@ import {
   Calendar,
   Plus,
   Loader2,
-  X,
   ChevronRight,
   ChevronDown,
   Pencil,
   CalendarDays,
+  MoreHorizontal,
+  Trash2,
 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import * as Dialog from "@radix-ui/react-dialog";
+import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import {
   useAcademicYears,
   useCreateAcademicYear,
+  useUpdateAcademicYear,
+  useDeleteAcademicYear,
+  useCreateNestedSemester,
   useUpdateNestedSemester,
+  useDeleteSemester,
 } from "@/lib/hooks/use-admin";
 import {
   createAcademicYearSchema,
   type CreateAcademicYearFormData,
+  createSemesterSchema,
+  type CreateSemesterFormData,
 } from "@/lib/schemas/admin.schema";
 import { PageHeader } from "@/components/shared/misc/page-header";
 import { StatusBadge } from "@/components/shared/feedback/status-badge";
 import { TableSkeleton } from "@/components/shared/feedback/loading-skeleton";
 import { ErrorState } from "@/components/shared/feedback/error-state";
 import { FormField } from "@/components/shared/forms/form-field";
+import { SlideDrawer } from "@/components/shared/feedback/slide-drawer";
+import { ConfirmDialog } from "@/components/shared/feedback/confirm-dialog";
 import { formatDate } from "@/lib/utils/format";
-import { cn } from "@/lib/utils/cn";
+import { ApiError } from "@/lib/api/client";
 import type { AcademicYear, Semester } from "@/lib/api/types/admin.types";
 
 function getStatusVariant(
-  status: "upcoming" | "active" | "completed"
+  status: "upcoming" | "active" | "completed",
 ): "info" | "success" | "muted" {
   const map = {
     upcoming: "info" as const,
@@ -44,17 +53,41 @@ function getStatusVariant(
   return map[status];
 }
 
-/* ── Create Academic Year Dialog ────────────────────────────────────────── */
+// Surface backend field-level messages (e.g. "Cannot delete: 12 courses are
+// scheduled in this semester") instead of the generic "Validation failed".
+function apiErrorMessage(err: unknown, fallback: string): string {
+  if (err instanceof ApiError && err.details) {
+    const first = Object.values(err.details).find(
+      (m) => Array.isArray(m) && m.length > 0,
+    );
+    if (first && first[0]) return first[0];
+  }
+  if (err instanceof Error && err.message) return err.message;
+  return fallback;
+}
 
-function CreateAcademicYearDialog({
+// Pull the YYYY year label out of an arbitrary year name like "AY 2026-2027".
+function deriveYearLabel(yearName: string, startDate: string): string {
+  const numeric = yearName.replace(/[^0-9]/g, "").slice(0, 4);
+  if (numeric.length === 4) return numeric;
+  return new Date(startDate).getFullYear().toString();
+}
+
+/* ── Create / Edit Academic Year Drawer ────────────────────────────────── */
+
+function AcademicYearDrawer({
   open,
-  onOpenChange,
+  onClose,
+  editing,
 }: {
   open: boolean;
-  onOpenChange: (open: boolean) => void;
+  onClose: () => void;
+  editing: AcademicYear | null;
 }) {
   const createYear = useCreateAcademicYear();
-  const [successMsg, setSuccessMsg] = useState("");
+  const updateYear = useUpdateAcademicYear();
+  const isEditing = !!editing;
+  const formId = "academic-year-form";
 
   const {
     register,
@@ -66,325 +99,501 @@ function CreateAcademicYearDialog({
     defaultValues: { name: "", startDate: "", endDate: "" },
   });
 
+  // Re-seed when the drawer opens with a different target.
+  useEffect(() => {
+    if (!open) return;
+    reset(
+      editing
+        ? {
+            name: editing.name,
+            startDate: editing.startDate.split("T")[0],
+            endDate: editing.endDate.split("T")[0],
+          }
+        : { name: "", startDate: "", endDate: "" },
+    );
+  }, [open, editing, reset]);
+
   const onSubmit = useCallback(
     async (data: CreateAcademicYearFormData) => {
       try {
-        await createYear.mutateAsync(data);
-        setSuccessMsg(
-          `${data.name} created with two semesters (Fall + Spring). Adjust dates as needed.`
-        );
+        if (isEditing && editing) {
+          await updateYear.mutateAsync({ id: editing.id, ...data });
+          toast.success(`${data.name} updated`);
+        } else {
+          await createYear.mutateAsync(data);
+          toast.success(
+            `${data.name} created with Fall + Spring semesters. Add or edit semesters as needed.`,
+          );
+        }
         reset();
-        setTimeout(() => {
-          setSuccessMsg("");
-          onOpenChange(false);
-        }, 1500);
-      } catch {
-        // shown via mutation state
+        onClose();
+      } catch (err) {
+        toast.error(apiErrorMessage(err, "Could not save the academic year"));
       }
     },
-    [createYear, reset, onOpenChange]
+    [isEditing, editing, createYear, updateYear, reset, onClose],
   );
 
+  const isPending = createYear.isPending || updateYear.isPending;
+
   return (
-    <Dialog.Root open={open} onOpenChange={onOpenChange}>
-      <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-xl border border-border bg-card p-6 shadow-lg data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95">
-          <div className="flex items-center justify-between">
-            <Dialog.Title className="text-lg font-semibold">
-              Create Academic Year
-            </Dialog.Title>
-            <Dialog.Close className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
-              <X className="h-4 w-4" />
-            </Dialog.Close>
-          </div>
-          <Dialog.Description className="mt-1 text-sm text-muted-foreground">
-            Two semesters (Fall + Spring) will be auto-created. You can edit each semester&apos;s dates afterwards.
-          </Dialog.Description>
-
-          <form onSubmit={handleSubmit(onSubmit)} className="mt-4 space-y-4">
-            <FormField
-              label="Academic Year Name"
-              placeholder="e.g. AY 2026-2027"
-              error={errors.name?.message}
-              required
-              {...register("name")}
-            />
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                label="Start Date"
-                type="date"
-                error={errors.startDate?.message}
-                required
-                {...register("startDate")}
-              />
-              <FormField
-                label="End Date"
-                type="date"
-                error={errors.endDate?.message}
-                required
-                {...register("endDate")}
-              />
-            </div>
-
-            {createYear.isError && (
-              <p className="text-xs text-danger">
-                Failed to create academic year. Please check the details.
-              </p>
-            )}
-            {successMsg && (
-              <p className="text-xs text-success">{successMsg}</p>
-            )}
-
-            <div className="flex justify-end gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => onOpenChange(false)}
-                className="rounded-lg border border-border px-4 py-2 text-sm font-medium transition-colors hover:bg-muted"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={createYear.isPending}
-                className="flex items-center gap-2 rounded-lg bg-portal-accent px-4 py-2 text-sm font-medium text-portal-accent-foreground transition-colors hover:bg-portal-accent-hover disabled:opacity-50"
-              >
-                {createYear.isPending && (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                )}
-                Create Year
-              </button>
-            </div>
-          </form>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
+    <SlideDrawer
+      open={open}
+      onClose={onClose}
+      width="lg"
+      title={isEditing ? `Edit ${editing?.name}` : "Create Academic Year"}
+      description={
+        isEditing
+          ? "Update name or overall start / end dates. Semesters inside keep their own dates."
+          : "Two semesters (Fall + Spring) will be auto-created. You can add more, rename, or adjust dates afterwards."
+      }
+      footer={
+        <div className="flex justify-end gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg border border-border px-4 py-2 text-sm font-medium transition-colors hover:bg-muted"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            form={formId}
+            disabled={isPending}
+            className="flex items-center gap-2 rounded-lg bg-portal-accent px-4 py-2 text-sm font-medium text-portal-accent-foreground transition-colors hover:bg-portal-accent-hover disabled:opacity-50"
+          >
+            {isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+            {isEditing ? "Save changes" : "Create year"}
+          </button>
+        </div>
+      }
+    >
+      <form
+        id={formId}
+        onSubmit={handleSubmit(onSubmit)}
+        className="space-y-5"
+      >
+        <FormField
+          label="Academic Year Name"
+          placeholder="e.g. AY 2026-2027"
+          error={errors.name?.message}
+          required
+          {...register("name")}
+        />
+        <div className="grid grid-cols-2 gap-4">
+          <FormField
+            label="Start Date"
+            type="date"
+            error={errors.startDate?.message}
+            required
+            {...register("startDate")}
+          />
+          <FormField
+            label="End Date"
+            type="date"
+            error={errors.endDate?.message}
+            required
+            {...register("endDate")}
+          />
+        </div>
+      </form>
+    </SlideDrawer>
   );
 }
 
-/* ── Edit Semester Dialog ──────────────────────────────────────────────── */
+/* ── Create / Edit Semester Drawer ─────────────────────────────────────── */
 
-function EditSemesterDialog({
+function SemesterDrawer({
   open,
-  onOpenChange,
-  semester,
+  onClose,
+  year,
+  editing,
 }: {
   open: boolean;
-  onOpenChange: (open: boolean) => void;
-  semester: Semester | null;
+  onClose: () => void;
+  year: AcademicYear | null;
+  editing: Semester | null;
 }) {
+  const createSemester = useCreateNestedSemester();
   const updateSemester = useUpdateNestedSemester();
-  const [name, setName] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
-  const [error, setError] = useState("");
+  const isEditing = !!editing;
+  const formId = "semester-form";
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<CreateSemesterFormData>({
+    resolver: zodResolver(createSemesterSchema),
+    defaultValues: { name: "", year: "", startDate: "", endDate: "" },
+  });
 
   useEffect(() => {
-    if (semester && open) {
-      setName(semester.name);
-      setStartDate(semester.startDate);
-      setEndDate(semester.endDate);
-      setError("");
-    }
-  }, [semester, open]);
-
-  const handleSave = useCallback(async () => {
-    if (!semester) return;
-    setError("");
-    if (!name || !startDate || !endDate) {
-      setError("All fields are required");
-      return;
-    }
-    if (new Date(endDate) <= new Date(startDate)) {
-      setError("End date must be after start date");
-      return;
-    }
-    try {
-      await updateSemester.mutateAsync({
-        id: semester.id,
-        name,
-        startDate,
-        endDate,
+    if (!open) return;
+    if (editing) {
+      reset({
+        name: editing.name,
+        year: editing.year,
+        startDate: editing.startDate.split("T")[0],
+        endDate: editing.endDate.split("T")[0],
       });
-      toast.success(`${name} updated`);
-      onOpenChange(false);
-    } catch {
-      setError("Failed to update semester");
+    } else if (year) {
+      // Pre-fill year label + sensible default date range from the parent
+      // year so admins don't have to retype it for every additional semester.
+      const yearLabel = deriveYearLabel(year.name, year.startDate);
+      reset({
+        name: "",
+        year: yearLabel,
+        startDate: year.startDate.split("T")[0],
+        endDate: year.endDate.split("T")[0],
+      });
     }
-  }, [semester, name, startDate, endDate, updateSemester, onOpenChange]);
+  }, [open, editing, year, reset]);
+
+  const onSubmit = useCallback(
+    async (data: CreateSemesterFormData) => {
+      try {
+        if (isEditing && editing) {
+          await updateSemester.mutateAsync({ id: editing.id, ...data });
+          toast.success(`${data.name} updated`);
+        } else {
+          if (!year) return;
+          await createSemester.mutateAsync({
+            ...data,
+            academicYearId: year.id,
+          });
+          toast.success(`${data.name} added to ${year.name}`);
+        }
+        reset();
+        onClose();
+      } catch (err) {
+        toast.error(apiErrorMessage(err, "Could not save the semester"));
+      }
+    },
+    [isEditing, editing, year, createSemester, updateSemester, reset, onClose],
+  );
+
+  const isPending = createSemester.isPending || updateSemester.isPending;
 
   return (
-    <Dialog.Root
+    <SlideDrawer
       open={open}
-      onOpenChange={(o) => {
-        if (!o) {
-          setName("");
-          setStartDate("");
-          setEndDate("");
-          setError("");
-        }
-        onOpenChange(o);
-      }}
+      onClose={onClose}
+      width="lg"
+      title={
+        isEditing
+          ? `Edit ${editing?.name}`
+          : `Add Semester${year ? ` to ${year.name}` : ""}`
+      }
+      description={
+        isEditing
+          ? "Status is auto-derived from dates after saving."
+          : "Create an additional semester (Summer, Supplementary, Trimester, etc.) inside this academic year."
+      }
+      footer={
+        <div className="flex justify-end gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg border border-border px-4 py-2 text-sm font-medium transition-colors hover:bg-muted"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            form={formId}
+            disabled={isPending}
+            className="flex items-center gap-2 rounded-lg bg-portal-accent px-4 py-2 text-sm font-medium text-portal-accent-foreground transition-colors hover:bg-portal-accent-hover disabled:opacity-50"
+          >
+            {isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+            {isEditing ? "Save changes" : "Add semester"}
+          </button>
+        </div>
+      }
     >
-      <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-xl border border-border bg-card p-6 shadow-lg">
-          <div className="flex items-center justify-between">
-            <Dialog.Title className="text-lg font-semibold">
-              Edit Semester
-            </Dialog.Title>
-            <Dialog.Close className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
-              <X className="h-4 w-4" />
-            </Dialog.Close>
-          </div>
-          <Dialog.Description className="mt-1 text-sm text-muted-foreground">
-            Update semester details. Status is auto-derived from dates.
-          </Dialog.Description>
-
-          <div className="mt-4 space-y-4">
-            <div>
-              <label className="text-sm font-medium">Semester Name</label>
-              <input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="mt-1.5 flex h-10 w-full rounded-lg border border-input bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary-400"
-                placeholder="e.g. Fall 2026"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-sm font-medium">Start Date</label>
-                <input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="mt-1.5 flex h-10 w-full rounded-lg border border-input bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary-400"
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium">End Date</label>
-                <input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className="mt-1.5 flex h-10 w-full rounded-lg border border-input bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary-400"
-                />
-              </div>
-            </div>
-            {error && <p className="text-xs text-danger">{error}</p>}
-            <div className="flex justify-end gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => onOpenChange(false)}
-                className="rounded-lg border border-border px-4 py-2 text-sm font-medium transition-colors hover:bg-muted"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleSave}
-                disabled={updateSemester.isPending}
-                className="flex items-center gap-2 rounded-lg bg-portal-accent px-4 py-2 text-sm font-medium text-portal-accent-foreground transition-colors hover:bg-portal-accent-hover disabled:opacity-50"
-              >
-                {updateSemester.isPending && (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                )}
-                Save Changes
-              </button>
-            </div>
-          </div>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
+      <form
+        id={formId}
+        onSubmit={handleSubmit(onSubmit)}
+        className="space-y-5"
+      >
+        <FormField
+          label="Semester Name"
+          placeholder="e.g. Summer 2027 / Trimester 3"
+          error={errors.name?.message}
+          required
+          {...register("name")}
+        />
+        <FormField
+          label="Year label"
+          placeholder="e.g. 2027"
+          hint="The 4-digit year used in reports and transcripts."
+          error={errors.year?.message}
+          required
+          {...register("year")}
+        />
+        <div className="grid grid-cols-2 gap-4">
+          <FormField
+            label="Start Date"
+            type="date"
+            error={errors.startDate?.message}
+            required
+            {...register("startDate")}
+          />
+          <FormField
+            label="End Date"
+            type="date"
+            error={errors.endDate?.message}
+            required
+            {...register("endDate")}
+          />
+        </div>
+      </form>
+    </SlideDrawer>
   );
 }
 
-/* ── Year Row ──────────────────────────────────────────────────────────── */
+/* ── Row action menus ──────────────────────────────────────────────────── */
 
-function YearRow({
+function YearRowActions({
+  year,
+  onAddSemester,
+  onEdit,
+  onDelete,
+}: {
+  year: AcademicYear;
+  onAddSemester: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  const isCompleted = year.status === "completed";
+  return (
+    <DropdownMenu.Root>
+      <DropdownMenu.Trigger asChild>
+        <button
+          onClick={(e) => e.stopPropagation()}
+          aria-label={`Actions for ${year.name}`}
+          className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+        >
+          <MoreHorizontal className="h-4 w-4" />
+        </button>
+      </DropdownMenu.Trigger>
+      <DropdownMenu.Portal>
+        <DropdownMenu.Content
+          align="end"
+          sideOffset={4}
+          onClick={(e) => e.stopPropagation()}
+          className="z-50 w-52 rounded-lg bg-card py-2 shadow-2xl ring-1 ring-border/30"
+        >
+          {!isCompleted && (
+            <DropdownMenu.Item
+              onSelect={onAddSemester}
+              className="flex cursor-pointer items-center gap-3 px-4 py-2.5 text-sm outline-none transition-colors hover:bg-muted focus:bg-muted"
+            >
+              <Plus className="h-4 w-4 text-muted-foreground" />
+              Add semester
+            </DropdownMenu.Item>
+          )}
+          <DropdownMenu.Item
+            onSelect={onEdit}
+            className="flex cursor-pointer items-center gap-3 px-4 py-2.5 text-sm outline-none transition-colors hover:bg-muted focus:bg-muted"
+          >
+            <Pencil className="h-4 w-4 text-muted-foreground" />
+            Edit year
+          </DropdownMenu.Item>
+          <DropdownMenu.Separator className="my-1 h-px bg-border/50" />
+          <DropdownMenu.Item
+            onSelect={onDelete}
+            className="flex cursor-pointer items-center gap-3 px-4 py-2.5 text-sm text-danger outline-none transition-colors hover:bg-muted focus:bg-muted"
+          >
+            <Trash2 className="h-4 w-4" />
+            Delete year
+          </DropdownMenu.Item>
+        </DropdownMenu.Content>
+      </DropdownMenu.Portal>
+    </DropdownMenu.Root>
+  );
+}
+
+function SemesterRowActions({
+  semester,
+  onEdit,
+  onDelete,
+}: {
+  semester: Semester;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  const isCompleted = semester.status === "completed";
+  return (
+    <DropdownMenu.Root>
+      <DropdownMenu.Trigger asChild>
+        <button
+          onClick={(e) => e.stopPropagation()}
+          aria-label={`Actions for ${semester.name}`}
+          className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+        >
+          <MoreHorizontal className="h-4 w-4" />
+        </button>
+      </DropdownMenu.Trigger>
+      <DropdownMenu.Portal>
+        <DropdownMenu.Content
+          align="end"
+          sideOffset={4}
+          onClick={(e) => e.stopPropagation()}
+          className="z-50 w-44 rounded-lg bg-card py-2 shadow-2xl ring-1 ring-border/30"
+        >
+          <DropdownMenu.Item
+            onSelect={onEdit}
+            disabled={isCompleted}
+            className="flex cursor-pointer items-center gap-3 px-4 py-2.5 text-sm outline-none transition-colors hover:bg-muted focus:bg-muted data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50"
+          >
+            <Pencil className="h-4 w-4 text-muted-foreground" />
+            {isCompleted ? "Edit (locked)" : "Edit semester"}
+          </DropdownMenu.Item>
+          <DropdownMenu.Separator className="my-1 h-px bg-border/50" />
+          <DropdownMenu.Item
+            onSelect={onDelete}
+            className="flex cursor-pointer items-center gap-3 px-4 py-2.5 text-sm text-danger outline-none transition-colors hover:bg-muted focus:bg-muted"
+          >
+            <Trash2 className="h-4 w-4" />
+            Delete
+          </DropdownMenu.Item>
+        </DropdownMenu.Content>
+      </DropdownMenu.Portal>
+    </DropdownMenu.Root>
+  );
+}
+
+/* ── Year Card ─────────────────────────────────────────────────────────── */
+
+function YearCard({
   year,
   expanded,
   onToggle,
+  onEditYear,
+  onDeleteYear,
+  onAddSemester,
   onEditSemester,
+  onDeleteSemester,
 }: {
   year: AcademicYear;
   expanded: boolean;
   onToggle: () => void;
+  onEditYear: () => void;
+  onDeleteYear: () => void;
+  onAddSemester: () => void;
   onEditSemester: (sem: Semester) => void;
+  onDeleteSemester: (sem: Semester) => void;
 }) {
-  const totalCourses = year.semesters.reduce((sum, s) => sum + s.courseCount, 0);
+  const totalCourses = year.semesters.reduce(
+    (sum, s) => sum + s.courseCount,
+    0,
+  );
   return (
     <div className="overflow-hidden rounded-xl border border-border bg-card">
       {/* Year header */}
-      <button
-        onClick={onToggle}
-        className="grid w-full grid-cols-[24px_2fr_1fr_1fr_120px] items-center gap-3 px-5 py-4 text-left transition-colors hover:bg-muted/40"
-      >
-        {expanded ? (
-          <ChevronDown className="h-5 w-5 text-muted-foreground" />
-        ) : (
-          <ChevronRight className="h-5 w-5 text-muted-foreground" />
-        )}
-        <div>
+      <div className="grid grid-cols-[24px_2fr_1fr_120px_36px] items-center gap-3 px-5 py-4">
+        <button
+          onClick={onToggle}
+          aria-label={expanded ? "Collapse" : "Expand"}
+          className="text-muted-foreground transition-colors hover:text-foreground"
+        >
+          {expanded ? (
+            <ChevronDown className="h-5 w-5" />
+          ) : (
+            <ChevronRight className="h-5 w-5" />
+          )}
+        </button>
+        <button onClick={onToggle} className="text-left">
           <p className="text-base font-semibold">{year.name}</p>
           <p className="text-xs text-muted-foreground">
-            {year.semesters.length} semester{year.semesters.length !== 1 ? "s" : ""} · {totalCourses} course{totalCourses !== 1 ? "s" : ""}
+            {year.semesters.length} semester
+            {year.semesters.length !== 1 ? "s" : ""} · {totalCourses} course
+            {totalCourses !== 1 ? "s" : ""}
           </p>
-        </div>
+        </button>
         <p className="text-sm text-muted-foreground">
           {formatDate(year.startDate)} → {formatDate(year.endDate)}
         </p>
-        <div />
         <div className="flex justify-end">
           <StatusBadge variant={getStatusVariant(year.status)} dot>
             {year.status}
           </StatusBadge>
         </div>
-      </button>
+        <div className="flex justify-end">
+          <YearRowActions
+            year={year}
+            onAddSemester={onAddSemester}
+            onEdit={onEditYear}
+            onDelete={onDeleteYear}
+          />
+        </div>
+      </div>
 
       {/* Nested semesters */}
       {expanded && (
         <div className="border-t border-border bg-muted/20 px-5 py-3">
           {year.semesters.length === 0 ? (
-            <p className="text-center text-xs text-muted-foreground py-4">
-              No semesters under this academic year.
-            </p>
-          ) : (
-            <div className="space-y-2">
-              {year.semesters.map((sem) => (
-                <div
-                  key={sem.id}
-                  className="grid grid-cols-[2fr_1fr_1fr_80px_60px] items-center gap-3 rounded-lg bg-background px-4 py-3 ring-1 ring-border/50"
-                >
-                  <div className="flex items-center gap-2">
-                    <CalendarDays className="h-4 w-4 text-muted-foreground" />
-                    <p className="text-sm font-medium">{sem.name}</p>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    {formatDate(sem.startDate)} → {formatDate(sem.endDate)}
-                  </p>
-                  <p className="text-sm">
-                    <span className="font-medium text-portal-accent">{sem.courseCount}</span>
-                    <span className="ml-1 text-muted-foreground">courses</span>
-                  </p>
-                  <StatusBadge variant={getStatusVariant(sem.status)} dot>
-                    {sem.status}
-                  </StatusBadge>
-                  <div className="flex justify-end">
-                    <button
-                      onClick={() => onEditSemester(sem)}
-                      className={cn(
-                        "rounded-lg p-1.5 transition-colors hover:bg-muted text-muted-foreground hover:text-foreground",
-                        sem.status === "completed" && "opacity-50 pointer-events-none"
-                      )}
-                      title={sem.status === "completed" ? "Cannot edit completed semester" : "Edit semester"}
-                    >
-                      <Pencil className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                </div>
-              ))}
+            <div className="flex flex-col items-center gap-2 py-6 text-center">
+              <p className="text-xs text-muted-foreground">
+                No semesters under this academic year yet.
+              </p>
+              <button
+                type="button"
+                onClick={onAddSemester}
+                className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted"
+              >
+                <Plus className="h-3 w-3" /> Add the first semester
+              </button>
             </div>
+          ) : (
+            <>
+              <div className="space-y-2">
+                {year.semesters.map((sem) => (
+                  <div
+                    key={sem.id}
+                    className="grid grid-cols-[2fr_1fr_1fr_80px_36px] items-center gap-3 rounded-lg bg-background px-4 py-3 ring-1 ring-border/50"
+                  >
+                    <div className="flex items-center gap-2">
+                      <CalendarDays className="h-4 w-4 text-muted-foreground" />
+                      <p className="text-sm font-medium">{sem.name}</p>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      {formatDate(sem.startDate)} → {formatDate(sem.endDate)}
+                    </p>
+                    <p className="text-sm">
+                      <span className="font-medium text-portal-accent">
+                        {sem.courseCount}
+                      </span>
+                      <span className="ml-1 text-muted-foreground">
+                        course{sem.courseCount !== 1 ? "s" : ""}
+                      </span>
+                    </p>
+                    <StatusBadge variant={getStatusVariant(sem.status)} dot>
+                      {sem.status}
+                    </StatusBadge>
+                    <div className="flex justify-end">
+                      <SemesterRowActions
+                        semester={sem}
+                        onEdit={() => onEditSemester(sem)}
+                        onDelete={() => onDeleteSemester(sem)}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {year.status !== "completed" && (
+                <button
+                  type="button"
+                  onClick={onAddSemester}
+                  className="mt-3 flex items-center gap-2 rounded-lg border border-dashed border-border px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-background hover:text-foreground"
+                >
+                  <Plus className="h-3 w-3" /> Add another semester to{" "}
+                  {year.name}
+                </button>
+              )}
+            </>
           )}
         </div>
       )}
@@ -395,14 +604,28 @@ function YearRow({
 /* ── Page ──────────────────────────────────────────────────────────────── */
 
 export default function AdminAcademicCalendarPage() {
-  const [createOpen, setCreateOpen] = useState(false);
-  const [editSemester, setEditSemester] = useState<{ open: boolean; semester: Semester | null }>({
-    open: false,
-    semester: null,
-  });
+  const [yearDrawer, setYearDrawer] = useState<{
+    open: boolean;
+    editing: AcademicYear | null;
+  }>({ open: false, editing: null });
+  const [semesterDrawer, setSemesterDrawer] = useState<{
+    open: boolean;
+    year: AcademicYear | null;
+    editing: Semester | null;
+  }>({ open: false, year: null, editing: null });
+  const [yearDelete, setYearDelete] = useState<{
+    open: boolean;
+    year: AcademicYear | null;
+  }>({ open: false, year: null });
+  const [semesterDelete, setSemesterDelete] = useState<{
+    open: boolean;
+    semester: Semester | null;
+  }>({ open: false, semester: null });
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
   const { data: years, isLoading, isError, refetch } = useAcademicYears();
+  const deleteYear = useDeleteAcademicYear();
+  const deleteSemester = useDeleteSemester();
 
   const handleToggle = useCallback((id: string) => {
     setExpanded((prev) => ({ ...prev, [id]: !prev[id] }));
@@ -419,15 +642,37 @@ export default function AdminAcademicCalendarPage() {
     }
   }, [years]);
 
+  const handleConfirmDeleteYear = useCallback(async () => {
+    if (!yearDelete.year) return;
+    const { id, name } = yearDelete.year;
+    try {
+      await deleteYear.mutateAsync(id);
+      toast.success(`${name} deleted`);
+    } catch (err) {
+      toast.error(apiErrorMessage(err, `Could not delete ${name}`));
+    }
+  }, [yearDelete.year, deleteYear]);
+
+  const handleConfirmDeleteSemester = useCallback(async () => {
+    if (!semesterDelete.semester) return;
+    const { id, name } = semesterDelete.semester;
+    try {
+      await deleteSemester.mutateAsync(id);
+      toast.success(`${name} deleted`);
+    } catch (err) {
+      toast.error(apiErrorMessage(err, `Could not delete ${name}`));
+    }
+  }, [semesterDelete.semester, deleteSemester]);
+
   return (
     <div className="space-y-6">
       <PageHeader
         icon={Calendar}
         title="Academic Calendar"
-        description="Manage academic years and their semesters"
+        description="Manage academic years and their semesters."
         actions={
           <button
-            onClick={() => setCreateOpen(true)}
+            onClick={() => setYearDrawer({ open: true, editing: null })}
             className="flex items-center gap-2 rounded-lg bg-portal-accent px-4 py-2 text-sm font-medium text-portal-accent-foreground transition-colors hover:bg-portal-accent-hover"
           >
             <Plus className="h-4 w-4" />
@@ -455,22 +700,66 @@ export default function AdminAcademicCalendarPage() {
       ) : (
         <div className="space-y-3">
           {years.map((year) => (
-            <YearRow
+            <YearCard
               key={year.id}
               year={year}
               expanded={!!expanded[year.id]}
               onToggle={() => handleToggle(year.id)}
-              onEditSemester={(sem) => setEditSemester({ open: true, semester: sem })}
+              onEditYear={() => setYearDrawer({ open: true, editing: year })}
+              onDeleteYear={() => setYearDelete({ open: true, year })}
+              onAddSemester={() => {
+                setExpanded((prev) => ({ ...prev, [year.id]: true }));
+                setSemesterDrawer({ open: true, year, editing: null });
+              }}
+              onEditSemester={(sem) =>
+                setSemesterDrawer({ open: true, year, editing: sem })
+              }
+              onDeleteSemester={(sem) =>
+                setSemesterDelete({ open: true, semester: sem })
+              }
             />
           ))}
         </div>
       )}
 
-      <CreateAcademicYearDialog open={createOpen} onOpenChange={setCreateOpen} />
-      <EditSemesterDialog
-        open={editSemester.open}
-        onOpenChange={(o) => setEditSemester((p) => ({ ...p, open: o }))}
-        semester={editSemester.semester}
+      <AcademicYearDrawer
+        open={yearDrawer.open}
+        onClose={() => setYearDrawer({ open: false, editing: null })}
+        editing={yearDrawer.editing}
+      />
+      <SemesterDrawer
+        open={semesterDrawer.open}
+        onClose={() =>
+          setSemesterDrawer({ open: false, year: null, editing: null })
+        }
+        year={semesterDrawer.year}
+        editing={semesterDrawer.editing}
+      />
+      <ConfirmDialog
+        open={yearDelete.open}
+        onOpenChange={(o) => setYearDelete((p) => ({ ...p, open: o }))}
+        title="Delete academic year"
+        description={
+          yearDelete.year
+            ? `Delete "${yearDelete.year.name}" and its ${yearDelete.year.semesters.length} semester${yearDelete.year.semesters.length === 1 ? "" : "s"}? This cannot be undone. Deletion is blocked if any semester has scheduled courses — archive or move those first.`
+            : ""
+        }
+        confirmLabel="Delete year"
+        variant="danger"
+        onConfirm={handleConfirmDeleteYear}
+      />
+      <ConfirmDialog
+        open={semesterDelete.open}
+        onOpenChange={(o) => setSemesterDelete((p) => ({ ...p, open: o }))}
+        title="Delete semester"
+        description={
+          semesterDelete.semester
+            ? `Delete "${semesterDelete.semester.name}"? This cannot be undone. Deletion is blocked when ${semesterDelete.semester.courseCount > 0 ? `${semesterDelete.semester.courseCount} course${semesterDelete.semester.courseCount === 1 ? " is" : "s are"} scheduled — archive or move them first` : "courses are scheduled"}.`
+            : ""
+        }
+        confirmLabel="Delete semester"
+        variant="danger"
+        onConfirm={handleConfirmDeleteSemester}
       />
     </div>
   );
