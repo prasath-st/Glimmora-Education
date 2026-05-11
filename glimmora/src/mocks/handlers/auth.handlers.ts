@@ -61,6 +61,37 @@ const MOCK_USERS = [
 
 let activeSessions: Map<string, (typeof MOCK_USERS)[number]> = new Map();
 
+// In production, /api/auth/me would verify the JWT signature against a
+// server-side secret and look up the user from a real DB — survives any
+// number of page reloads. Here our "DB" is the MOCK_USERS array in this
+// module, and the activeSessions Map gets wiped every time the page
+// reloads (the MSW worker re-evaluates the module). To make the mock
+// survive refreshes, we encode the user id into the token at login
+// (mock_access_<userId>_<timestamp>) and recover the user from the
+// token itself when the session map is empty.
+function userFromToken(
+  token: string,
+): (typeof MOCK_USERS)[number] | undefined {
+  const fromMap = activeSessions.get(token);
+  if (fromMap) return fromMap;
+
+  // Token shape: mock_access_<userId>_<timestamp>. The userId itself
+  // contains underscores (e.g. usr_admin_01), so we have to slice off
+  // the trailing timestamp segment rather than splitting on "_".
+  if (!token.startsWith("mock_access_")) return undefined;
+  const rest = token.slice("mock_access_".length);
+  const lastUnderscore = rest.lastIndexOf("_");
+  if (lastUnderscore === -1) return undefined;
+  const userId = rest.slice(0, lastUnderscore);
+  const user = MOCK_USERS.find((u) => u.id === userId);
+  if (user) {
+    // Re-seed the session map so subsequent calls in this page lifetime
+    // are O(1).
+    activeSessions.set(token, user);
+  }
+  return user;
+}
+
 export const authHandlers = [
   http.post("/api/auth/login", async ({ request }) => {
     await delay(400);
@@ -147,7 +178,7 @@ export const authHandlers = [
     }
 
     const token = authHeader.replace("Bearer ", "");
-    const user = activeSessions.get(token);
+    const user = userFromToken(token);
 
     if (!user) {
       return HttpResponse.json(
@@ -167,11 +198,26 @@ export const authHandlers = [
     });
   }),
 
-  http.post("/api/auth/refresh", async () => {
+  http.post("/api/auth/refresh", async ({ request }) => {
     await delay(200);
 
-    const newAccessToken = `mock_access_refreshed_${Date.now()}`;
+    // Carry the user id forward so a refreshed token still survives reload.
+    const authHeader = request.headers.get("Authorization");
+    const oldToken = authHeader?.replace("Bearer ", "") ?? "";
+    const user = userFromToken(oldToken);
+
+    if (!user) {
+      return HttpResponse.json(
+        {
+          error: { code: "UNAUTHORIZED", message: "No valid session to refresh" },
+        },
+        { status: 401 },
+      );
+    }
+
+    const newAccessToken = `mock_access_${user.id}_${Date.now()}`;
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+    activeSessions.set(newAccessToken, user);
 
     return HttpResponse.json({
       data: { accessToken: newAccessToken, expiresAt },
