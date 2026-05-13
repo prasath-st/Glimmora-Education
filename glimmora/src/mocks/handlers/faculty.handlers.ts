@@ -6,9 +6,6 @@ import type {
   CreateInterventionRequest,
   FacultyCourse,
   FacultyCourseDetail,
-  FacultyGrant,
-  FacultyCollaboration,
-  FacultyPublication,
   AiBriefing,
   FacultyProfile,
   CourseModule,
@@ -30,9 +27,6 @@ import {
   generateInterventions,
   generateFacultyCourses,
   generateFacultyCourseDetail,
-  generateGrants,
-  generateCollaborations,
-  generatePublications,
   generateBriefings,
   generateFacultyProfile,
   generateCourseModules,
@@ -48,9 +42,6 @@ const dashboard: FacultyDashboard = generateFacultyDashboard();
 const students: FacultyStudentListItem[] = generateFacultyStudents(48);
 let interventions: Intervention[] = generateInterventions(10);
 const courses: FacultyCourse[] = generateFacultyCourses(5);
-let grants: FacultyGrant[] = generateGrants(10);
-let collaborations: FacultyCollaboration[] = generateCollaborations(15);
-let publications: FacultyPublication[] = generatePublications(20);
 let briefings: AiBriefing[] = generateBriefings();
 let profile: FacultyProfile = generateFacultyProfile();
 let facultyNotifPrefs = {
@@ -384,100 +375,6 @@ export const facultyHandlers = [
     return HttpResponse.json({ data: detail });
   }),
 
-  // ── Grants ────────────────────────────────────────────────────────────────
-  http.get("/api/faculty/me/grants", async ({ request }) => {
-    await randomDelay();
-    const url = new URL(request.url);
-    const status = url.searchParams.get("status");
-
-    let filtered = [...grants];
-
-    if (status && ["discovered", "interested", "drafting", "submitted", "funded", "rejected"].includes(status)) {
-      filtered = filtered.filter((g) => g.status === status);
-    }
-
-    // Sort by alignment score descending
-    filtered.sort((a, b) => b.alignmentScore - a.alignmentScore);
-
-    const result = paginate(filtered, url);
-    return HttpResponse.json({ data: result.data, meta: result.meta });
-  }),
-
-  // ── Collaborations ────────────────────────────────────────────────────────
-  http.get("/api/faculty/me/collaborations", async ({ request }) => {
-    await randomDelay();
-    const url = new URL(request.url);
-    const search = url.searchParams.get("search");
-
-    let filtered = [...collaborations];
-
-    filtered = searchFilter(filtered, search, [
-      "name",
-      "institution",
-      "department",
-    ] as (keyof FacultyCollaboration)[]);
-
-    // Also search in expertise arrays
-    if (search) {
-      const lower = search.toLowerCase();
-      const searchInExpertise = collaborations.filter((c) =>
-        c.expertise.some((e) => e.toLowerCase().includes(lower))
-      );
-      // Merge without duplicates
-      const ids = new Set(filtered.map((c) => c.id));
-      for (const c of searchInExpertise) {
-        if (!ids.has(c.id)) {
-          filtered.push(c);
-          ids.add(c.id);
-        }
-      }
-    }
-
-    // Sort by match score descending
-    filtered.sort((a, b) => b.matchScore - a.matchScore);
-
-    return HttpResponse.json({ data: filtered });
-  }),
-
-  // ── Publications ──────────────────────────────────────────────────────────
-  http.get("/api/faculty/me/publications", async ({ request }) => {
-    await randomDelay();
-    const url = new URL(request.url);
-    const type = url.searchParams.get("type");
-    const search = url.searchParams.get("search");
-
-    let filtered = [...publications];
-
-    if (type && ["journal", "conference", "book_chapter", "preprint"].includes(type)) {
-      filtered = filtered.filter((p) => p.type === type);
-    }
-
-    filtered = searchFilter(filtered, search, [
-      "title",
-      "journal",
-    ] as (keyof FacultyPublication)[]);
-
-    // Also search in coAuthors
-    if (search) {
-      const lower = search.toLowerCase();
-      const searchInAuthors = publications.filter((p) =>
-        p.coAuthors.some((a) => a.toLowerCase().includes(lower))
-      );
-      const ids = new Set(filtered.map((p) => p.id));
-      for (const p of searchInAuthors) {
-        if (!ids.has(p.id)) {
-          filtered.push(p);
-          ids.add(p.id);
-        }
-      }
-    }
-
-    // Sort by year descending, then citations descending
-    filtered.sort((a, b) => b.year - a.year || b.citations - a.citations);
-
-    return HttpResponse.json({ data: filtered });
-  }),
-
   // ── Briefings ─────────────────────────────────────────────────────────────
   http.get("/api/faculty/me/briefings", async () => {
     await randomDelay();
@@ -534,25 +431,6 @@ export const facultyHandlers = [
     return HttpResponse.json({ data: updatedBriefing });
   }),
 
-  // ── Grant Status Change ───────────────────────────────────────────────────
-  http.patch("/api/faculty/me/grants/:grantId", async ({ params, request }) => {
-    await randomDelay();
-    const grantId = params.grantId as string;
-    const idx = grants.findIndex((g) => g.id === grantId);
-    if (idx === -1) return notFound("Grant");
-
-    const body = (await request.json()) as { status?: string };
-    if (!body.status || !["discovered", "interested", "drafting", "submitted", "funded", "rejected"].includes(body.status)) {
-      return validationError({ status: ["Status must be one of: discovered, interested, drafting, submitted, funded, rejected"] });
-    }
-
-    const now = new Date().toISOString();
-    grants = grants.map((g) =>
-      g.id === grantId ? { ...g, status: body.status as FacultyGrant["status"] } : g
-    );
-
-    return HttpResponse.json({ data: grants.find((g) => g.id === grantId) });
-  }),
 
   // ── Notification Preferences ─────────────────────────────────────────────
   http.get("/api/faculty/me/notification-preferences", async () => {
@@ -904,7 +782,6 @@ export const facultyHandlers = [
       "avatarUrl",
       "officeHours",
       "office",
-      "researchInterests",
       "expertise",
       "socialLinks",
     ] as const;

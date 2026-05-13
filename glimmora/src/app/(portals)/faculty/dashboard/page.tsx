@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import {
   LayoutDashboard,
@@ -8,23 +7,16 @@ import {
   Activity,
   Users,
   Clock,
-  FlaskConical,
   MapPin,
-  ExternalLink,
-  FileText,
-  Quote,
-  BookOpen,
   Sparkles,
 } from "lucide-react";
 import { useFacultyDashboard } from "@/lib/hooks/use-faculty";
 import { StatCard } from "@/components/shared/misc/stat-card";
 import { PageHeader } from "@/components/shared/misc/page-header";
-import { StatusBadge, getRiskVariant } from "@/components/shared/feedback/status-badge";
+import { StatusBadge } from "@/components/shared/feedback/status-badge";
 import { AreaTrend } from "@/components/shared/charts/area-trend";
 import { DashboardSkeleton } from "@/components/shared/feedback/loading-skeleton";
 import { ErrorState } from "@/components/shared/feedback/error-state";
-import { cn } from "@/lib/utils/cn";
-import { formatDate, formatCurrency, formatNumber } from "@/lib/utils/format";
 
 export default function FacultyDashboardPage() {
   const { data, isLoading, isError, refetch } = useFacultyDashboard();
@@ -43,11 +35,11 @@ export default function FacultyDashboardPage() {
       <PageHeader
         icon={LayoutDashboard}
         title="Dashboard"
-        description="Overview of your students, courses, and research"
+        description="Overview of your students and courses"
       />
 
       {/* KPI Row */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatCard
           label="At-Risk Students"
           value={data.atRiskStudentCount}
@@ -64,132 +56,65 @@ export default function FacultyDashboardPage() {
           value={data.totalStudents}
           icon={Users}
         />
-        <StatCard
-          label="h-index"
-          value={data.researchMetrics.hIndex}
-          icon={FlaskConical}
-        />
       </div>
 
-      {/* Two columns: Upcoming Classes + Grant Alerts */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* Upcoming Classes */}
-        <div className="rounded-xl border border-border bg-card p-6">
-          <div className="mb-4 flex items-center gap-2">
-            <Clock className="h-4 w-4 text-muted-foreground" />
-            <h2 className="text-sm font-semibold">Upcoming Classes</h2>
-          </div>
-          {data.upcomingClasses.length === 0 ? (
-            <p className="py-8 text-center text-sm text-muted-foreground">
-              No upcoming classes
-            </p>
-          ) : (
-            <div className="space-y-3">
-              {data.upcomingClasses.map((cls) => (
-                <div
-                  key={cls.courseId}
-                  className="rounded-lg border border-border px-4 py-3 transition-colors hover:bg-muted/50"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <Link
-                          href={`/faculty/courses/${cls.courseId}`}
-                          className="truncate text-sm font-medium hover:underline"
-                        >
-                          {cls.courseName}
-                        </Link>
-                        <StatusBadge variant="muted">{cls.courseCode}</StatusBadge>
-                      </div>
-                      <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
-                        <span className="flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          {cls.time} - {cls.endTime}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <MapPin className="h-3 w-3" />
-                          {cls.room}
-                        </span>
-                        <span>{cls.totalStudents} students</span>
-                      </div>
-                    </div>
-                    {cls.studentsAtRisk > 0 && (
-                      <StatusBadge variant="danger" dot>
-                        {cls.studentsAtRisk} at risk
-                      </StatusBadge>
-                    )}
-                  </div>
-                  <Link
-                    href="/faculty/briefings"
-                    className="mt-2 inline-flex items-center gap-1 text-xs text-portal-accent hover:underline"
-                  >
-                    <Sparkles className="h-3 w-3" />
-                    View Briefing
-                  </Link>
-                </div>
-              ))}
-            </div>
-          )}
+      {/* Upcoming Classes */}
+      <div className="rounded-xl border border-border bg-card p-6">
+        <div className="mb-4 flex items-center gap-2">
+          <Clock className="h-4 w-4 text-muted-foreground" />
+          <h2 className="text-sm font-semibold">Upcoming Classes</h2>
         </div>
-
-        {/* Grant Alerts */}
-        <div className="rounded-xl border border-border bg-card p-6">
-          <div className="mb-4 flex items-center gap-2">
-            <FileText className="h-4 w-4 text-muted-foreground" />
-            <h2 className="text-sm font-semibold">Grant Alerts</h2>
-          </div>
-          {data.grantAlerts.length === 0 ? (
-            <p className="py-8 text-center text-sm text-muted-foreground">
-              No grant alerts
-            </p>
-          ) : (
-            <div className="space-y-3">
-              {data.grantAlerts.map((grant) => (
-                <div
-                  key={grant.id}
-                  className={cn(
-                    "rounded-lg border px-4 py-3 transition-shadow hover:shadow-sm",
-                    grant.isNew
-                      ? "border-portal-accent/30 bg-portal-accent-light/20"
-                      : "border-border"
-                  )}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <p className="truncate text-sm font-medium">{grant.title}</p>
-                        {grant.isNew && (
-                          <StatusBadge variant="info">New</StatusBadge>
-                        )}
-                      </div>
-                      <p className="mt-0.5 text-xs text-muted-foreground">
-                        {grant.fundingBody}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm font-semibold">
-                        {formatCurrency(grant.amount)}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
-                    <span>Deadline: {formatDate(grant.deadline)}</span>
-                    <span className="font-medium text-portal-accent">
-                      {grant.alignmentScore}% match
-                    </span>
-                  </div>
-                </div>
-              ))}
-              <Link
-                href="/faculty/research/grants"
-                className="inline-flex items-center gap-1.5 text-sm font-medium text-portal-accent hover:underline"
+        {data.upcomingClasses.length === 0 ? (
+          <p className="py-8 text-center text-sm text-muted-foreground">
+            No upcoming classes
+          </p>
+        ) : (
+          <div className="space-y-3">
+            {data.upcomingClasses.map((cls) => (
+              <div
+                key={cls.courseId}
+                className="rounded-lg border border-border px-4 py-3 transition-colors hover:bg-muted/50"
               >
-                View all grants
-                <ExternalLink className="h-3.5 w-3.5" />
-              </Link>
-            </div>
-          )}
-        </div>
+                <div className="flex items-center justify-between">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <Link
+                        href={`/faculty/courses/${cls.courseId}`}
+                        className="truncate text-sm font-medium hover:underline"
+                      >
+                        {cls.courseName}
+                      </Link>
+                      <StatusBadge variant="muted">{cls.courseCode}</StatusBadge>
+                    </div>
+                    <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        {cls.time} - {cls.endTime}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <MapPin className="h-3 w-3" />
+                        {cls.room}
+                      </span>
+                      <span>{cls.totalStudents} students</span>
+                    </div>
+                  </div>
+                  {cls.studentsAtRisk > 0 && (
+                    <StatusBadge variant="danger" dot>
+                      {cls.studentsAtRisk} at risk
+                    </StatusBadge>
+                  )}
+                </div>
+                <Link
+                  href="/faculty/briefings"
+                  className="mt-2 inline-flex items-center gap-1 text-xs text-portal-accent hover:underline"
+                >
+                  <Sparkles className="h-3 w-3" />
+                  View Briefing
+                </Link>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Weekly Trend */}
@@ -200,31 +125,6 @@ export default function FacultyDashboardPage() {
         height={240}
       />
 
-      {/* Research Metrics */}
-      <div className="space-y-3">
-        <div className="flex items-center gap-2">
-          <FlaskConical className="h-4 w-4 text-muted-foreground" />
-          <h2 className="text-sm font-semibold">Research Metrics</h2>
-        </div>
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-          <div className="rounded-xl border border-border bg-card p-4 text-center">
-            <p className="text-2xl font-semibold">{formatNumber(data.researchMetrics.publications)}</p>
-            <p className="mt-0.5 text-xs text-muted-foreground">Publications</p>
-          </div>
-          <div className="rounded-xl border border-border bg-card p-4 text-center">
-            <p className="text-2xl font-semibold">{formatNumber(data.researchMetrics.citations)}</p>
-            <p className="mt-0.5 text-xs text-muted-foreground">Citations</p>
-          </div>
-          <div className="rounded-xl border border-border bg-card p-4 text-center">
-            <p className="text-2xl font-semibold">{data.researchMetrics.hIndex}</p>
-            <p className="mt-0.5 text-xs text-muted-foreground">h-index</p>
-          </div>
-          <div className="rounded-xl border border-border bg-card p-4 text-center">
-            <p className="text-2xl font-semibold">{data.researchMetrics.activeGrants}</p>
-            <p className="mt-0.5 text-xs text-muted-foreground">Active Grants</p>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

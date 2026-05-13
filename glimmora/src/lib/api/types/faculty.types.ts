@@ -6,13 +6,6 @@ export interface FacultyDashboard {
   activeInterventions: number;
   totalStudents: number;
   upcomingClasses: UpcomingClass[];
-  grantAlerts: GrantAlert[];
-  researchMetrics: {
-    publications: number;
-    citations: number;
-    hIndex: number;
-    activeGrants: number;
-  };
   weeklyTrend: { day: string; atRisk: number; interventions: number }[];
 }
 
@@ -25,15 +18,6 @@ export interface UpcomingClass {
   room: string;
   studentsAtRisk: number;
   totalStudents: number;
-}
-
-export interface GrantAlert extends Identifiable {
-  title: string;
-  fundingBody: string;
-  deadline: string;
-  amount: number;
-  alignmentScore: number;
-  isNew: boolean;
 }
 
 // === Students ===
@@ -111,43 +95,6 @@ export interface FacultyCourseDetail extends FacultyCourse {
   engagementMetrics: { metric: string; value: number; benchmark: number }[];
 }
 
-// === Research ===
-export interface FacultyGrant extends Identifiable {
-  title: string;
-  fundingBody: string;
-  amount: number;
-  currency: string;
-  alignmentScore: number;
-  successProbability: number;
-  deadline: string;
-  topics: string[];
-  status: "discovered" | "interested" | "drafting" | "submitted" | "funded" | "rejected";
-  matchExplanation: string;
-  requirements: string[];
-}
-
-export interface FacultyCollaboration extends Identifiable {
-  name: string;
-  institution: string;
-  department: string;
-  expertise: string[];
-  sharedPublications: number;
-  matchScore: number;
-  email: string;
-  avatarUrl: string | null;
-}
-
-export interface FacultyPublication extends Identifiable {
-  title: string;
-  journal: string;
-  year: number;
-  citations: number;
-  coAuthors: string[];
-  doi?: string;
-  type: "journal" | "conference" | "book_chapter" | "preprint";
-  status: "published" | "in_review" | "accepted" | "preprint";
-}
-
 // === Briefings ===
 export interface AiBriefing extends Identifiable {
   courseId: string;
@@ -174,7 +121,6 @@ export interface FacultyProfile {
   phone?: string;
   bio?: string;
   avatarUrl?: string | null;
-  researchInterests: string[];
   expertise: string[];
   socialLinks: { platform: string; url: string }[];
 }
@@ -184,10 +130,7 @@ export interface FacultyNotificationPreferences {
   push: boolean;
   studentRiskAlerts: boolean;
   interventionUpdates: boolean;
-  grantDeadlines: boolean;
   briefingReady: boolean;
-  collaborationRequests: boolean;
-  citationAlerts: boolean;
 }
 
 // === Course Content (LMS) ===

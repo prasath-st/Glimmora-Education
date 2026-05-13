@@ -38,7 +38,6 @@ export const facultyProfileSchema = z.object({
   bio: z.string().optional(),
   officeHours: z.string().optional(),
   office: z.string().optional(),
-  researchInterests: z.array(z.string()),
   expertise: z.array(z.string()),
 });
 

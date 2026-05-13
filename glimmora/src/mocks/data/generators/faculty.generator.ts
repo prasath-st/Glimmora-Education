@@ -2,15 +2,11 @@ import { faker } from "@faker-js/faker";
 import type {
   FacultyDashboard,
   UpcomingClass,
-  GrantAlert,
   FacultyStudentListItem,
   FacultyStudentDetail,
   Intervention,
   FacultyCourse,
   FacultyCourseDetail,
-  FacultyGrant,
-  FacultyCollaboration,
-  FacultyPublication,
   AiBriefing,
   FacultyProfile,
   CourseModule,
@@ -164,83 +160,6 @@ const INTERVENTION_DESCRIPTIONS: Record<Intervention["type"], string[]> = {
   ],
 };
 
-const FUNDING_BODIES = [
-  { name: "National Science Foundation (NSF)", prefix: "NSF" },
-  { name: "National Institutes of Health (NIH)", prefix: "NIH" },
-  { name: "Defense Advanced Research Projects Agency (DARPA)", prefix: "DARPA" },
-  { name: "EU Horizon Europe", prefix: "HORIZON" },
-  { name: "Department of Energy (DOE)", prefix: "DOE" },
-  { name: "Google Research", prefix: "GOOGLE" },
-  { name: "Microsoft Research", prefix: "MSR" },
-  { name: "Amazon Science", prefix: "AMAZON" },
-  { name: "Meta AI Research", prefix: "META" },
-  { name: "OpenAI Research Fund", prefix: "OPENAI" },
-  { name: "Toyota Research Institute", prefix: "TRI" },
-  { name: "Allen Institute for AI", prefix: "AI2" },
-];
-
-const GRANT_TOPICS = [
-  "Explainable AI",
-  "Federated Learning",
-  "Responsible AI",
-  "AI Safety",
-  "Large Language Models",
-  "Multimodal Learning",
-  "Reinforcement Learning",
-  "Graph Neural Networks",
-  "AI for Education",
-  "Computational Biology",
-  "Robotics & Autonomy",
-  "Privacy-Preserving ML",
-  "AI Fairness & Bias",
-  "Quantum Machine Learning",
-  "Edge AI & Efficient Computing",
-];
-
-const RESEARCH_INSTITUTIONS = [
-  "MIT",
-  "Stanford University",
-  "Carnegie Mellon University",
-  "UC Berkeley",
-  "University of Toronto",
-  "ETH Zurich",
-  "University of Oxford",
-  "Georgia Institute of Technology",
-  "University of Washington",
-  "Tsinghua University",
-  "National University of Singapore",
-  "Max Planck Institute",
-  "University of Cambridge",
-  "EPFL",
-  "Seoul National University",
-];
-
-const JOURNAL_NAMES = [
-  "Nature Machine Intelligence",
-  "IEEE Transactions on Pattern Analysis and Machine Intelligence",
-  "Journal of Machine Learning Research",
-  "Artificial Intelligence",
-  "Neural Computation",
-  "Machine Learning",
-  "ACM Computing Surveys",
-  "IEEE Transactions on Neural Networks and Learning Systems",
-  "Data Mining and Knowledge Discovery",
-  "Pattern Recognition",
-];
-
-const CONFERENCE_NAMES = [
-  "NeurIPS",
-  "ICML",
-  "ICLR",
-  "AAAI",
-  "CVPR",
-  "ACL",
-  "EMNLP",
-  "KDD",
-  "IJCAI",
-  "SIGIR",
-];
-
 // ─── Stable Student Pool ──────────────────────────────────────────────────────
 
 interface StudentSeed {
@@ -357,16 +276,6 @@ export function generateFacultyDashboard(): FacultyDashboard {
     };
   });
 
-  const grantAlerts: GrantAlert[] = FUNDING_BODIES.slice(0, 3).map((fb) => ({
-    id: id("ga"),
-    title: `${fb.prefix}-${faker.number.int({ min: 2025, max: 2026 })}: ${pick(GRANT_TOPICS)}`,
-    fundingBody: fb.name,
-    deadline: futureDate(faker.number.int({ min: 14, max: 90 })),
-    amount: faker.number.int({ min: 50000, max: 500000 }),
-    alignmentScore: roundTo(faker.number.float({ min: 0.72, max: 0.96 }), 2),
-    isNew: faker.datatype.boolean(0.6),
-  }));
-
   const weekDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
   const weeklyTrend = weekDays.map((day) => ({
     day,
@@ -379,13 +288,6 @@ export function generateFacultyDashboard(): FacultyDashboard {
     activeInterventions: 3,
     totalStudents: students.length,
     upcomingClasses,
-    grantAlerts,
-    researchMetrics: {
-      publications: 47,
-      citations: 1823,
-      hIndex: 22,
-      activeGrants: 3,
-    },
     weeklyTrend,
   };
 }
@@ -737,170 +639,6 @@ export function generateFacultyCourseDetail(courseId: string): FacultyCourseDeta
   };
 }
 
-export function generateGrants(count: number = 10): FacultyGrant[] {
-  faker.seed(43);
-  const statuses: FacultyGrant["status"][] = ["discovered", "interested", "drafting", "submitted", "funded", "rejected", "discovered", "interested", "funded", "drafting"];
-
-  return Array.from({ length: count }, (_, i) => {
-    const fb = FUNDING_BODIES[i % FUNDING_BODIES.length];
-    const status = statuses[i % statuses.length];
-    const topics = pickN(GRANT_TOPICS, faker.number.int({ min: 2, max: 4 }));
-
-    return {
-      id: id("grt"),
-      title: `${fb.prefix}-${faker.number.int({ min: 2025, max: 2027 })}-${faker.string.alphanumeric(4).toUpperCase()}: ${topics[0]} ${pick(["Research Program", "Initiative", "Grant", "Fellowship", "Collaborative Award"])}`,
-      fundingBody: fb.name,
-      amount: faker.number.int({ min: 50000, max: 2000000 }),
-      currency: fb.name.includes("EU") ? "EUR" : "USD",
-      alignmentScore: roundTo(faker.number.float({ min: 0.55, max: 0.98 }), 2),
-      successProbability: roundTo(faker.number.float({ min: 0.15, max: 0.85 }), 2),
-      deadline: futureDate(faker.number.int({ min: 14, max: 180 })),
-      topics,
-      status,
-      matchExplanation: pick([
-        "Strong alignment with your published work on neural network architectures and explainability research.",
-        "Your recent publications on federated learning directly address the call's focus areas.",
-        "Interdisciplinary scope matches your collaboration profile in AI for education.",
-        "Aligns with your expertise in NLP and multimodal learning from recent conference papers.",
-        "Your h-index and publication record meet the eligibility criteria. Topic overlap is high.",
-        "Matches your ongoing research in responsible AI and bias detection methodologies.",
-        "Strong fit based on your lab's work in efficient edge computing for ML inference.",
-        "Your co-authored papers with the target institution increase collaboration score.",
-      ]),
-      requirements: pickN([
-        "PI must hold tenure-track or tenured position",
-        "Maximum 3-year project duration",
-        "Budget cap: $500,000 per year",
-        "Requires institutional letter of support",
-        "Open to international collaborations",
-        "Must include plan for broadening participation",
-        "Data management plan required",
-        "Quarterly progress reports",
-        "Results must be published open-access",
-        "Requires matching funds from institution",
-      ], faker.number.int({ min: 3, max: 5 })),
-    };
-  });
-}
-
-export function generateCollaborations(count: number = 15): FacultyCollaboration[] {
-  faker.seed(43);
-  const expertiseAreas = [
-    ["Machine Learning", "Deep Learning", "Computer Vision"],
-    ["Natural Language Processing", "Computational Linguistics", "Text Mining"],
-    ["Reinforcement Learning", "Robotics", "Autonomous Systems"],
-    ["Graph Neural Networks", "Network Analysis", "Social Computing"],
-    ["AI Safety", "Explainable AI", "Trustworthy AI"],
-    ["Federated Learning", "Privacy-Preserving ML", "Distributed Systems"],
-    ["Quantum Computing", "Quantum Machine Learning", "Optimization"],
-    ["Computational Biology", "Bioinformatics", "Drug Discovery"],
-    ["Computer Vision", "Medical Imaging", "Pattern Recognition"],
-    ["Edge Computing", "IoT", "Efficient ML"],
-    ["Multimodal Learning", "Audio Processing", "Speech Recognition"],
-    ["AI for Education", "Intelligent Tutoring", "Learning Analytics"],
-    ["Generative Models", "GANs", "Diffusion Models"],
-    ["Knowledge Graphs", "Semantic Web", "Information Extraction"],
-    ["Time Series Analysis", "Anomaly Detection", "Predictive Maintenance"],
-  ];
-
-  return Array.from({ length: count }, (_, i) => {
-    const firstName = faker.person.firstName();
-    const lastName = faker.person.lastName();
-    const institution = RESEARCH_INSTITUTIONS[i % RESEARCH_INSTITUTIONS.length];
-    const dept = pick(["Computer Science", "Electrical Engineering", "Data Science", "Statistics", "Mathematics", "Biomedical Engineering"]);
-    const expertise = expertiseAreas[i % expertiseAreas.length];
-
-    return {
-      id: id("col"),
-      name: `Dr. ${firstName} ${lastName}`,
-      institution,
-      department: dept,
-      expertise,
-      sharedPublications: faker.number.int({ min: 0, max: 8 }),
-      matchScore: roundTo(faker.number.float({ min: 0.60, max: 0.97 }), 2),
-      email: `${firstName.toLowerCase()}.${lastName.toLowerCase()}@${institution.toLowerCase().replace(/\s+/g, "").replace(/[^a-z]/g, "")}.edu`,
-      avatarUrl: faker.datatype.boolean(0.4) ? faker.image.avatar() : null,
-    };
-  });
-}
-
-export function generatePublications(count: number = 20): FacultyPublication[] {
-  faker.seed(43);
-  const publicationTitles = [
-    "Attention-Guided Feature Fusion for Multi-Scale Object Detection",
-    "Federated Learning with Differential Privacy: A Comprehensive Survey",
-    "Transformer Architectures for Time Series Forecasting: A Benchmark Study",
-    "Explaining Black-Box Models Through Counterfactual Analysis",
-    "Graph Convolutional Networks for Molecular Property Prediction",
-    "Self-Supervised Pre-Training for Low-Resource NLP Tasks",
-    "Efficient Neural Architecture Search via Progressive Pruning",
-    "Adversarial Robustness in Deep Learning: Challenges and Opportunities",
-    "Multi-Agent Reinforcement Learning for Cooperative Navigation",
-    "Bias Detection and Mitigation in Large Language Models",
-    "Knowledge Distillation for Edge Deployment of Vision Transformers",
-    "Continual Learning Without Catastrophic Forgetting: A Meta-Learning Approach",
-    "Causal Inference in Observational Studies Using Neural Networks",
-    "Scalable Bayesian Deep Learning for Uncertainty Quantification",
-    "Cross-Modal Retrieval with Contrastive Language-Image Pre-Training",
-    "Privacy-Preserving Federated Learning in Healthcare Applications",
-    "Dynamic Sparse Training for Resource-Constrained Environments",
-    "Neuro-Symbolic AI: Bridging Logic and Learning",
-    "Multimodal Sentiment Analysis with Cross-Attention Mechanisms",
-    "Reinforcement Learning from Human Feedback: Theory and Practice",
-  ];
-
-  const coAuthorPool = [
-    "J. Kim", "R. Patel", "M. Zhang", "A. Thompson", "L. Garcia",
-    "K. Nakamura", "P. Muller", "S. Okafor", "H. Liu", "D. Rossi",
-    "T. Anderson", "Y. Wang", "B. Fernandez", "N. Gupta", "C. Park",
-  ];
-
-  const types: FacultyPublication["type"][] = [
-    "journal", "conference", "journal", "conference", "conference",
-    "journal", "preprint", "conference", "journal", "conference",
-    "book_chapter", "journal", "conference", "preprint", "conference",
-    "journal", "conference", "journal", "preprint", "conference",
-  ];
-
-  const statusMap: Record<FacultyPublication["type"], FacultyPublication["status"][]> = {
-    journal: ["published", "published", "in_review", "accepted"],
-    conference: ["published", "published", "published", "accepted"],
-    book_chapter: ["published", "published"],
-    preprint: ["preprint", "preprint", "in_review"],
-  };
-
-  return Array.from({ length: count }, (_, i) => {
-    const type = types[i % types.length];
-    const status = pick(statusMap[type]);
-    const year = faker.number.int({ min: 2019, max: currentYear });
-    const coAuthors = pickN(coAuthorPool, faker.number.int({ min: 2, max: 5 }));
-
-    return {
-      id: id("pub"),
-      title: publicationTitles[i % publicationTitles.length],
-      journal: type === "conference"
-        ? `Proceedings of ${pick(CONFERENCE_NAMES)} ${year}`
-        : type === "preprint"
-          ? "arXiv"
-          : pick(JOURNAL_NAMES),
-      year,
-      citations: year < currentYear - 1
-        ? faker.number.int({ min: 5, max: 180 })
-        : year === currentYear - 1
-          ? faker.number.int({ min: 0, max: 45 })
-          : faker.number.int({ min: 0, max: 8 }),
-      coAuthors,
-      doi: status === "published" || status === "accepted"
-        ? `10.${faker.number.int({ min: 1000, max: 9999 })}/${faker.string.alphanumeric(8)}`
-        : type === "preprint"
-          ? `10.48550/arXiv.${year}.${faker.string.numeric(5)}`
-          : undefined,
-      type,
-      status,
-    };
-  });
-}
-
 export function generateBriefings(): AiBriefing[] {
   faker.seed(43);
   const courses = generateFacultyCourses();
@@ -992,14 +730,6 @@ export function generateFacultyProfile(): FacultyProfile {
     phone: "+1 (555) 234-5678",
     bio: "Associate Professor of Computer Science specializing in machine learning, natural language processing, and AI for education. My research focuses on developing interpretable ML models and applying AI techniques to improve educational outcomes. I lead the Intelligent Systems Lab, where we work on explainable AI, federated learning, and adaptive educational technology.",
     avatarUrl: null,
-    researchInterests: [
-      "Machine Learning",
-      "Natural Language Processing",
-      "Explainable AI",
-      "AI for Education",
-      "Federated Learning",
-      "Deep Learning",
-    ],
     expertise: [
       "Neural Network Architectures",
       "Transformer Models",

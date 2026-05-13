@@ -150,12 +150,6 @@ const AI_MODEL_DEFINITIONS = [
     version: "3.2.1",
   },
   {
-    name: "Research Optimization Engine",
-    domain: "Research Management",
-    description: "Optimizes research grant matching and resource allocation across departments using historical funding data.",
-    version: "2.1.0",
-  },
-  {
     name: "Compliance Monitor",
     domain: "Regulatory Compliance",
     description: "Continuously monitors institutional practices against GDPR, FERPA, and DPDP frameworks to detect potential violations.",
@@ -633,7 +627,7 @@ export function generateAiModels(): AiModel[] {
   return AI_MODEL_DEFINITIONS.map((def) => {
     // One training, one inactive, the rest active — reflects a typical fleet
     // mid-cycle with at least one model under retrain.
-    const statuses: ModelStatus[] = ["active", "training", "active", "active", "inactive"];
+    const statuses: ModelStatus[] = ["active", "training", "active", "active"];
     const status = statuses[AI_MODEL_DEFINITIONS.indexOf(def)];
 
     return {
@@ -663,10 +657,9 @@ export function generateBiasReports(): BiasReport[] {
 
   const reportDefs = [
     { modelIdx: 0, overallScore: 92 },
-    { modelIdx: 1, overallScore: 87 },
-    { modelIdx: 2, overallScore: 95 },
-    { modelIdx: 3, overallScore: 78 },
-    { modelIdx: 4, overallScore: 84 },
+    { modelIdx: 1, overallScore: 95 },
+    { modelIdx: 2, overallScore: 78 },
+    { modelIdx: 3, overallScore: 84 },
   ];
 
   return reportDefs.map((def) => {
@@ -723,7 +716,6 @@ export function generateOverrideLog(): AiOverrideLog[] {
     { model: "Curriculum Advisor", original: "Drop Advanced ML Course", overridden: "Continue with Additional Support", reason: "Student is struggling but highly motivated; dropping course would delay graduation by a semester.", entity: "Student: Kavya Singh (STU-2024-1102)" },
     { model: "Compliance Monitor", original: "Flag as Non-Compliant", overridden: "Compliant with Conditions", reason: "Department submitted corrective action plan; full compliance expected within 30 days.", entity: "Department: Biotechnology" },
     { model: "Student Risk Predictor", original: "Low Risk — No Action", overridden: "Medium Risk — Schedule Check-in", reason: "Faculty advisor noted concerning behavioral changes not reflected in academic metrics.", entity: "Student: Siddharth Reddy (STU-2024-0756)" },
-    { model: "Research Optimization Engine", original: "Reject Grant Application", overridden: "Forward to Committee Review", reason: "Novel interdisciplinary approach not well-evaluated by current model parameters.", entity: "Grant: SERB-2026-AI-0042" },
     { model: "Placement Matching Agent", original: "Match Score: 42% — Skip", overridden: "Match Score Override: 78% — Include", reason: "Student is career-switching from mechanical engineering; prior skills highly transferable.", entity: "Student: Vikram Kumar (STU-2023-1455)" },
   ];
 

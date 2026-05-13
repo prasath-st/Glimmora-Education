@@ -104,7 +104,6 @@ interface ProfileFormData {
   bio: string;
   officeHours: string;
   office: string;
-  researchInterests: string;
   expertise: string;
 }
 
@@ -124,7 +123,6 @@ function ProfileTab({ profile }: { profile: FacultyProfile }) {
       bio: profile.bio || "",
       officeHours: profile.officeHours || "",
       office: profile.office || "",
-      researchInterests: profile.researchInterests.join(", "),
       expertise: profile.expertise.join(", "),
     },
   });
@@ -137,10 +135,6 @@ function ProfileTab({ profile }: { profile: FacultyProfile }) {
       bio: data.bio || undefined,
       officeHours: data.officeHours || undefined,
       office: data.office || undefined,
-      researchInterests: data.researchInterests
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean),
       expertise: data.expertise
         .split(",")
         .map((s) => s.trim())
@@ -222,15 +216,6 @@ function ProfileTab({ profile }: { profile: FacultyProfile }) {
         />
       </FormSection>
 
-      <FormSection title="Research Interests" description="Add your research interests as comma-separated values">
-        <FormField
-          label="Research Interests"
-          {...register("researchInterests")}
-          placeholder="Machine Learning, NLP, Computer Vision (comma-separated)"
-          hint="Comma-separated list of research interests"
-        />
-      </FormSection>
-
       <FormSection title="Expertise" description="Add your areas of expertise as comma-separated values">
         <FormField
           label="Expertise"
@@ -276,7 +261,7 @@ function ProfileTab({ profile }: { profile: FacultyProfile }) {
             Add social link
           </button>
           <p className="text-xs text-muted-foreground mt-2">
-            Social links help collaborators find your research profiles.
+            Social links help colleagues find your professional profiles.
           </p>
         </div>
       </FormSection>
@@ -323,10 +308,7 @@ const notifToggles: NotifToggleItem[] = [
   { key: "push", label: "Push Notifications", description: "Receive push notifications in browser" },
   { key: "studentRiskAlerts", label: "Student Risk Alerts", description: "Get notified when student risk levels change" },
   { key: "interventionUpdates", label: "Intervention Updates", description: "Updates on intervention progress" },
-  { key: "grantDeadlines", label: "Grant Deadlines", description: "Reminders for upcoming grant deadlines" },
   { key: "briefingReady", label: "Briefing Ready", description: "Notification when AI briefings are ready" },
-  { key: "collaborationRequests", label: "Collaboration Requests", description: "New collaboration opportunities" },
-  { key: "citationAlerts", label: "Citation Alerts", description: "Notifications when your publications are cited" },
 ];
 
 function PreferencesTab() {

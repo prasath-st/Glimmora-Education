@@ -10,9 +10,6 @@ import type {
   CreateInterventionRequest,
   FacultyCourse,
   FacultyCourseDetail,
-  FacultyGrant,
-  FacultyCollaboration,
-  FacultyPublication,
   AiBriefing,
   FacultyProfile,
   FacultyNotificationPreferences,
@@ -160,65 +157,6 @@ export function useFacultyCourseDetail(courseId: string) {
   });
 }
 
-// === Research ===
-export function useFacultyGrants(params?: {
-  status?: string;
-  page?: number;
-  pageSize?: number;
-}) {
-  const searchParams = new URLSearchParams();
-  if (params?.status) searchParams.set("status", params.status);
-  if (params?.page) searchParams.set("page", String(params.page));
-  if (params?.pageSize) searchParams.set("pageSize", String(params.pageSize));
-  const qs = searchParams.toString();
-
-  return useQuery({
-    queryKey: ["faculty", "grants", params],
-    queryFn: () =>
-      api.get<FacultyGrant[]>(
-        `/api/faculty/me/grants${qs ? `?${qs}` : ""}`
-      ),
-    select: (res) => ({
-      grants: res.data,
-      meta: res.meta as PaginationMeta,
-    }),
-  });
-}
-
-export function useFacultyCollaborations(params?: { search?: string }) {
-  const searchParams = new URLSearchParams();
-  if (params?.search) searchParams.set("search", params.search);
-  const qs = searchParams.toString();
-
-  return useQuery({
-    queryKey: ["faculty", "collaborations", params],
-    queryFn: () =>
-      api.get<FacultyCollaboration[]>(
-        `/api/faculty/me/collaborations${qs ? `?${qs}` : ""}`
-      ),
-    select: (res) => res.data,
-  });
-}
-
-export function useFacultyPublications(params?: {
-  type?: string;
-  search?: string;
-}) {
-  const searchParams = new URLSearchParams();
-  if (params?.type) searchParams.set("type", params.type);
-  if (params?.search) searchParams.set("search", params.search);
-  const qs = searchParams.toString();
-
-  return useQuery({
-    queryKey: ["faculty", "publications", params],
-    queryFn: () =>
-      api.get<FacultyPublication[]>(
-        `/api/faculty/me/publications${qs ? `?${qs}` : ""}`
-      ),
-    select: (res) => res.data,
-  });
-}
-
 // === Briefings ===
 export function useBriefings() {
   return useQuery({
@@ -276,19 +214,6 @@ export function useUpdateFacultyProfile() {
       api.patch<FacultyProfile>("/api/faculty/me/profile", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["faculty", "profile"] });
-    },
-  });
-}
-
-// === Grant Status Change ===
-export function useUpdateGrantStatus() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ grantId, status }: { grantId: string; status: string }) =>
-      api.patch<FacultyGrant>(`/api/faculty/me/grants/${grantId}`, { status }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["faculty", "grants"] });
-      queryClient.invalidateQueries({ queryKey: ["faculty", "dashboard"] });
     },
   });
 }

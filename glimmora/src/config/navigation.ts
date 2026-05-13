@@ -11,11 +11,7 @@ import {
   UserCheck,
   GraduationCap,
   ClipboardList,
-  FlaskConical,
-  Search,
   BrainCircuit,
-  Network,
-  FileText,
   TrendingUp,
   BarChart3,
   ShieldCheck,
@@ -126,15 +122,6 @@ export const PORTAL_NAVIGATION: Record<PortalRole, NavSection[]> = {
       label: "Teaching",
       items: [
         { label: "Courses", href: "/faculty/courses", icon: GraduationCap },
-      ],
-    },
-    {
-      label: "Research",
-      items: [
-        { label: "Overview", href: "/faculty/research", icon: FlaskConical },
-        { label: "Grant Radar", href: "/faculty/research/grants", icon: Search },
-        { label: "Collaborations", href: "/faculty/research/collaborations", icon: Network },
-        { label: "Publications", href: "/faculty/research/publications", icon: FileText },
       ],
     },
     {
