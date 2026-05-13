@@ -1,22 +1,16 @@
 "use client";
 
 import { use, useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft,
-  UserCheck,
   GraduationCap,
   Calendar,
-  Plus,
   AlertTriangle,
   BookOpen,
   Clock,
-  CheckCircle2,
 } from "lucide-react";
 import { useFacultyStudentDetail } from "@/lib/hooks/use-faculty";
-import { PageHeader } from "@/components/shared/misc/page-header";
-import { StatCard } from "@/components/shared/misc/stat-card";
 import { StatusBadge, getRiskVariant } from "@/components/shared/feedback/status-badge";
 import { RiskIndicator } from "@/components/shared/misc/risk-indicator";
 import { AreaTrend } from "@/components/shared/charts/area-trend";
@@ -25,28 +19,11 @@ import { GaugeChart } from "@/components/shared/charts/gauge-chart";
 import { DataTable } from "@/components/shared/data-table/data-table";
 import { DashboardSkeleton } from "@/components/shared/feedback/loading-skeleton";
 import { ErrorState } from "@/components/shared/feedback/error-state";
-import { EmptyState } from "@/components/shared/feedback/empty-state";
 import { cn } from "@/lib/utils/cn";
-import { formatGpa, formatPercentage, formatDate, formatRelative } from "@/lib/utils/format";
+import { formatGpa, formatPercentage, formatDate } from "@/lib/utils/format";
 import type { ColumnDef } from "@tanstack/react-table";
-import type { Intervention } from "@/lib/api/types/faculty.types";
 
-type TabId = "overview" | "performance" | "attendance" | "interventions";
-
-const interventionStatusVariant: Record<string, "default" | "success" | "warning" | "danger" | "info" | "muted"> = {
-  planned: "info",
-  active: "default",
-  completed: "success",
-  abandoned: "muted",
-};
-
-const interventionTypeLabels: Record<string, string> = {
-  academic_support: "Academic Support",
-  counseling: "Counseling",
-  mentoring: "Mentoring",
-  schedule_adjustment: "Schedule Adjustment",
-  financial_aid: "Financial Aid",
-};
+type TabId = "overview" | "performance" | "attendance";
 
 export default function FacultyStudentDetailPage({
   params,
@@ -54,7 +31,6 @@ export default function FacultyStudentDetailPage({
   params: Promise<{ studentId: string }>;
 }) {
   const { studentId } = use(params);
-  const router = useRouter();
   const { data: student, isLoading, isError, refetch } = useFacultyStudentDetail(studentId);
   const [activeTab, setActiveTab] = useState<TabId>("overview");
 
@@ -118,41 +94,6 @@ export default function FacultyStudentDetailPage({
           </div>
           <span className="text-xs text-muted-foreground">{formatPercentage(row.original.assignments, 0)}</span>
         </div>
-      ),
-    },
-  ];
-
-  const interventionColumns: ColumnDef<Intervention, unknown>[] = [
-    {
-      accessorKey: "type",
-      header: "Type",
-      cell: ({ row }) => (
-        <StatusBadge variant="muted">
-          {interventionTypeLabels[row.original.type] || row.original.type}
-        </StatusBadge>
-      ),
-    },
-    {
-      accessorKey: "description",
-      header: "Description",
-      cell: ({ row }) => (
-        <span className="line-clamp-1 max-w-[300px]">{row.original.description}</span>
-      ),
-    },
-    {
-      accessorKey: "status",
-      header: "Status",
-      cell: ({ row }) => (
-        <StatusBadge variant={interventionStatusVariant[row.original.status]} dot>
-          {row.original.status}
-        </StatusBadge>
-      ),
-    },
-    {
-      accessorKey: "startDate",
-      header: "Start Date",
-      cell: ({ row }) => (
-        <span className="text-muted-foreground">{formatDate(row.original.startDate)}</span>
       ),
     },
   ];
@@ -221,7 +162,7 @@ export default function FacultyStudentDetailPage({
 
       {/* Tabs */}
       <div className="flex gap-1 rounded-lg border border-border bg-muted/50 p-1">
-        {(["overview", "performance", "attendance", "interventions"] as const).map((tab) => (
+        {(["overview", "performance", "attendance"] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -275,12 +216,6 @@ export default function FacultyStudentDetailPage({
                     </StatusBadge>
                     <p className="mt-2 text-sm">{alert.message}</p>
                     <p className="mt-1 text-xs text-muted-foreground">{formatDate(alert.date)}</p>
-                    <Link
-                      href={`/faculty/interventions/new?studentId=${studentId}`}
-                      className="mt-2 inline-block text-xs text-portal-accent hover:underline"
-                    >
-                      Create Intervention
-                    </Link>
                   </div>
                 ))}
               </div>
@@ -344,39 +279,6 @@ export default function FacultyStudentDetailPage({
         </div>
       )}
 
-      {activeTab === "interventions" && (
-        <div className="space-y-4">
-          <div className="flex justify-end">
-            <Link
-              href={`/faculty/interventions/new?studentId=${student.id}`}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-portal-accent px-4 py-2 text-sm font-medium text-portal-accent-foreground transition-colors hover:bg-portal-accent-hover"
-            >
-              <Plus className="h-4 w-4" />
-              Create Intervention
-            </Link>
-          </div>
-          {student.interventions.length === 0 ? (
-            <EmptyState
-              title="No interventions"
-              description="No interventions have been created for this student yet."
-              action={{
-                label: "Create Intervention",
-                onClick: () => router.push(`/faculty/interventions/new?studentId=${studentId}`),
-              }}
-            />
-          ) : (
-            <DataTable
-              columns={interventionColumns}
-              data={student.interventions}
-              showSearch={false}
-              onRowClick={(row) => {
-                window.location.href = `/faculty/interventions/${row.id}`;
-              }}
-              emptyTitle="No interventions"
-            />
-          )}
-        </div>
-      )}
     </div>
   );
 }

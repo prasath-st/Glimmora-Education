@@ -1,12 +1,11 @@
-import type { Identifiable, Timestamps, RiskLevel, InterventionStatus } from "./common.types";
+import type { Identifiable, Timestamps, RiskLevel } from "./common.types";
 
 // === Dashboard ===
 export interface FacultyDashboard {
   atRiskStudentCount: number;
-  activeInterventions: number;
   totalStudents: number;
   upcomingClasses: UpcomingClass[];
-  weeklyTrend: { day: string; atRisk: number; interventions: number }[];
+  weeklyTrend: { day: string; atRisk: number }[];
 }
 
 export interface UpcomingClass {
@@ -45,32 +44,8 @@ export interface FacultyStudentDetail extends FacultyStudentListItem {
   skills: { name: string; score: number; trend: "up" | "down" | "stable" }[];
   gpaHistory: { semester: string; gpa: number }[];
   attendanceHistory: { date: string; status: "present" | "absent" | "late"; courseName: string }[];
-  interventions: Intervention[];
   riskAlerts: { type: string; severity: RiskLevel; message: string; date: string }[];
   coursePerformance: { courseCode: string; courseName: string; grade: string; attendance: number; assignments: number }[];
-}
-
-// === Interventions ===
-export interface Intervention extends Identifiable, Timestamps {
-  studentId: string;
-  studentName: string;
-  type: "academic_support" | "counseling" | "mentoring" | "schedule_adjustment" | "financial_aid";
-  description: string;
-  goals: string[];
-  status: InterventionStatus;
-  startDate: string;
-  endDate?: string;
-  outcomes?: string;
-  notes: { date: string; content: string; author: string }[];
-  createdBy: string;
-}
-
-export interface CreateInterventionRequest {
-  studentId: string;
-  type: Intervention["type"];
-  description: string;
-  goals: string[];
-  startDate: string;
 }
 
 // === Courses ===
@@ -129,7 +104,6 @@ export interface FacultyNotificationPreferences {
   email: boolean;
   push: boolean;
   studentRiskAlerts: boolean;
-  interventionUpdates: boolean;
   briefingReady: boolean;
 }
 

@@ -36,10 +36,3 @@ export const APPEAL_STATUS_LABELS = {
   rejected: "Rejected",
   escalated: "Escalated",
 } as const;
-
-export const INTERVENTION_STATUS_LABELS = {
-  planned: "Planned",
-  active: "Active",
-  completed: "Completed",
-  abandoned: "Abandoned",
-} as const;

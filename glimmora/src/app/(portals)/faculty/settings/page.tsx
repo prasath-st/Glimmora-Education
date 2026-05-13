@@ -307,7 +307,6 @@ const notifToggles: NotifToggleItem[] = [
   { key: "email", label: "Email Notifications", description: "Receive notifications via email" },
   { key: "push", label: "Push Notifications", description: "Receive push notifications in browser" },
   { key: "studentRiskAlerts", label: "Student Risk Alerts", description: "Get notified when student risk levels change" },
-  { key: "interventionUpdates", label: "Intervention Updates", description: "Updates on intervention progress" },
   { key: "briefingReady", label: "Briefing Ready", description: "Notification when AI briefings are ready" },
 ];
 

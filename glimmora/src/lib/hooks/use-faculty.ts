@@ -6,8 +6,6 @@ import type {
   FacultyDashboard,
   FacultyStudentListItem,
   FacultyStudentDetail,
-  Intervention,
-  CreateInterventionRequest,
   FacultyCourse,
   FacultyCourseDetail,
   AiBriefing,
@@ -69,72 +67,6 @@ export function useFacultyStudentDetail(studentId: string) {
       api.get<FacultyStudentDetail>(`/api/faculty/me/students/${studentId}`),
     select: (res) => res.data,
     enabled: !!studentId,
-  });
-}
-
-// === Interventions ===
-export function useInterventions(params?: {
-  status?: string;
-  page?: number;
-  pageSize?: number;
-}) {
-  const searchParams = new URLSearchParams();
-  if (params?.status) searchParams.set("status", params.status);
-  if (params?.page) searchParams.set("page", String(params.page));
-  if (params?.pageSize) searchParams.set("pageSize", String(params.pageSize));
-  const qs = searchParams.toString();
-
-  return useQuery({
-    queryKey: ["faculty", "interventions", params],
-    queryFn: () =>
-      api.get<Intervention[]>(
-        `/api/faculty/me/interventions${qs ? `?${qs}` : ""}`
-      ),
-    select: (res) => ({
-      interventions: res.data,
-      meta: res.meta as PaginationMeta,
-    }),
-  });
-}
-
-export function useInterventionDetail(interventionId: string) {
-  return useQuery({
-    queryKey: ["faculty", "intervention", interventionId],
-    queryFn: () =>
-      api.get<Intervention>(`/api/faculty/me/interventions/${interventionId}`),
-    select: (res) => res.data,
-    enabled: !!interventionId,
-  });
-}
-
-export function useCreateIntervention() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (data: CreateInterventionRequest) =>
-      api.post<Intervention>("/api/faculty/me/interventions", data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["faculty", "interventions"] });
-      queryClient.invalidateQueries({ queryKey: ["faculty", "dashboard"] });
-    },
-  });
-}
-
-export function useUpdateIntervention() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({
-      id,
-      ...data
-    }: { id: string } & Partial<
-      Pick<Intervention, "status" | "outcomes"> & { note: string }
-    >) => api.patch<Intervention>(`/api/faculty/me/interventions/${id}`, data),
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({
-        queryKey: ["faculty", "intervention", variables.id],
-      });
-      queryClient.invalidateQueries({ queryKey: ["faculty", "interventions"] });
-      queryClient.invalidateQueries({ queryKey: ["faculty", "dashboard"] });
-    },
   });
 }
 
@@ -234,31 +166,6 @@ export function useUpdateFacultyNotificationPreferences() {
       api.patch<FacultyNotificationPreferences>("/api/faculty/me/notification-preferences", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["faculty", "notification-preferences"] });
-    },
-  });
-}
-
-// === Intervention Note Edit/Delete ===
-export function useEditInterventionNote() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ interventionId, noteIndex, content }: { interventionId: string; noteIndex: number; content: string }) =>
-      api.patch(`/api/faculty/me/interventions/${interventionId}/notes/${noteIndex}`, { content }),
-    onSuccess: (_, vars) => {
-      queryClient.invalidateQueries({ queryKey: ["faculty", "intervention", vars.interventionId] });
-      queryClient.invalidateQueries({ queryKey: ["faculty", "interventions"] });
-    },
-  });
-}
-
-export function useDeleteInterventionNote() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ interventionId, noteIndex }: { interventionId: string; noteIndex: number }) =>
-      api.delete(`/api/faculty/me/interventions/${interventionId}/notes/${noteIndex}`),
-    onSuccess: (_, vars) => {
-      queryClient.invalidateQueries({ queryKey: ["faculty", "intervention", vars.interventionId] });
-      queryClient.invalidateQueries({ queryKey: ["faculty", "interventions"] });
     },
   });
 }

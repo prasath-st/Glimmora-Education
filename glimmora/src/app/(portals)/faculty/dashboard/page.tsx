@@ -4,7 +4,6 @@ import Link from "next/link";
 import {
   LayoutDashboard,
   AlertTriangle,
-  Activity,
   Users,
   Clock,
   MapPin,
@@ -27,7 +26,6 @@ export default function FacultyDashboardPage() {
   const weeklyTrendData = data.weeklyTrend.map((w) => ({
     label: w.day,
     value: w.atRisk,
-    interventions: w.interventions,
   }));
 
   return (
@@ -39,17 +37,12 @@ export default function FacultyDashboardPage() {
       />
 
       {/* KPI Row */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <StatCard
           label="At-Risk Students"
           value={data.atRiskStudentCount}
           icon={AlertTriangle}
           className="border-danger/20"
-        />
-        <StatCard
-          label="Active Interventions"
-          value={data.activeInterventions}
-          icon={Activity}
         />
         <StatCard
           label="Total Students"

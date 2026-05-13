@@ -8,7 +8,6 @@ import {
   Scale,
   Settings,
   Users,
-  UserCheck,
   GraduationCap,
   ClipboardList,
   BrainCircuit,
@@ -115,7 +114,6 @@ export const PORTAL_NAVIGATION: Record<PortalRole, NavSection[]> = {
       label: "Students",
       items: [
         { label: "My Students", href: "/faculty/students", icon: Users },
-        { label: "Interventions", href: "/faculty/interventions", icon: UserCheck },
       ],
     },
     {

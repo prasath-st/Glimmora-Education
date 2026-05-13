@@ -2,8 +2,6 @@ import { http, HttpResponse, delay } from "msw";
 import type {
   FacultyDashboard,
   FacultyStudentListItem,
-  Intervention,
-  CreateInterventionRequest,
   FacultyCourse,
   FacultyCourseDetail,
   AiBriefing,
@@ -24,7 +22,6 @@ import {
   generateFacultyDashboard,
   generateFacultyStudents,
   generateFacultyStudentDetail,
-  generateInterventions,
   generateFacultyCourses,
   generateFacultyCourseDetail,
   generateBriefings,
@@ -40,7 +37,6 @@ import {
 
 const dashboard: FacultyDashboard = generateFacultyDashboard();
 const students: FacultyStudentListItem[] = generateFacultyStudents(48);
-let interventions: Intervention[] = generateInterventions(10);
 const courses: FacultyCourse[] = generateFacultyCourses(5);
 let briefings: AiBriefing[] = generateBriefings();
 let profile: FacultyProfile = generateFacultyProfile();
@@ -48,11 +44,7 @@ let facultyNotifPrefs = {
   email: true,
   push: true,
   studentRiskAlerts: true,
-  interventionUpdates: true,
-  grantDeadlines: true,
   briefingReady: true,
-  collaborationRequests: false,
-  citationAlerts: false,
 };
 
 // ─── LMS Data Caches (keyed by courseId) ─────────────────────────────────────
@@ -168,7 +160,6 @@ export const facultyHandlers = [
     const liveData = {
       ...dashboard,
       atRiskStudentCount: students.filter((s) => s.riskLevel === "high").length,
-      activeInterventions: interventions.filter((i) => i.status === "active").length,
       totalStudents: students.length,
     };
     return HttpResponse.json({ data: liveData });
@@ -210,151 +201,6 @@ export const facultyHandlers = [
     if (!detail) return notFound("Student");
 
     return HttpResponse.json({ data: detail });
-  }),
-
-  // ── Interventions ─────────────────────────────────────────────────────────
-  http.get("/api/faculty/me/interventions", async ({ request }) => {
-    await randomDelay();
-    const url = new URL(request.url);
-    const status = url.searchParams.get("status");
-
-    let filtered = [...interventions];
-
-    if (status && ["planned", "active", "completed", "abandoned"].includes(status)) {
-      filtered = filtered.filter((i) => i.status === status);
-    }
-
-    // Sort by most recently updated
-    filtered.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
-
-    const result = paginate(filtered, url);
-    return HttpResponse.json({ data: result.data, meta: result.meta });
-  }),
-
-  http.get("/api/faculty/me/interventions/:interventionId", async ({ params }) => {
-    await randomDelay();
-    const intervention = interventions.find((i) => i.id === params.interventionId);
-    if (!intervention) return notFound("Intervention");
-    return HttpResponse.json({ data: intervention });
-  }),
-
-  http.post("/api/faculty/me/interventions", async ({ request }) => {
-    await randomDelay();
-    const body = (await request.json()) as CreateInterventionRequest;
-    const errors: Record<string, string[]> = {};
-
-    if (!body.studentId) {
-      errors.studentId = ["Student ID is required"];
-    } else {
-      const student = students.find((s) => s.id === body.studentId);
-      if (!student) {
-        errors.studentId = ["Student not found"];
-      }
-    }
-
-    if (!body.type || !["academic_support", "counseling", "mentoring", "schedule_adjustment", "financial_aid"].includes(body.type)) {
-      errors.type = ["Type must be one of: academic_support, counseling, mentoring, schedule_adjustment, financial_aid"];
-    }
-
-    if (!body.description || body.description.trim().length < 10) {
-      errors.description = ["Description is required and must be at least 10 characters"];
-    }
-
-    if (!body.goals || body.goals.length === 0) {
-      errors.goals = ["At least one goal is required"];
-    }
-
-    if (!body.startDate) {
-      errors.startDate = ["Start date is required"];
-    }
-
-    if (Object.keys(errors).length > 0) {
-      return validationError(errors);
-    }
-
-    const student = students.find((s) => s.id === body.studentId)!;
-    const now = new Date().toISOString();
-
-    const newIntervention: Intervention = {
-      id: `int_${Date.now()}`,
-      studentId: body.studentId,
-      studentName: student.name,
-      type: body.type,
-      description: body.description,
-      goals: body.goals,
-      status: "planned",
-      startDate: body.startDate,
-      notes: [
-        {
-          date: now,
-          content: "Intervention created and awaiting activation.",
-          author: "Dr. Sarah Chen",
-        },
-      ],
-      createdBy: "usr_faculty_01",
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    interventions = [newIntervention, ...interventions];
-
-    return HttpResponse.json({ data: newIntervention }, { status: 201 });
-  }),
-
-  http.patch("/api/faculty/me/interventions/:interventionId", async ({ params, request }) => {
-    await randomDelay();
-    const interventionId = params.interventionId as string;
-    const idx = interventions.findIndex((i) => i.id === interventionId);
-    if (idx === -1) return notFound("Intervention");
-
-    const body = (await request.json()) as {
-      status?: string;
-      note?: { content: string };
-      outcomes?: string;
-    };
-    const errors: Record<string, string[]> = {};
-
-    if (body.status !== undefined) {
-      if (!["planned", "active", "completed", "abandoned"].includes(body.status)) {
-        errors.status = ["Status must be one of: planned, active, completed, abandoned"];
-      }
-    }
-
-    if (body.note !== undefined) {
-      if (!body.note.content || body.note.content.trim().length < 5) {
-        errors["note.content"] = ["Note content is required and must be at least 5 characters"];
-      }
-    }
-
-    if (Object.keys(errors).length > 0) {
-      return validationError(errors);
-    }
-
-    const now = new Date().toISOString();
-    const current = interventions[idx];
-    const updated = { ...current, updatedAt: now };
-
-    if (body.status) {
-      updated.status = body.status as Intervention["status"];
-      if (body.status === "completed" || body.status === "abandoned") {
-        updated.endDate = now;
-      }
-    }
-
-    if (body.outcomes) {
-      updated.outcomes = body.outcomes;
-    }
-
-    if (body.note) {
-      updated.notes = [
-        { date: now, content: body.note.content, author: "Dr. Sarah Chen" },
-        ...current.notes,
-      ];
-    }
-
-    interventions = interventions.map((i) => (i.id === interventionId ? updated : i));
-
-    return HttpResponse.json({ data: updated });
   }),
 
   // ── Courses ───────────────────────────────────────────────────────────────
@@ -449,53 +295,6 @@ export const facultyHandlers = [
     }
 
     return HttpResponse.json({ data: facultyNotifPrefs });
-  }),
-
-  // ── Intervention Note Edit/Delete ────────────────────────────────────────
-  http.patch("/api/faculty/me/interventions/:interventionId/notes/:noteIndex", async ({ params, request }) => {
-    await randomDelay();
-    const interventionId = params.interventionId as string;
-    const noteIndex = Number(params.noteIndex);
-    const intervention = interventions.find((i) => i.id === interventionId);
-    if (!intervention) return notFound("Intervention");
-    if (isNaN(noteIndex) || noteIndex < 0 || noteIndex >= intervention.notes.length) {
-      return notFound("Note");
-    }
-
-    const body = (await request.json()) as { content: string };
-    if (!body.content || body.content.trim().length < 5) {
-      return validationError({ content: ["Note must be at least 5 characters"] });
-    }
-
-    const now = new Date().toISOString();
-    const updatedNotes = [...intervention.notes];
-    updatedNotes[noteIndex] = { ...updatedNotes[noteIndex], content: body.content, date: now };
-
-    interventions = interventions.map((i) =>
-      i.id === interventionId ? { ...i, notes: updatedNotes, updatedAt: now } : i
-    );
-
-    return HttpResponse.json({ data: interventions.find((i) => i.id === interventionId) });
-  }),
-
-  http.delete("/api/faculty/me/interventions/:interventionId/notes/:noteIndex", async ({ params }) => {
-    await randomDelay();
-    const interventionId = params.interventionId as string;
-    const noteIndex = Number(params.noteIndex);
-    const intervention = interventions.find((i) => i.id === interventionId);
-    if (!intervention) return notFound("Intervention");
-    if (isNaN(noteIndex) || noteIndex < 0 || noteIndex >= intervention.notes.length) {
-      return notFound("Note");
-    }
-
-    const now = new Date().toISOString();
-    const updatedNotes = intervention.notes.filter((_, i) => i !== noteIndex);
-
-    interventions = interventions.map((i) =>
-      i.id === interventionId ? { ...i, notes: updatedNotes, updatedAt: now } : i
-    );
-
-    return HttpResponse.json({ data: interventions.find((i) => i.id === interventionId) });
   }),
 
   // ── Course Modules (LMS) ──────────────────────────────────────────────────

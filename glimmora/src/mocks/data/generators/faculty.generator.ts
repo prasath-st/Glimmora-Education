@@ -4,7 +4,6 @@ import type {
   UpcomingClass,
   FacultyStudentListItem,
   FacultyStudentDetail,
-  Intervention,
   FacultyCourse,
   FacultyCourseDetail,
   AiBriefing,
@@ -18,7 +17,7 @@ import type {
   AttendanceSession,
   AttendanceRecord,
 } from "@/lib/api/types/faculty.types";
-import type { RiskLevel, InterventionStatus } from "@/lib/api/types/common.types";
+import type { RiskLevel } from "@/lib/api/types/common.types";
 
 faker.seed(43);
 
@@ -122,43 +121,6 @@ const STUDENT_SKILLS = [
 ];
 
 const GRADE_LETTERS = ["A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D", "F"];
-
-const INTERVENTION_TYPES: Intervention["type"][] = [
-  "academic_support",
-  "counseling",
-  "mentoring",
-  "schedule_adjustment",
-  "financial_aid",
-];
-
-const INTERVENTION_DESCRIPTIONS: Record<Intervention["type"], string[]> = {
-  academic_support: [
-    "Weekly tutoring sessions for core algorithm concepts",
-    "Study group facilitation for exam preparation",
-    "One-on-one office hours for assignment help",
-    "Supplementary problem sets with guided solutions",
-  ],
-  counseling: [
-    "Referral to academic counseling for course planning",
-    "Stress management and academic balance support",
-    "Career direction counseling for undecided students",
-  ],
-  mentoring: [
-    "Paired with senior graduate student mentor",
-    "Industry mentor connection for research guidance",
-    "Faculty mentoring for graduate school preparation",
-  ],
-  schedule_adjustment: [
-    "Reduced course load recommendation for current semester",
-    "Lab section reassignment to accommodate work schedule",
-    "Extended deadline arrangement for documented circumstances",
-  ],
-  financial_aid: [
-    "Emergency grant application assistance",
-    "Work-study position referral in CS department",
-    "Scholarship application support for next semester",
-  ],
-};
 
 // ─── Stable Student Pool ──────────────────────────────────────────────────────
 
@@ -280,12 +242,10 @@ export function generateFacultyDashboard(): FacultyDashboard {
   const weeklyTrend = weekDays.map((day) => ({
     day,
     atRisk: faker.number.int({ min: 4, max: 9 }),
-    interventions: faker.number.int({ min: 1, max: 4 }),
   }));
 
   return {
     atRiskStudentCount: atRiskStudents.filter((s) => s.riskLevel === "high").length,
-    activeInterventions: 3,
     totalStudents: students.length,
     upcomingClasses,
     weeklyTrend,
@@ -365,50 +325,6 @@ export function generateFacultyStudentDetail(studentId: string): FacultyStudentD
     trend: pick(["up", "down", "stable"] as const),
   }));
 
-  // Generate interventions for this student
-  const interventionCount = s.riskLevel === "high" ? 3 : s.riskLevel === "medium" ? 2 : faker.number.int({ min: 0, max: 1 });
-  const interventions: Intervention[] = Array.from({ length: interventionCount }, () => {
-    const type = pick(INTERVENTION_TYPES);
-    const descriptions = INTERVENTION_DESCRIPTIONS[type];
-    const status = pick(["planned", "active", "completed", "abandoned"] as InterventionStatus[]);
-    const startDate = pastDate(faker.number.int({ min: 7, max: 60 }));
-    return {
-      id: id("int"),
-      studentId: s.id,
-      studentName: s.name,
-      type,
-      description: pick(descriptions),
-      goals: [
-        `Improve ${pick(["attendance", "assignment completion", "exam scores", "participation"])} by ${faker.number.int({ min: 10, max: 30 })}%`,
-        `Achieve minimum GPA of ${roundTo(faker.number.float({ min: 2.0, max: 3.0 }), 1)} by end of semester`,
-      ],
-      status,
-      startDate,
-      endDate: status === "completed" ? pastDate(faker.number.int({ min: 1, max: 5 })) : undefined,
-      outcomes: status === "completed" ? "Student showed measurable improvement in targeted areas" : undefined,
-      notes: [
-        {
-          date: startDate,
-          content: "Initial assessment completed. Student is aware of support plan.",
-          author: "Dr. Sarah Chen",
-        },
-        {
-          date: pastDate(faker.number.int({ min: 1, max: 6 })),
-          content: pick([
-            "Follow-up meeting conducted. Student showing early signs of engagement.",
-            "Student attended tutoring session. Needs continued support.",
-            "Checked in with student via email. Will schedule in-person meeting.",
-            "Progress review: moderate improvement in targeted areas.",
-          ]),
-          author: "Dr. Sarah Chen",
-        },
-      ],
-      createdBy: "usr_faculty_01",
-      createdAt: startDate,
-      updatedAt: pastDate(faker.number.int({ min: 1, max: 3 })),
-    };
-  });
-
   // Risk alerts
   const riskAlerts = s.riskFactors.map((factor) => ({
     type: pick(["academic", "attendance", "engagement", "financial"]),
@@ -463,79 +379,9 @@ export function generateFacultyStudentDetail(studentId: string): FacultyStudentD
     skills,
     gpaHistory,
     attendanceHistory,
-    interventions,
     riskAlerts,
     coursePerformance,
   };
-}
-
-export function generateInterventions(count: number = 10): Intervention[] {
-  faker.seed(43);
-  const pool = getStudentPool();
-  const atRiskStudents = pool.filter((s) => s.riskLevel === "high" || s.riskLevel === "medium");
-
-  return Array.from({ length: count }, (_, i) => {
-    const student = atRiskStudents[i % atRiskStudents.length];
-    const type = INTERVENTION_TYPES[i % INTERVENTION_TYPES.length];
-    const descriptions = INTERVENTION_DESCRIPTIONS[type];
-    const statuses: InterventionStatus[] = ["planned", "active", "active", "completed", "completed", "active", "planned", "abandoned", "active", "completed"];
-    const status = statuses[i % statuses.length];
-    const startDate = pastDate(faker.number.int({ min: 7, max: 90 }));
-    const noteCount = faker.number.int({ min: 1, max: 4 });
-
-    const notes: { date: string; content: string; author: string }[] = [];
-    for (let n = 0; n < noteCount; n++) {
-      notes.push({
-        date: pastDate(faker.number.int({ min: 1, max: 30 })),
-        content: pick([
-          "Initial assessment and goal-setting session completed.",
-          "Student showed improvement in targeted areas during weekly check-in.",
-          "Discussed strategies for better time management and study habits.",
-          "Referred student to writing center for additional support.",
-          "Student missed scheduled session. Will follow up via email.",
-          "Positive feedback from TA regarding recent lab performance.",
-          "Mid-intervention review: on track for 2 of 3 goals.",
-          "Student expressed interest in research opportunities. Connected with lab.",
-          "Attendance has improved by 15% since intervention start.",
-          "Final review scheduled for next week.",
-        ]),
-        author: pick(["Dr. Sarah Chen", "Dr. Sarah Chen", "TA: Michael Park", "Academic Advisor: Lisa Wong"]),
-      });
-    }
-
-    // Sort notes by date descending
-    notes.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-    return {
-      id: id("int"),
-      studentId: student.id,
-      studentName: student.name,
-      type,
-      description: pick(descriptions),
-      goals: [
-        `Improve ${pick(["GPA", "attendance", "assignment completion rate", "class participation"])} to acceptable levels`,
-        `Complete all ${pick(["homework", "lab", "project"])} submissions on time for remainder of semester`,
-        `Attend ${faker.number.int({ min: 2, max: 4 })} additional tutoring sessions per week`,
-      ],
-      status,
-      startDate,
-      endDate: status === "completed" || status === "abandoned" ? pastDate(faker.number.int({ min: 1, max: 7 })) : undefined,
-      outcomes: status === "completed"
-        ? pick([
-          "Student GPA improved from 1.8 to 2.4 over the intervention period.",
-          "Attendance improved by 25%. Student is now attending all scheduled sessions.",
-          "All targeted goals met. Student removed from at-risk list.",
-          "Partial improvement observed. Continuing with adjusted support plan.",
-        ])
-        : status === "abandoned"
-          ? "Student withdrew from the course. Intervention no longer applicable."
-          : undefined,
-      notes,
-      createdBy: "usr_faculty_01",
-      createdAt: startDate,
-      updatedAt: pastDate(faker.number.int({ min: 1, max: 5 })),
-    };
-  });
 }
 
 export function generateFacultyCourses(count: number = 5): FacultyCourse[] {

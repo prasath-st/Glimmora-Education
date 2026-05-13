@@ -306,14 +306,14 @@ function BriefingCard({
                 ))}
               </div>
               <p className="mt-3 text-xs text-muted-foreground">
-                To follow up on action items, create an intervention from the{" "}
+                Open the{" "}
                 <Link
                   href="/faculty/students"
                   className="text-portal-accent hover:underline"
                 >
                   student&apos;s profile
                 </Link>
-                .
+                {" "}to drill into individual risk factors.
               </p>
             </div>
           )}

@@ -67,16 +67,4 @@ export type CredentialStatus =
   | "expired"
   | "pending_verification";
 export type IntegrationHealth = "healthy" | "degraded" | "down";
-export type InterventionStatus =
-  | "planned"
-  | "active"
-  | "completed"
-  | "abandoned";
-export type GrantStatus =
-  | "discovered"
-  | "interested"
-  | "drafting"
-  | "submitted"
-  | "funded"
-  | "rejected";
 export type ModelStatus = "active" | "inactive" | "training" | "deprecated";
