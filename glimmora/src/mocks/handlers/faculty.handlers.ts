@@ -31,6 +31,7 @@ import {
   generateStudentSubmissions,
   generateGradebook,
   generateAttendanceSessions,
+  getFacultyTerms,
 } from "@/mocks/data/generators/faculty.generator";
 import { getAssessmentsByCourse } from "@/mocks/data/db";
 import type { Assessment } from "@/lib/api/types/assessment.types";
@@ -231,13 +232,29 @@ export const facultyHandlers = [
   }),
 
   // ── Students ──────────────────────────────────────────────────────────────
+  http.get("/api/faculty/me/terms", async () => {
+    await randomDelay();
+    return HttpResponse.json({ data: getFacultyTerms() });
+  }),
+
   http.get("/api/faculty/me/students", async ({ request }) => {
     await randomDelay();
     const url = new URL(request.url);
     const search = url.searchParams.get("search");
     const riskLevel = url.searchParams.get("riskLevel");
+    const term = url.searchParams.get("term");
 
     let filtered = [...students];
+
+    // Default to the active term if no term param is sent, so consumers that
+    // don't yet pass `term` still see the current roster rather than every
+    // student across history.
+    const terms = getFacultyTerms();
+    const activeTerm = terms.find((t) => t.isCurrent)?.value ?? terms[0]?.value;
+    const effectiveTerm = term ?? activeTerm;
+    if (effectiveTerm) {
+      filtered = filtered.filter((s) => s.terms?.includes(effectiveTerm));
+    }
 
     if (riskLevel && ["high", "medium", "low", "none"].includes(riskLevel)) {
       filtered = filtered.filter((s) => s.riskLevel === riskLevel);

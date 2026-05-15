@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Users, AlertTriangle, AlertCircle, TrendingDown, TrendingUp, Minus } from "lucide-react";
-import { useFacultyStudents } from "@/lib/hooks/use-faculty";
+import { useFacultyStudents, useFacultyTerms } from "@/lib/hooks/use-faculty";
 import { PageHeader } from "@/components/shared/misc/page-header";
 import { SearchInput } from "@/components/shared/forms/search-input";
 import { DataTable } from "@/components/shared/data-table/data-table";
@@ -100,10 +100,27 @@ export default function FacultyStudentsPage() {
   const router = useRouter();
   const [search, setSearch] = useState("");
   const [riskLevel, setRiskLevel] = useState("all");
+  const [term, setTerm] = useState<string>("");
+
+  const { data: terms } = useFacultyTerms();
+
+  // Snap the term filter to the active term on first load. Letting the API's
+  // implicit default carry us here would break the visual state of the
+  // dropdown (it would show no selection on first paint).
+  useEffect(() => {
+    if (!term && terms && terms.length > 0) {
+      const current = terms.find((t) => t.isCurrent) ?? terms[0];
+      setTerm(current.value);
+    }
+  }, [term, terms]);
 
   const { data, isLoading, isError, refetch } = useFacultyStudents({
     search: search || undefined,
     riskLevel: riskLevel === "all" ? undefined : riskLevel,
+    term: term || undefined,
+    // Pull the full roster for the selected term so the summary counts and the
+    // table pagination both reflect the entire filtered set, not a server page.
+    pageSize: 100,
   });
 
   const handleSearch = useCallback((value: string) => {
@@ -163,8 +180,21 @@ export default function FacultyStudentsPage() {
           className="w-full sm:max-w-xs"
         />
         <select
+          value={term}
+          onChange={(e) => setTerm(e.target.value)}
+          aria-label="Academic term"
+          className="flex h-10 rounded-lg border border-input bg-background px-3 text-sm transition-colors appearance-none focus:outline-none focus:ring-2 focus:ring-portal-accent focus:ring-offset-1 hover:border-muted-foreground"
+        >
+          {(terms ?? []).map((t) => (
+            <option key={t.value} value={t.value}>
+              {t.isCurrent ? `${t.label} (Current)` : t.label}
+            </option>
+          ))}
+        </select>
+        <select
           value={riskLevel}
           onChange={(e) => setRiskLevel(e.target.value)}
+          aria-label="Risk level"
           className="flex h-10 rounded-lg border border-input bg-background px-3 text-sm transition-colors appearance-none focus:outline-none focus:ring-2 focus:ring-portal-accent focus:ring-offset-1 hover:border-muted-foreground"
         >
           {riskFilterOptions.map((opt) => (

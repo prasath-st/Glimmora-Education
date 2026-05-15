@@ -17,6 +17,7 @@ import type {
   GradebookEntry,
   AttendanceSession,
   AttendanceRecord,
+  FacultyTerm,
 } from "@/lib/api/types/faculty.types";
 import type { RiskLevel } from "@/lib/api/types/common.types";
 
@@ -29,6 +30,32 @@ const currentYear = now.getFullYear();
 const currentMonth = now.getMonth();
 const currentSemester = currentMonth < 6 ? "Spring" : "Fall";
 const currentSemesterLabel = `${currentSemester} ${currentYear}`;
+
+// Compute the previous two academic terms in chronological-descending order.
+// Spring → Fall(prev year) → Spring(prev year), and Fall → Spring(same year) → Fall(prev year).
+function priorTerm(label: string): string {
+  const [sem, yearStr] = label.split(" ");
+  const yr = Number(yearStr);
+  if (sem === "Spring") return `Fall ${yr - 1}`;
+  return `Spring ${yr}`;
+}
+const previousSemesterLabel = priorTerm(currentSemesterLabel);
+const earlierSemesterLabel = priorTerm(previousSemesterLabel);
+
+/**
+ * Academic terms surfaced in the faculty portal's filters. The current term is
+ * always first; the two prior terms follow so faculty can review historical
+ * rosters without scrolling through every term they've ever taught.
+ */
+export const FACULTY_TERMS: FacultyTerm[] = [
+  { value: currentSemesterLabel, label: currentSemesterLabel, isCurrent: true },
+  { value: previousSemesterLabel, label: previousSemesterLabel, isCurrent: false },
+  { value: earlierSemesterLabel, label: earlierSemesterLabel, isCurrent: false },
+];
+
+export function getFacultyTerms(): FacultyTerm[] {
+  return FACULTY_TERMS;
+}
 
 function id(prefix: string): string {
   return `${prefix}_${faker.string.alphanumeric(12)}`;
@@ -256,22 +283,39 @@ export function generateFacultyDashboard(): FacultyDashboard {
 export function generateFacultyStudents(count: number = 48): FacultyStudentListItem[] {
   faker.seed(43);
   const pool = getStudentPool();
-  return pool.slice(0, count).map((s, i) => ({
-    id: s.id,
-    name: s.name,
-    studentId: s.studentId,
-    email: s.email,
-    department: s.department,
-    program: s.program,
-    semester: s.semester,
-    gpa: s.gpa,
-    riskLevel: s.riskLevel,
-    riskFactors: s.riskFactors,
-    lastActivity: s.lastActivity,
-    avatarUrl: s.avatarUrl,
-    courses: getStudentCourses(i),
-    attendanceRate: s.attendanceRate,
-  }));
+  return pool.slice(0, count).map((s, i) => {
+    // Mixed cohort assignment. Roughly half the roster only appears in the
+    // current term; the rest carry over from a prior term so the filter
+    // exposes meaningfully different rosters per term.
+    //   bucket 0 (i % 4 === 0): current + previous + earlier  (returning veterans)
+    //   bucket 1 (i % 4 === 1): current + previous            (second-term returners)
+    //   bucket 2 (i % 4 === 2): previous only                 (left the roster this term)
+    //   bucket 3 (i % 4 === 3): current only                  (new to the roster)
+    const bucket = i % 4;
+    const terms: string[] = [];
+    if (bucket === 0) terms.push(currentSemesterLabel, previousSemesterLabel, earlierSemesterLabel);
+    else if (bucket === 1) terms.push(currentSemesterLabel, previousSemesterLabel);
+    else if (bucket === 2) terms.push(previousSemesterLabel);
+    else terms.push(currentSemesterLabel);
+
+    return {
+      id: s.id,
+      name: s.name,
+      studentId: s.studentId,
+      email: s.email,
+      department: s.department,
+      program: s.program,
+      semester: s.semester,
+      gpa: s.gpa,
+      riskLevel: s.riskLevel,
+      riskFactors: s.riskFactors,
+      lastActivity: s.lastActivity,
+      avatarUrl: s.avatarUrl,
+      courses: getStudentCourses(i),
+      attendanceRate: s.attendanceRate,
+      terms,
+    };
+  });
 }
 
 export function generateFacultyStudentDetail(studentId: string): FacultyStudentDetail | null {
@@ -374,6 +418,7 @@ export function generateFacultyStudentDetail(studentId: string): FacultyStudentD
     avatarUrl: s.avatarUrl,
     courses,
     attendanceRate: s.attendanceRate,
+    terms: [currentSemesterLabel],
     enrollmentYear: s.enrollmentYear,
     creditsCompleted: faker.number.int({ min: 30, max: 120 }),
     creditsRequired: 128,

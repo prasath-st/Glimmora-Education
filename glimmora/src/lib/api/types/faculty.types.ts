@@ -34,6 +34,15 @@ export interface FacultyStudentListItem extends Identifiable {
   avatarUrl: string | null;
   courses: string[];
   attendanceRate: number;
+  /** Academic terms this student appears on the faculty's roster. */
+  terms: string[];
+}
+
+/** A selectable academic term in the faculty portal's filters. */
+export interface FacultyTerm {
+  value: string;
+  label: string;
+  isCurrent: boolean;
 }
 
 export interface FacultyStudentDetail extends FacultyStudentListItem {

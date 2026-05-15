@@ -21,6 +21,7 @@ import type {
   GradebookEntry,
   AttendanceSession,
   CreateAttendanceSessionRequest,
+  FacultyTerm,
 } from "@/lib/api/types/faculty.types";
 import type { PaginationMeta } from "@/lib/api/types/common.types";
 
@@ -34,15 +35,27 @@ export function useFacultyDashboard() {
 }
 
 // === Students ===
+export function useFacultyTerms() {
+  return useQuery({
+    queryKey: ["faculty", "terms"],
+    queryFn: () => api.get<FacultyTerm[]>("/api/faculty/me/terms"),
+    select: (res) => res.data,
+    // Terms list is stable for the session; no need to refetch on focus.
+    staleTime: Infinity,
+  });
+}
+
 export function useFacultyStudents(params?: {
   search?: string;
   riskLevel?: string;
+  term?: string;
   page?: number;
   pageSize?: number;
 }) {
   const searchParams = new URLSearchParams();
   if (params?.search) searchParams.set("search", params.search);
   if (params?.riskLevel) searchParams.set("riskLevel", params.riskLevel);
+  if (params?.term) searchParams.set("term", params.term);
   if (params?.page) searchParams.set("page", String(params.page));
   if (params?.pageSize) searchParams.set("pageSize", String(params.pageSize));
   const qs = searchParams.toString();
