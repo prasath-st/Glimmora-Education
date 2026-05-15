@@ -300,3 +300,115 @@ export function useUpdateAttendanceRecords() {
     },
   });
 }
+
+// === Assessments (cross-portal) ===
+import type {
+  Assessment,
+  AssessmentSubmissionSummary,
+  CreateAssessmentRequest,
+  UpdateAssessmentRequest,
+} from "@/lib/api/types/assessment.types";
+
+export function useFacultyAssessments(courseId: string) {
+  return useQuery({
+    queryKey: ["faculty", "course", courseId, "assessments"],
+    queryFn: () =>
+      api.get<Assessment[]>(`/api/faculty/me/courses/${courseId}/assessments`),
+    select: (res) => res.data,
+    enabled: !!courseId,
+  });
+}
+
+export function useFacultyAssessmentDetail(courseId: string, assessmentId: string) {
+  return useQuery({
+    queryKey: ["faculty", "course", courseId, "assessment", assessmentId],
+    queryFn: () =>
+      api.get<Assessment>(
+        `/api/faculty/me/courses/${courseId}/assessments/${assessmentId}`,
+      ),
+    select: (res) => res.data,
+    enabled: !!courseId && !!assessmentId,
+  });
+}
+
+function invalidateAssessments(qc: ReturnType<typeof useQueryClient>, courseId: string) {
+  qc.invalidateQueries({ queryKey: ["faculty", "course", courseId, "assessments"] });
+  qc.invalidateQueries({ queryKey: ["faculty", "course", courseId, "assessment"] });
+  // Student-side caches need to refresh too when faculty mutates
+  qc.invalidateQueries({ queryKey: ["student", "course", courseId, "assessments"] });
+  qc.invalidateQueries({ queryKey: ["student", "course", courseId, "assessment"] });
+  qc.invalidateQueries({ queryKey: ["faculty", "course", courseId, "gradebook"] });
+}
+
+export function useCreateAssessment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ courseId, ...data }: CreateAssessmentRequest) =>
+      api.post<Assessment>(`/api/faculty/me/courses/${courseId}/assessments`, {
+        ...data,
+        courseId,
+      }),
+    onSuccess: (_, variables) => invalidateAssessments(qc, variables.courseId),
+  });
+}
+
+export function useUpdateAssessment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      courseId,
+      assessmentId,
+      ...data
+    }: { courseId: string; assessmentId: string } & UpdateAssessmentRequest) =>
+      api.patch<Assessment>(
+        `/api/faculty/me/courses/${courseId}/assessments/${assessmentId}`,
+        data,
+      ),
+    onSuccess: (_, variables) => invalidateAssessments(qc, variables.courseId),
+  });
+}
+
+export function usePublishAssessment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ courseId, assessmentId }: { courseId: string; assessmentId: string }) =>
+      api.post<Assessment>(
+        `/api/faculty/me/courses/${courseId}/assessments/${assessmentId}/publish`,
+      ),
+    onSuccess: (_, variables) => invalidateAssessments(qc, variables.courseId),
+  });
+}
+
+export function useCloseAssessment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ courseId, assessmentId }: { courseId: string; assessmentId: string }) =>
+      api.post<Assessment>(
+        `/api/faculty/me/courses/${courseId}/assessments/${assessmentId}/close`,
+      ),
+    onSuccess: (_, variables) => invalidateAssessments(qc, variables.courseId),
+  });
+}
+
+export function useDeleteAssessment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ courseId, assessmentId }: { courseId: string; assessmentId: string }) =>
+      api.delete<{ success: boolean }>(
+        `/api/faculty/me/courses/${courseId}/assessments/${assessmentId}`,
+      ),
+    onSuccess: (_, variables) => invalidateAssessments(qc, variables.courseId),
+  });
+}
+
+export function useAssessmentSubmissions(courseId: string, assessmentId: string) {
+  return useQuery({
+    queryKey: ["faculty", "course", courseId, "assessment", assessmentId, "submissions"],
+    queryFn: () =>
+      api.get<AssessmentSubmissionSummary[]>(
+        `/api/faculty/me/courses/${courseId}/assessments/${assessmentId}/attempts`,
+      ),
+    select: (res) => res.data,
+    enabled: !!courseId && !!assessmentId,
+  });
+}

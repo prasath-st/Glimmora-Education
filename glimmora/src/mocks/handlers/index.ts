@@ -5,5 +5,15 @@ import { adminHandlers } from "./admin.handlers";
 import { placementHandlers } from "./placement.handlers";
 import { tutorHandlers } from "./tutor.handlers";
 import { superAdminHandlers } from "./super-admin.handlers";
+import { assessmentHandlers } from "./assessment.handlers";
 
-export const handlers = [...authHandlers, ...studentHandlers, ...facultyHandlers, ...adminHandlers, ...placementHandlers, ...tutorHandlers, ...superAdminHandlers];
+export const handlers = [
+  ...authHandlers,
+  ...studentHandlers,
+  ...facultyHandlers,
+  ...adminHandlers,
+  ...placementHandlers,
+  ...tutorHandlers,
+  ...superAdminHandlers,
+  ...assessmentHandlers,
+];

@@ -6,7 +6,7 @@ import Link from "next/link";
 import { FilePlus, ArrowLeft, Loader2, Info, ChevronDown, ChevronUp } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { useCourses, useCreateAppeal } from "@/lib/hooks/use-student";
+import { useCourses, useCreateAppeal, useStudentAssessments } from "@/lib/hooks/use-student";
 import { PageHeader } from "@/components/shared/misc/page-header";
 import { FormTextarea, FormSelect } from "@/components/shared/forms/form-field";
 import { FormSection } from "@/components/shared/forms/form-section";
@@ -73,15 +73,36 @@ function StudentNewAppealForm() {
   const selectedCourse = courses.find((c) => c.id === selectedCourseId);
   const assignments = selectedCourse?.assignments ?? [];
 
+  // In-browser assessments live in a separate store; pull them in so quizzes,
+  // midterms, finals are pickable alongside file-submission assignments.
+  const { data: courseAssessments = [] } = useStudentAssessments(selectedCourseId);
+
   const courseOptions = courses.map((c) => ({
     value: c.id,
     label: `${c.code} - ${c.name}`,
   }));
 
-  const assessmentOptions = assignments.map((a) => ({
-    value: a.id,
-    label: `${a.title} (${a.type})`,
-  }));
+  const assessmentOptions = [
+    ...assignments.map((a) => ({
+      value: a.id,
+      label: `${a.title} (${a.type})`,
+    })),
+    ...courseAssessments.map((a) => ({
+      value: a.id,
+      label: `${a.title} (${a.type})`,
+    })),
+  ];
+
+  // Re-apply the URL-prefilled assessment once cross-portal assessments load.
+  // The earlier setValue ran before assessmentOptions contained quiz/midterm
+  // rows, so the <select> snapped to its first option.
+  useEffect(() => {
+    if (!prefillAssessmentId) return;
+    if (assessmentOptions.some((o) => o.value === prefillAssessmentId)) {
+      setValue("assessmentId", prefillAssessmentId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prefillAssessmentId, courseAssessments.length, assignments.length]);
 
   const onSubmit = async (data: AppealFormData) => {
     await createAppeal.mutateAsync({

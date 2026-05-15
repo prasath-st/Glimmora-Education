@@ -1,4 +1,5 @@
 import { faker } from "@faker-js/faker";
+import { getAssessmentsByCourse } from "@/mocks/data/db";
 import type {
   FacultyDashboard,
   UpcomingClass,
@@ -681,11 +682,12 @@ export function generateCourseModules(courseId: string): CourseModule[] {
   });
 }
 
+// Quizzes / exams are no longer Assignments — they're authored as Assessments
+// (see assessment.generator.ts). Faculty's seeded Assignments tab now shows
+// only file-submission work: homeworks, projects, milestones.
 const ASSIGNMENT_TEMPLATES: { title: string; description: string; type: FacultyAssignment["type"]; weight: number; maxScore: number }[] = [
   { title: "Homework 1: Foundations", description: "Apply foundational concepts through analytical problems and short coding exercises.", type: "assignment", weight: 10, maxScore: 100 },
-  { title: "Quiz 1: Prerequisite Check", description: "Quick assessment of prerequisite knowledge and early course material.", type: "quiz", weight: 5, maxScore: 50 },
   { title: "Homework 2: Core Implementation", description: "Implement core algorithms from scratch with correctness and efficiency analysis.", type: "assignment", weight: 10, maxScore: 100 },
-  { title: "Midterm Exam", description: "Comprehensive exam covering Modules 1-3, including theory and problem solving.", type: "exam", weight: 20, maxScore: 100 },
   { title: "Project Milestone 1: Proposal", description: "Submit project proposal with problem statement, dataset description, and methodology plan.", type: "project", weight: 10, maxScore: 100 },
   { title: "Homework 3: Advanced Topics", description: "Problem set covering advanced algorithms, optimization, and analysis techniques.", type: "assignment", weight: 10, maxScore: 100 },
   { title: "Final Project Submission", description: "Complete project with implementation, evaluation, report, and presentation slides.", type: "project", weight: 25, maxScore: 100 },
@@ -768,6 +770,9 @@ export function generateStudentSubmissions(assignmentId: string): StudentSubmiss
 
 export function generateGradebook(courseId: string): GradebookEntry[] {
   const assignments = generateFacultyAssignments(courseId);
+  // Pull in current assessments for this course from the cross-portal store so
+  // gradebook rows show one cell per in-browser quiz/exam too.
+  const assessments = getAssessmentsByCourse(courseId);
   const studentCount = faker.number.int({ min: 12, max: 18 });
 
   return Array.from({ length: studentCount }, (_, i) => {
@@ -792,12 +797,36 @@ export function generateGradebook(courseId: string): GradebookEntry[] {
       };
     });
 
+    // Synthesise per-student best-scores for published/closed assessments;
+    // drafts have no scores yet. Real student attempts will be folded in by
+    // the handler at GET-time for the signed-in student.
+    const assessmentScores = assessments.map((a) => {
+      const isLive = a.status === "published" || a.status === "closed";
+      const hasAttempted = isLive && faker.datatype.boolean(0.8);
+      const score = hasAttempted
+        ? faker.number.int({ min: Math.floor(a.maxScore * 0.4), max: a.maxScore })
+        : null;
+      if (score !== null) {
+        weightedSum += (score / a.maxScore) * a.weight;
+        totalWeight += a.weight;
+      }
+      return {
+        assessmentId: a.id,
+        title: a.title,
+        score,
+        maxScore: a.maxScore,
+        weight: a.weight,
+        status: score !== null ? "graded" : "pending",
+      };
+    });
+
     const weightedAverage = totalWeight > 0 ? roundTo((weightedSum / totalWeight) * 100, 1) : 0;
 
     return {
       studentId: id("stu"),
       studentName,
       assignments: assignmentScores,
+      assessments: assessmentScores,
       weightedAverage,
     };
   });

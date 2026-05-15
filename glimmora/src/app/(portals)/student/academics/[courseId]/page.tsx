@@ -41,8 +41,9 @@ import { cn } from "@/lib/utils/cn";
 import { formatDate, formatPercentage } from "@/lib/utils/format";
 import type { ColumnDef } from "@tanstack/react-table";
 import type { Assignment } from "@/lib/api/types/student.types";
+import { StudentAssessmentsTab } from "./_components/student-assessments-tab";
 
-type TabId = "overview" | "content" | "assignments" | "attendance";
+type TabId = "overview" | "content" | "assignments" | "assessments" | "attendance";
 
 const DONUT_COLORS = ["#2563eb", "#059669", "#d97706", "#dc2626", "#8b5cf6", "#ec4899"];
 
@@ -643,7 +644,7 @@ export default function StudentCourseDetailPage({
 
       {/* Tabs */}
       <div className="flex gap-1 rounded-lg border border-border bg-muted/50 p-1">
-        {(["overview", "content", "assignments", "attendance"] as const).map((tab) => (
+        {(["overview", "content", "assignments", "assessments", "attendance"] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -695,6 +696,8 @@ export default function StudentCourseDetailPage({
           setUploadFiles={setUploadFiles}
         />
       )}
+
+      {activeTab === "assessments" && <StudentAssessmentsTab courseId={courseId} />}
 
       {activeTab === "attendance" && (
         <div className="space-y-6">

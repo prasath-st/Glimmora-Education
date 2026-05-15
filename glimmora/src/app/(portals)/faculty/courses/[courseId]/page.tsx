@@ -73,14 +73,16 @@ import { FileUpload } from "@/components/shared/forms/file-upload";
 import { cn } from "@/lib/utils/cn";
 import { formatPercentage, formatGpa } from "@/lib/utils/format";
 import type { ColumnDef } from "@tanstack/react-table";
+import { AssessmentsTab } from "./_components/assessments-tab";
 
-type TabId = "overview" | "content" | "students" | "assignments" | "gradebook" | "attendance" | "engagement";
+type TabId = "overview" | "content" | "students" | "assignments" | "assessments" | "gradebook" | "attendance" | "engagement";
 
 const TAB_LABELS: Record<TabId, string> = {
   overview: "Overview",
   content: "Content",
   students: "Students",
   assignments: "Assignments",
+  assessments: "Assessments",
   gradebook: "Gradebook",
   attendance: "Attendance",
   engagement: "Engagement",
@@ -384,7 +386,7 @@ export default function FacultyCourseDetailPage({
 
       {/* Tabs */}
       <div className="flex gap-1 overflow-x-auto rounded-lg border border-border bg-muted/50 p-1">
-        {(["overview", "content", "students", "assignments", "gradebook", "attendance", "engagement"] as const).map((tab) => (
+        {(["overview", "content", "students", "assignments", "assessments", "gradebook", "attendance", "engagement"] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -853,6 +855,11 @@ export default function FacultyCourseDetailPage({
       )}
 
       {/* ═══════════════════════════════════════════════════════════════════════
+          TAB: Assessments
+         ═══════════════════════════════════════════════════════════════════════ */}
+      {activeTab === "assessments" && <AssessmentsTab courseId={courseId} />}
+
+      {/* ═══════════════════════════════════════════════════════════════════════
           TAB: Gradebook
          ═══════════════════════════════════════════════════════════════════════ */}
       {activeTab === "gradebook" && (
@@ -881,6 +888,15 @@ export default function FacultyCourseDetailPage({
                           <div className="mt-0.5 font-normal normal-case text-muted-foreground/60">{a.weight}%</div>
                         </th>
                       ))}
+                      {gradebook[0]?.assessments?.map((a) => (
+                        <th key={a.assessmentId} className="border-l border-border bg-portal-accent-light/40 px-3 py-3 text-center text-xs font-medium uppercase tracking-wider text-portal-accent">
+                          <div className="max-w-[120px] truncate" title={a.title}>{a.title}</div>
+                          <div className="mt-0.5 font-normal normal-case text-portal-accent/70">
+                            <span className="mr-1 rounded-sm bg-portal-accent/15 px-1 py-px text-[10px] uppercase tracking-wider">Assess</span>
+                            {a.weight}%
+                          </div>
+                        </th>
+                      ))}
                       <th className="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider text-muted-foreground">
                         Avg
                       </th>
@@ -896,6 +912,26 @@ export default function FacultyCourseDetailPage({
                           const pct = a.score !== null ? (a.score / a.maxScore) * 100 : null;
                           return (
                             <td key={a.assignmentId} className="px-3 py-3 text-center text-sm">
+                              {a.score !== null ? (
+                                <span
+                                  className={cn(
+                                    "font-semibold",
+                                    pct !== null && pct >= 80 ? "text-success" : pct !== null && pct >= 60 ? "text-warning" : "text-danger"
+                                  )}
+                                >
+                                  {a.score}
+                                </span>
+                              ) : (
+                                <span className="text-muted-foreground">--</span>
+                              )}
+                              <span className="text-xs text-muted-foreground">/{a.maxScore}</span>
+                            </td>
+                          );
+                        })}
+                        {entry.assessments?.map((a) => {
+                          const pct = a.score !== null ? (a.score / a.maxScore) * 100 : null;
+                          return (
+                            <td key={a.assessmentId} className="border-l border-border bg-portal-accent-light/20 px-3 py-3 text-center text-sm">
                               {a.score !== null ? (
                                 <span
                                   className={cn(
@@ -1160,7 +1196,7 @@ function AssignmentRow({
   );
 
   const statusVariant = assignment.status === "published" ? "success" : assignment.status === "closed" ? "muted" : "warning";
-  const typeVariant = assignment.type === "exam" ? "danger" : assignment.type === "project" ? "default" : assignment.type === "quiz" ? "warning" : "muted";
+  const typeVariant = assignment.type === "project" ? "default" : "muted";
 
   return (
     <>

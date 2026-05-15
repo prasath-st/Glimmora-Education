@@ -133,11 +133,13 @@ export interface CreateModuleRequest {
 }
 
 // === Assignments (LMS) ===
+// File-submission work only. Quizzes/exams now live as Assessments — see
+// `assessment.types.ts`. The Assignment.type enum no longer carries quiz/exam.
 export interface FacultyAssignment extends Identifiable {
   courseId: string;
   title: string;
   description: string;
-  type: "assignment" | "exam" | "project" | "quiz";
+  type: "assignment" | "project";
   dueDate: string;
   maxScore: number;
   weight: number;
@@ -157,7 +159,7 @@ export interface CreateAssignmentRequest {
   courseId: string;
   title: string;
   description: string;
-  type: "assignment" | "exam" | "project" | "quiz";
+  type: "assignment" | "project";
   dueDate: string;
   maxScore: number;
   weight: number;
@@ -183,10 +185,31 @@ export interface GradeSubmissionRequest {
 }
 
 // === Gradebook ===
+export interface GradebookAssignmentCell {
+  assignmentId: string;
+  title: string;
+  score: number | null;
+  maxScore: number;
+  weight: number;
+  status: string;
+}
+
+export interface GradebookAssessmentCell {
+  assessmentId: string;
+  title: string;
+  /** Best score across the student's submitted attempts, or null if untaken. */
+  score: number | null;
+  maxScore: number;
+  weight: number;
+  /** "graded" once an attempt has been submitted; "pending" otherwise. */
+  status: string;
+}
+
 export interface GradebookEntry {
   studentId: string;
   studentName: string;
-  assignments: { assignmentId: string; title: string; score: number | null; maxScore: number; weight: number; status: string }[];
+  assignments: GradebookAssignmentCell[];
+  assessments: GradebookAssessmentCell[];
   weightedAverage: number;
 }
 

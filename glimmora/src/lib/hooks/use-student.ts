@@ -479,3 +479,93 @@ export function useSubmitAssignment() {
     },
   });
 }
+
+// === Assessments (student view) ===
+import type {
+  StudentAssessmentListItem,
+  StudentAssessmentDetail,
+  StartAttemptResponse,
+  GradedAttempt,
+  SubmitAttemptRequest,
+} from "@/lib/api/types/assessment.types";
+
+export function useStudentAssessments(courseId: string) {
+  return useQuery({
+    queryKey: ["student", "course", courseId, "assessments"],
+    queryFn: () =>
+      api.get<StudentAssessmentListItem[]>(
+        `/api/students/me/courses/${courseId}/assessments`,
+      ),
+    select: (res) => res.data,
+    enabled: !!courseId,
+  });
+}
+
+export function useStudentAssessmentDetail(courseId: string, assessmentId: string) {
+  return useQuery({
+    queryKey: ["student", "course", courseId, "assessment", assessmentId],
+    queryFn: () =>
+      api.get<StudentAssessmentDetail>(
+        `/api/students/me/courses/${courseId}/assessments/${assessmentId}`,
+      ),
+    select: (res) => res.data,
+    enabled: !!courseId && !!assessmentId,
+  });
+}
+
+export function useStartAssessmentAttempt() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ courseId, assessmentId }: { courseId: string; assessmentId: string }) =>
+      api.post<StartAttemptResponse>(
+        `/api/students/me/courses/${courseId}/assessments/${assessmentId}/start`,
+      ),
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({
+        queryKey: ["student", "course", vars.courseId, "assessment", vars.assessmentId],
+      });
+      qc.invalidateQueries({
+        queryKey: ["student", "course", vars.courseId, "assessments"],
+      });
+    },
+  });
+}
+
+export function useSubmitAssessmentAttempt() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      courseId,
+      assessmentId,
+      answers,
+    }: { courseId: string; assessmentId: string } & SubmitAttemptRequest) =>
+      api.post<GradedAttempt>(
+        `/api/students/me/courses/${courseId}/assessments/${assessmentId}/submit`,
+        { answers },
+      ),
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({
+        queryKey: ["student", "course", vars.courseId, "assessment", vars.assessmentId],
+      });
+      qc.invalidateQueries({
+        queryKey: ["student", "course", vars.courseId, "assessments"],
+      });
+    },
+  });
+}
+
+export function useAssessmentAttemptResult(
+  courseId: string,
+  assessmentId: string,
+  attemptId: string,
+) {
+  return useQuery({
+    queryKey: ["student", "course", courseId, "assessment", assessmentId, "attempt", attemptId],
+    queryFn: () =>
+      api.get<GradedAttempt>(
+        `/api/students/me/courses/${courseId}/assessments/${assessmentId}/attempts/${attemptId}`,
+      ),
+    select: (res) => res.data,
+    enabled: !!courseId && !!assessmentId && !!attemptId,
+  });
+}

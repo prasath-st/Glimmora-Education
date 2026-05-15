@@ -33,7 +33,8 @@ export interface Deadline {
   courseId: string;
   courseName: string;
   dueDate: string;
-  type: "assignment" | "exam" | "project";
+  /** Dashboard deadlines include both assignment-style and assessment-style work. */
+  type: "assignment" | "project" | "assessment";
 }
 
 export interface ActivityItem {
@@ -66,7 +67,12 @@ export interface Course extends Identifiable, Timestamps {
 
 export interface Assignment extends Identifiable {
   title: string;
-  type: "assignment" | "exam" | "project" | "quiz";
+  /**
+   * File-submission work only. Quizzes/exams now live as Assessments — see
+   * `assessment.types.ts`. Existing seeded rows of type quiz/exam are migrated
+   * by the student generator into Assessments at boot.
+   */
+  type: "assignment" | "project";
   dueDate: string;
   score?: number;
   maxScore: number;
@@ -218,12 +224,20 @@ export interface StudentRecommendation extends Identifiable, Timestamps {
 }
 
 // === Appeals ===
+/**
+ * The appealable item — either a file-submission Assignment or an
+ * in-browser Assessment. Reviewers see different workflows by type.
+ */
+export type AppealTarget = "assignment" | "assessment";
+
 export interface Appeal extends Identifiable, Timestamps {
   courseId: string;
   courseName: string;
   courseCode: string;
   assessmentName: string;
   assessmentType: string;
+  /** Which kind of item is being appealed. Defaults to "assignment" for legacy rows. */
+  target: AppealTarget;
   currentScore: number;
   maxScore: number;
   appealReason: string;
@@ -241,6 +255,8 @@ export interface Appeal extends Identifiable, Timestamps {
 export interface CreateAppealRequest {
   courseId: string;
   assessmentId: string;
+  /** Optional explicit target. If omitted, the server infers from the assessmentId. */
+  target?: AppealTarget;
   reason: string;
   supportingDocuments?: File[];
 }

@@ -32,6 +32,8 @@ import {
   generateGradebook,
   generateAttendanceSessions,
 } from "@/mocks/data/generators/faculty.generator";
+import { getAssessmentsByCourse } from "@/mocks/data/db";
+import type { Assessment } from "@/lib/api/types/assessment.types";
 
 // ─── Generate data once at module level ───────────────────────────────────────
 
@@ -79,7 +81,70 @@ function getGradebookData(courseId: string): GradebookEntry[] {
   if (!gradebookCache[courseId]) {
     gradebookCache[courseId] = generateGradebook(courseId);
   }
-  return gradebookCache[courseId];
+  // Reconcile per-row assessment cells against the current assessment store so
+  // faculty-created or deleted assessments propagate without busting the cache.
+  return reconcileAssessmentCells(courseId, gradebookCache[courseId]);
+}
+
+function reconcileAssessmentCells(
+  courseId: string,
+  entries: GradebookEntry[],
+): GradebookEntry[] {
+  const liveAssessments = getAssessmentsByCourse(courseId);
+  const liveIds = new Set(liveAssessments.map((a) => a.id));
+
+  return entries.map((entry) => {
+    const keptCells = (entry.assessments ?? []).filter((c) => liveIds.has(c.assessmentId));
+    const knownIds = new Set(keptCells.map((c) => c.assessmentId));
+
+    const newCells: GradebookEntry["assessments"] = liveAssessments
+      .filter((a: Assessment) => !knownIds.has(a.id))
+      .map((a: Assessment) => {
+        // Newly-added assessments default to ungraded for every student. Once
+        // an attempt lands the student's row will get filled in below.
+        return {
+          assessmentId: a.id,
+          title: a.title,
+          score: null,
+          maxScore: a.maxScore,
+          weight: a.weight,
+          status: "pending",
+        };
+      });
+
+    const merged = [...keptCells, ...newCells];
+
+    // Keep title/maxScore/weight in sync if faculty edits an assessment.
+    const aligned = merged.map((cell) => {
+      const live = liveAssessments.find((a: Assessment) => a.id === cell.assessmentId);
+      if (!live) return cell;
+      return {
+        ...cell,
+        title: live.title,
+        maxScore: live.maxScore,
+        weight: live.weight,
+      };
+    });
+
+    // Recompute the weighted average to reflect the current cell set.
+    let weightedSum = 0;
+    let totalWeight = 0;
+    for (const c of entry.assignments) {
+      if (c.score !== null) {
+        weightedSum += (c.score / c.maxScore) * c.weight;
+        totalWeight += c.weight;
+      }
+    }
+    for (const c of aligned) {
+      if (c.score !== null) {
+        weightedSum += (c.score / c.maxScore) * c.weight;
+        totalWeight += c.weight;
+      }
+    }
+    const weightedAverage = totalWeight > 0 ? Math.round(((weightedSum / totalWeight) * 100) * 10) / 10 : 0;
+
+    return { ...entry, assessments: aligned, weightedAverage };
+  });
 }
 
 function getAttendanceSessions(courseId: string): AttendanceSession[] {

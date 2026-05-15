@@ -193,11 +193,13 @@ function generateAssignments(
   const count = faker.number.int({ min: 4, max: 8 });
   const assignments: Assignment[] = [];
 
+  // Quizzes/exams now live as Assessments (see assessment.generator.ts).
+  // Course assignments are file-submission work only.
   const types: Assignment["type"][] = [
     "assignment",
     "assignment",
-    "quiz",
-    "exam",
+    "assignment",
+    "project",
     "project",
   ];
   const totalWeight = 100;
@@ -218,7 +220,7 @@ function generateAssignments(
 
   for (let i = 0; i < count; i++) {
     const type = pick(types);
-    const maxScore = type === "exam" ? 100 : faker.number.int({ min: 50, max: 100 });
+    const maxScore = faker.number.int({ min: 50, max: 100 });
     const isGraded = courseStatus === "completed" || faker.datatype.boolean(0.7);
 
     let status: Assignment["status"];
@@ -266,13 +268,9 @@ function generateAssignments(
     assignments.push({
       id: id("asgn"),
       title:
-        type === "exam"
-          ? `Midterm Exam ${i + 1}`
-          : type === "quiz"
-            ? `Quiz ${i + 1}`
-            : type === "project"
-              ? `Project: ${faker.hacker.noun()} ${faker.hacker.ingverb()}`
-              : `Assignment ${i + 1}: ${faker.hacker.phrase().slice(0, 40)}`,
+        type === "project"
+          ? `Project: ${faker.hacker.noun()} ${faker.hacker.ingverb()}`
+          : `Assignment ${i + 1}: ${faker.hacker.phrase().slice(0, 40)}`,
       type,
       dueDate,
       score,
@@ -1446,6 +1444,11 @@ export function generateAppeals(count: number = 3): Appeal[] {
       courseCode: ad.courseCode,
       assessmentName: ad.assessment,
       assessmentType: ad.assessmentType,
+      // Infer target from seeded assessmentType. Pre-existing rows are mostly
+      // file-based work; the "quiz" row is an Assessment.
+      target: ad.assessmentType === "quiz" || ad.assessmentType === "exam" || ad.assessmentType === "midterm" || ad.assessmentType === "final"
+        ? "assessment"
+        : "assignment",
       currentScore: ad.currentScore,
       maxScore: ad.maxScore,
       appealReason: ad.reason,
@@ -1597,11 +1600,11 @@ export function generateStudentDashboard(): StudentDashboard {
     },
     {
       id: id("dl"),
-      title: "Midterm Exam",
+      title: "Midterm Assessment",
       courseId: id("crs"),
       courseName: "Database Systems",
       dueDate: futureDate(7),
-      type: "exam",
+      type: "assessment",
     },
     {
       id: id("dl"),

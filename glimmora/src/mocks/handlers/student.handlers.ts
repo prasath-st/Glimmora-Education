@@ -41,6 +41,7 @@ import {
   generateStudentCourseModules,
   generateAssignmentDetail,
 } from "@/mocks/data/generators/student.generator";
+import { getAssessmentById } from "@/mocks/data/db";
 
 // ─── Generate data once at module level ───────────────────────────────────────
 
@@ -537,6 +538,7 @@ export const studentHandlers = [
     const body = (await request.json()) as {
       courseId?: string;
       assessmentId?: string;
+      target?: "assignment" | "assessment";
       reason?: string;
     };
     const errors: Record<string, string[]> = {};
@@ -560,16 +562,41 @@ export const studentHandlers = [
     // Find the course for context
     const course = courses.find((c) => c.id === body.courseId);
 
+    // Resolve the item being appealed: first look it up in the cross-portal
+    // assessment store, then fall back to the course's seeded assignments.
+    let assessmentName = "Assessment";
+    let assessmentType = "assignment";
+    let target: "assignment" | "assessment" = body.target ?? "assignment";
+    let currentScore = 0;
+    let maxScore = 100;
+    const assessment = getAssessmentById(body.courseId!, body.assessmentId!);
+    if (assessment) {
+      assessmentName = assessment.title;
+      assessmentType = assessment.type;
+      target = "assessment";
+      maxScore = assessment.maxScore;
+    } else if (course) {
+      const assignment = course.assignments.find((a) => a.id === body.assessmentId);
+      if (assignment) {
+        assessmentName = assignment.title;
+        assessmentType = assignment.type;
+        target = "assignment";
+        currentScore = assignment.score ?? 0;
+        maxScore = assignment.maxScore;
+      }
+    }
+
     const now = new Date().toISOString();
     const newAppeal: Appeal = {
       id: `apl_${Date.now()}`,
       courseId: body.courseId!,
       courseName: course?.name ?? "Unknown Course",
       courseCode: course?.code ?? "N/A",
-      assessmentName: "Assessment",
-      assessmentType: "assignment",
-      currentScore: 0,
-      maxScore: 100,
+      assessmentName,
+      assessmentType,
+      target,
+      currentScore,
+      maxScore,
       appealReason: body.reason!,
       supportingDocuments: [],
       status: "pending",
