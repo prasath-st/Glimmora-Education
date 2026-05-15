@@ -444,13 +444,14 @@ export function buildAnalytics(
 }
 
 export function generateCompliancePulse(): CompliancePulse {
+  // Financial Audit and Research Ethics categories were dropped — Budget and
+  // Research are out of scope for this build and should not surface as
+  // compliance items or deviations.
   const categoryDefs = [
     { name: "Data Privacy", items: ["GDPR Consent Management", "Data Encryption at Rest", "Access Control Policies", "Data Breach Response Plan", "Right to Erasure Process"] },
     { name: "Academic Standards", items: ["Curriculum Review Cycle", "Assessment Integrity", "Grading Rubric Consistency", "Credit Transfer Policies", "Accreditation Alignment"] },
-    { name: "Financial Audit", items: ["Budget Reconciliation", "Expenditure Tracking", "Grant Fund Usage", "Tuition Fee Compliance", "Vendor Payment Records"] },
     { name: "Safety & Security", items: ["Campus Security Protocols", "Emergency Response Plan", "Lab Safety Compliance", "Fire Safety Inspections", "Cybersecurity Audit"] },
     { name: "Accreditation", items: ["NBA Criteria Compliance", "NAAC Self-Study Report", "Program Learning Outcomes", "Faculty Qualifications", "Infrastructure Standards"] },
-    { name: "Research Ethics", items: ["IRB Approval Process", "Data Handling Protocols", "Plagiarism Detection", "Conflict of Interest Disclosure", "Publication Ethics"] },
   ];
 
   const categories: ComplianceCategory[] = categoryDefs.map((cat) => {
@@ -481,14 +482,15 @@ export function generateCompliancePulse(): CompliancePulse {
 
   const deviationDescriptions = [
     { category: "Data Privacy", severity: "high" as RiskLevel, description: "Unencrypted student PII found in legacy database backup from 2023 migration." },
-    { category: "Financial Audit", severity: "medium" as RiskLevel, description: "Three vendor invoices exceeding ₹5L processed without dual-authorization approval." },
     { category: "Academic Standards", severity: "low" as RiskLevel, description: "Two course syllabi for Spring 2026 not yet uploaded to accreditation portal." },
     { category: "Safety & Security", severity: "medium" as RiskLevel, description: "Lab safety inspection overdue for Biotechnology Department wet lab by 12 days." },
-    { category: "Research Ethics", severity: "high" as RiskLevel, description: "IRB approval expired for ongoing human-subjects study in Psychology department." },
+    { category: "Accreditation", severity: "medium" as RiskLevel, description: "NAAC self-study report due in 30 days; three program-learning-outcome rubrics still incomplete." },
   ];
 
   const recentDeviations: ComplianceDeviation[] = deviationDescriptions.map((d, i) => {
-    const isResolved = i === 2;
+    // Mark the "Academic Standards" row as already resolved so the list shows
+    // a mix of statuses (the resolution text is specific to that deviation).
+    const isResolved = d.category === "Academic Standards";
     return {
       id: id("dev"),
       category: d.category,
